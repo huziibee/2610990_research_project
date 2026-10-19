@@ -198,7 +198,7 @@ def render(bundle, *, synthetic=False):
     latency += [r"\bottomrule", r"\end{tabular}"]
 
     failure_lines = [r"\begin{tabular}{lrr}", r"\toprule",
-                     line("Primary failure type", "Count", "Rate (\%)").rstrip(), r"\midrule"]
+                     line("Primary failure type", "Count", r"Rate (\%)").rstrip(), r"\midrule"]
     for name, label in FAILURES:
         record = bundle["failure_analysis"][name]
         failure_lines.append(line(label, record["count"],
