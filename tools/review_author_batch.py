@@ -115,7 +115,7 @@ def read_author_attestation(path, reviewed):
     return data["actor"],data["statement"]
 
 
-def approve_batch(workspace, actor, notes, *, reported_two_models=False):
+def approve_batch(workspace, actor, notes, *, reported_two_models=False, reported_review_models=None):
     """Persist one HUMAN's explicit approval; never synthesize second reviewer.
 
     Resumable when a process stops halfway through writing candidate/adoption
@@ -128,6 +128,16 @@ def approve_batch(workspace, actor, notes, *, reported_two_models=False):
         raise ValueError("Enter substantive approval notes (20+ characters)")
     if type(reported_two_models) is not bool:
         raise ValueError("Two-model history is an explicit author assertion, not a scored label")
+    if reported_review_models is None:
+        model_names = None
+    else:
+        if (not reported_two_models or not isinstance(reported_review_models, (list, tuple))
+                or len(reported_review_models) != 2
+                or any(not isinstance(name, str) or not name.strip() or name != name.strip()
+                       for name in reported_review_models)
+                or reported_review_models[0] == reported_review_models[1]):
+            raise ValueError("Exactly two distinct, author-reported model names require --report-two-model-adjudication")
+        model_names = list(reported_review_models)
     store, reviewed = preflight(workspace)
     export = Path(workspace) / "author_review_export"
     if export.exists():
@@ -164,6 +174,8 @@ def approve_batch(workspace, actor, notes, *, reported_two_models=False):
         "reviewer_identity_authenticated_externally": False,
         "independent_human_verification": False,
         "two_model_adjudication_reported_by_author": reported_two_models,
+        "review_models_reported_by_author": model_names,
+        "reported_review_scope": "100 semantic references (author assertion)" if model_names else None,
         "two_model_review_logs_authenticated": False,
         "two_model_adjudication_evidence": "NOT_VERIFIED_BY_THIS_EXPORT",
         "benchmark_executed": False, "semantic_results": "NOT_COMPUTED",
@@ -179,6 +191,8 @@ def approve_batch(workspace, actor, notes, *, reported_two_models=False):
              "revision": s["revision"], "history_head": s["head"],
              "provenance": s["provenance"], "model_assisted": s["model_assisted"],
              "human_adopted": s["adopted"], "author_attestation": True,
+             "review_models_reported_by_author": model_names,
+             "review_model_provenance": "author_attested_not_log_authenticated" if model_names else None,
              "independently_verified": False}
             for s in final_states]
     references = export / "author_reviewed_references_100.jsonl"
@@ -319,6 +333,8 @@ def main():
                         help="Private user-provided attestation bound to the exact 100 draft hashes")
     parser.add_argument("--report-two-model-adjudication",action="store_true",
                         help="Record your report of two-model adjudication; never claims logs were authenticated")
+    parser.add_argument("--reported-review-models",nargs=2,metavar=("MODEL_1","MODEL_2"),
+                        help="Author-reported model identities (e.g. Grok GLM) for all 100 semantic references")
     args=parser.parse_args()
     if args.check and args.approve:
         parser.error("Choose either --check or --approve")
@@ -328,6 +344,8 @@ def main():
         parser.error("--approval-file must be used with --approve and without --actor/--notes")
     if args.report_two_model_adjudication and not args.approve:
         parser.error("--report-two-model-adjudication is valid only with --approve")
+    if args.reported_review_models and not (args.approve and args.report_two_model_adjudication):
+        parser.error("--reported-review-models requires --approve --report-two-model-adjudication")
     if not 1024<=args.port<=65535: raise SystemExit("Invalid port")
     root=ROOT
     verify_release(root/"Data")
@@ -339,7 +357,8 @@ def main():
         actor,notes=(read_author_attestation(args.approval_file,items)
                      if args.approval_file else (args.actor,args.notes))
         report=approve_batch(workspace,actor,notes,
-                             reported_two_models=args.report_two_model_adjudication)
+                             reported_two_models=args.report_two_model_adjudication,
+                             reported_review_models=args.reported_review_models)
         print(json.dumps({"status":report["status"],"case_count":report["case_count"],
                           "reviewer":report["actor"],"receipt":str(workspace/"author_review_export"/"AUTHOR_REVIEW_RECEIPT.json"),
                           "independently_verified":False},indent=2))
