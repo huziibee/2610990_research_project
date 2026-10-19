@@ -15,7 +15,7 @@ class AnnotationTriageTests(unittest.TestCase):
         report = triage_states([state()])
         self.assertEqual(report["semantic_correctness"], "NOT_COMPUTED")
         self.assertFalse(report["benchmark_executed"])
-        self.assertFalse(report["annotation_export_ready"])
+        self.assertFalse(report["triage_checklist_clear"])
         self.assertIn("prepare_semantic_reference", report["cases"][0]["needs"])
 
     def test_clarification_needs_branches(self):
