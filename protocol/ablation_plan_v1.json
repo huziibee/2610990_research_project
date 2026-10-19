@@ -1,0 +1,30 @@
+{
+  "schema_version": 1,
+  "date": "2026-10-19",
+  "status": "CANDIDATE_NOT_FROZEN",
+  "allow_ablation_predictions": false,
+  "main_protocol_sha256": null,
+  "ablation_schedule_sha256": null,
+  "interventions": [
+    "goal_first",
+    "structured_grounding",
+    "scene",
+    "dependency_checking",
+    "dialogue"
+  ],
+  "goal_first_control": "two_call_context_summary",
+  "planned_case_count": 100,
+  "seeds": [
+    17,
+    29,
+    43,
+    71,
+    101
+  ],
+  "planned_initial_predictions": 2500,
+  "initial_only": true,
+  "primary_model": "gemini-2.5-flash-lite",
+  "requires_main_readiness_gate": true,
+  "requires_explicit_frozen_revision": true,
+  "scientific_caveat": "Goal-first removal is a matched context-summary comparator, not proof of no implicit goal inference. Grounding removal is prompt-only; structured representation remains. Dependency removal changes deterministic consistency validation. All must be independently scored after freeze."
+}

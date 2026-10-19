@@ -1,0 +1,60 @@
+name: Research regression checks
+
+on:
+  push:
+    branches:
+      - main
+      - "research/**"
+  pull_request:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: research-ci-${{ github.event.pull_request.number || github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  integrity-and-unit-tests:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+      - name: Verify frozen data release
+        run: python Data/verify_package.py
+      - name: Full synthetic regression suite
+        run: python -m unittest discover -s tests -v
+      - name: Annotation triage is not evaluation permission
+        run: |
+          python - <<'PY'
+          import json
+          from pathlib import Path
+          import subprocess
+          import sys
+          import tempfile
+          from research.annotation_store import AnnotationStore
+
+          # The developer's annotation workspace contains machine-specific
+          # absolute pins. CI must never replay or rewrite that human ledger.
+          with tempfile.TemporaryDirectory(prefix="triage-ci-") as workspace:
+              store = AnnotationStore(workspace)
+              store.initialize(
+                  Path("Data/data/source_100.jsonl"),
+                  Path("Data/data/author_approved_route_gold_100.jsonl"),
+                  Path("annotation/semantic_reference_template_100.jsonl"),
+              )
+              result = subprocess.run(
+                  [sys.executable, "tools/annotation_triage.py", "--workspace", workspace, "--summary-only"],
+                  check=True, capture_output=True, text=True,
+              )
+              report = json.loads(result.stdout)
+              assert report["benchmark_executed"] is False
+              assert report["readiness_authorized"] is False
+              assert report["semantic_correctness"] == "NOT_COMPUTED"
+              assert report["case_count"] == 100
+              assert report["route_counts"] == {"clarify": 26, "execute": 74}
+              assert report["annotation_complete_count"] == 0
+          PY

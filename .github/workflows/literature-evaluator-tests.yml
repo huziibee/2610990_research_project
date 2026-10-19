@@ -1,0 +1,21 @@
+name: Literature evaluator focused tests
+on:
+  push:
+    branches:
+      - research/literature-evaluation-20261019
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  evaluator-synthetic-only:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+      - name: Compile evaluator
+        run: python -m py_compile research/literature_evaluation.py tests/test_literature_evaluation.py
+      - name: Run literature diagnostic regression suite
+        run: python -m unittest tests.test_literature_evaluation -v

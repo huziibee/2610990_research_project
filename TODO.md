@@ -42,6 +42,10 @@ Updated: 2026-10-19. This tracker supersedes the old Qwen3/99-case checklist for
 - [x] Clarification/revalidation loop, maximum five simulated turns, with unavailable answers recorded honestly.
 - [x] Route scoring and paired confidence intervals with case/run alignment tests.
 - [x] Prepared blank evaluator-only semantic-reference worksheet and independent-review rubric candidate; existing route approvals preserved.
+- [x] Added local, loopback-only human annotation/review workbench with explicit ledger-bound preparation, adoption, independent verification, disagreement and final approval actions.
+- [x] Added GitHub Actions checks for data release integrity, synthetic tests and non-authorization of held-out evaluation.
+- [ ] Human preparers and independent reviewers complete all 100 semantic references and 26 clarification cases; browser code does not substitute for semantic adjudication.
+- [ ] Confirm new workflow's full repository CI run succeeds before merging.
 - [ ] Implement and verify semantic task comparison/scoring after complete references and equivalents are supplied.
 - [ ] Supply independently verified capability catalogs to activate permitted-action/required-field checks for actual cases; raw prose is not such a catalog.
 - [x] Run regression tests exclusively on synthetic examples and review agent work.
@@ -49,7 +53,7 @@ Updated: 2026-10-19. This tracker supersedes the old Qwen3/99-case checklist for
 ## 4. Experiments (not started)
 
 - [ ] Main comparison: five runs/system, same frozen cases, schema, context and declared inference budgets.
-- [ ] Five independent removals: goal-first, structured grounding, scene, dependency checks, dialogue.
+- [ ] Five independent removals: goal-first, structured grounding, scene, dependency checks, dialogue. Engineering status: scene/dialogue masks, budget-matched non-goal first-stage comparator, dependency-consistency guard removal, and explicit-grounding-prompt control have synthetic implementations. The last three test narrower mechanisms than complete architectural removal. Full structured-grounding removal still requires a fair comparator. No evaluated ablation has run. No evaluated ablation has run.
 - [ ] Efficiency: median/P95 end-to-end latency, calls, input/output/reasoning tokens and versioned pricing; report unavailable provider hardware metrics as unavailable.
 - [ ] Simulated clarification completion at turns 0–5, separately from initial decisions and observed human conversations.
 - [ ] Primary/secondary failure categories and independently verified representative examples.

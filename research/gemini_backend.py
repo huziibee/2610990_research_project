@@ -59,6 +59,13 @@ def _validate_context(stage, context, model_input, direct):
     elif stage in ("S1.goal", "S2.first.goal", "S2.second.goal"):
         if context is not None or direct:
             raise ValueError("Goal stage accepts no intermediate context")
+    elif stage == "S1.context":
+        if context is not None or direct:
+            raise ValueError("Context-only stage accepts no intermediate context")
+    elif stage == "S1.context_ground":
+        if (direct or type(context) is not dict or set(context) != {"context_summary"}
+                or type(context["context_summary"]) is not str or not context["context_summary"].strip()):
+            raise ValueError("Context grounding requires only a generated context summary")
     elif stage in ("S1.ground", "S2.first.ground", "S2.second.ground"):
         if (direct or type(context) is not dict or set(context) != {"intended_goal"}
                 or type(context["intended_goal"]) is not str or not context["intended_goal"].strip()):

@@ -240,9 +240,22 @@ def main(argv=None):
     parser.add_argument("--bundle", type=Path)
     parser.add_argument("--output", type=Path)
     parser.add_argument("--execute", action="store_true", help="Future execution only after every readiness gate is frozen")
+    parser.add_argument("--phase", choices=("main", "ablations"), default="main",
+                        help="Ablations use a separately frozen plan and main readiness gates")
+    parser.add_argument("--prepare-ablation-schedule", action="store_true",
+                        help="Write 2000-row deterministic schedule only; never calls a model")
     args = parser.parse_args(argv)
     try:
-        result = run_initial_pass(args.root, bundle=args.bundle, output=args.output, execute=args.execute)
+        if args.prepare_ablation_schedule:
+            if args.phase != "ablations" or args.execute or args.bundle or args.output:
+                raise ValueError("Schedule preparation cannot combine with inference arguments")
+            from tools.run_ablations import prepare_ablation_schedule
+            result = prepare_ablation_schedule(Path(args.root))
+        elif args.phase == "ablations":
+            from tools.run_ablations import run_ablation_pass
+            result = run_ablation_pass(args.root, bundle=args.bundle, output=args.output, execute=args.execute)
+        else:
+            result = run_initial_pass(args.root, bundle=args.bundle, output=args.output, execute=args.execute)
         print(json.dumps(result, indent=2))
         return 0
     except (ValueError, OSError, KeyError, TypeError):

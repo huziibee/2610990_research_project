@@ -1,0 +1,37 @@
+name: Literature architecture synthetic tests
+
+on:
+  push:
+    branches:
+      - research/literature-architecture-20261019
+  pull_request:
+    paths:
+      - 'research/semantic_relations.py'
+      - 'research/capability_diagnostics.py'
+      - 'research/clarification_continuity.py'
+      - 'tests/test_semantic_relations.py'
+      - 'tests/test_capability_diagnostics.py'
+      - 'tests/test_clarification_continuity.py'
+      - 'docs/SARATHY_CLARA_ARCHITECTURE_AUDIT.md'
+      - '.github/workflows/literature-tests.yml'
+
+permissions:
+  contents: read
+
+concurrency:
+  group: lit-synthetic-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  synthetic-regression:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+      - name: Sarathy and CLARA isolated synthetic tests
+        run: python -m unittest tests.test_semantic_relations tests.test_capability_diagnostics tests.test_clarification_continuity -v
+      - name: Full synthetic repository regression suite
+        run: python -m unittest discover -s tests -v
