@@ -69,9 +69,9 @@ def triage_states(states, *, expected_ids=None):
     blockers = Counter(gate for row in rows for gate in row["needs"])
     complete = sum(not row["needs"] for row in rows)
     return {"report_type": "ANNOTATION_TRIAGE_ONLY", "benchmark_executed": False,
-            "semantic_correctness": "NOT_COMPUTED", "case_count": len(rows),
+            "semantic_correctness": "NOT_COMPUTED", "readiness_authorized": False, "case_count": len(rows),
             "annotation_complete_count": complete,
-            "annotation_export_ready": complete == len(rows),
+            "triage_checklist_clear": complete == len(rows),
             "route_counts": dict(sorted(by_route.items())),
             "status_counts": dict(sorted(by_status.items())),
             "outstanding_gates": dict(sorted(blockers.items())), "cases": rows}
