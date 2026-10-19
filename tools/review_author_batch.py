@@ -27,7 +27,7 @@ if str(ROOT) not in sys.path:
 from research.annotation_store import AnnotationStore
 from research.input_contract import source_to_model_input
 from research.reference_schema import validate_reference
-from research.integrity import digest, verify_release
+from research.integrity import digest, verify_release, read_json, read_jsonl
 
 EXPECTED = [f"CA-{i:04d}" for i in range(1, 101)]
 EXTRA_METADATA = {"reference_preparer", "independent_verifier", "semantic_reference_status"}
@@ -115,6 +115,94 @@ def read_author_attestation(path, reviewed):
     return data["actor"],data["statement"]
 
 
+def _reuse_existing_release(workspace, store, reviewed, actor, notes, model_names, reported_two_models):
+    """Validate a completed, immutable 100-case signoff before updating model-name metadata.
+
+    Never replays approvals or overwrites a mismatched / incomplete release.
+    Only separately authored model-review attribution can change.
+    """
+    directory = Path(workspace) / "author_review_export"
+    receipt_path = directory / "AUTHOR_REVIEW_RECEIPT.json"
+    reference_path = directory / "author_reviewed_references_100.jsonl"
+    if not receipt_path.is_file() or not reference_path.is_file():
+        raise ValueError("Incomplete existing author release: receipt or references missing; do not overwrite")
+    receipt = read_json(receipt_path)
+    rows = read_jsonl(reference_path)
+    previous_hash = receipt.get("receipt_sha256")
+    if (previous_hash != _hash({k: v for k, v in receipt.items() if k != "receipt_sha256"})
+            or receipt.get("reference_export_sha256") != digest(reference_path)
+            or receipt.get("source_manifest_sha256") != digest(Path(workspace) / "manifest.json")
+            or receipt.get("case_count") != 100
+            or receipt.get("route_counts") != {"execute": 74, "clarify": 26}
+            or receipt.get("actor") != actor
+            or receipt.get("status") != "AUTHOR_REVIEWED_NOT_INDEPENDENTLY_VERIFIED"
+            or len(rows) != 100
+            or len(receipt.get("references", [])) != 100):
+        raise ValueError("Existing author approval release failed fingerprint or identity verification")
+    for item, signed_row, signed_ref in zip(reviewed, rows, receipt["references"]):
+        state = store.show(item["record_id"])
+        if (signed_row.get("record_id") != item["record_id"]
+                or signed_ref.get("record_id") != item["record_id"]
+                or signed_ref.get("history_head") != state["head"]
+                or signed_row.get("history_head") != state["head"]
+                or signed_ref.get("revision") != state["revision"]
+                or signed_row.get("reference") != state["reference"]
+                or signed_ref.get("reference_sha256") != _hash(state["reference"])
+                or item["reference_sha256"] != _hash(state["reference"])
+                or state["status"] != "CANDIDATE"
+                or not state["adopted"]
+                or state["verification"] is not None
+                or state["provenance"] != "model_candidate"
+                or actor not in state["contributors"]):
+            raise ValueError(item["record_id"] + ": existing approval does not match immutable ledger")
+    recorded_names = receipt.get("review_models_reported_by_author")
+    if recorded_names not in (None, model_names) and model_names is not None:
+        raise ValueError("Existing model-review identities disagree; a new explicit amendment is required")
+    if reported_two_models and not receipt.get("two_model_adjudication_reported_by_author", False):
+        receipt["two_model_adjudication_reported_by_author"] = True
+    if model_names:
+        receipt["review_models_reported_by_author"] = model_names
+        receipt["reported_review_scope"] = "100 semantic references (author assertion)"
+        for row in rows:
+            row["review_models_reported_by_author"] = model_names
+            row["review_model_provenance"] = "author_attested_not_log_authenticated"
+    receipt["human_author_approval_attested"] = True
+    receipt["reviewer_identity_self_attested"] = True
+    receipt["reviewer_identity_authenticated_externally"] = False
+    receipt["independent_human_verification"] = False
+    receipt["two_model_review_logs_authenticated"] = False
+    receipt["two_model_adjudication_evidence"] = "NOT_VERIFIED_BY_THIS_EXPORT"
+    # Reference contents, approval timestamps and ledger events remain unchanged.
+    if model_names and receipt.get("model_provenance_updated") is not True:
+        receipt["model_provenance_updated"] = True
+    existing_rows = read_jsonl(reference_path)
+    original_receipt = read_json(receipt_path)
+    if rows != existing_rows or receipt != original_receipt:
+        # Overwrite only the verified release we own; stage both new files first.
+        staged_rows = directory / ("." + reference_path.name + "." + secrets.token_hex(6))
+        staged_receipt = directory / ("." + receipt_path.name + "." + secrets.token_hex(6))
+        try:
+            with staged_rows.open("x", encoding="utf-8", newline="\n") as out:
+                for row in rows:
+                    out.write(json.dumps(row, sort_keys=True, ensure_ascii=False) + "\n")
+                out.flush()
+                os.fsync(out.fileno())
+            receipt["reference_export_sha256"] = digest(staged_rows)
+            receipt["receipt_sha256"] = _hash({k: v for k, v in receipt.items() if k != "receipt_sha256"})
+            with staged_receipt.open("x", encoding="utf-8", newline="\n") as out:
+                json.dump(receipt, out, indent=2, ensure_ascii=False)
+                out.write("\n")
+                out.flush()
+                os.fsync(out.fileno())
+            os.replace(staged_rows, reference_path)
+            os.replace(staged_receipt, receipt_path)
+        finally:
+            staged_rows.unlink(missing_ok=True)
+            staged_receipt.unlink(missing_ok=True)
+    receipt["existing_release_reused"] = True
+    return receipt
+
+
 def approve_batch(workspace, actor, notes, *, reported_two_models=False, reported_review_models=None):
     """Persist one HUMAN's explicit approval; never synthesize second reviewer.
 
@@ -141,7 +229,7 @@ def approve_batch(workspace, actor, notes, *, reported_two_models=False, reporte
     store, reviewed = preflight(workspace)
     export = Path(workspace) / "author_review_export"
     if export.exists():
-        raise ValueError("Existing author approval release: do not overwrite")
+        return _reuse_existing_release(workspace, store, reviewed, actor, notes, model_names, reported_two_models)
     # Preflight every case and all immutable references BEFORE recording changes.
     for item in reviewed:
         cid = item["record_id"]
