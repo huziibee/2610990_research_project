@@ -9,6 +9,12 @@ import argparse
 import hashlib
 import json
 from pathlib import Path
+import sys
+
+
+ROOT = Path(__file__).resolve().parents[1]
+if __package__ in (None, ""):
+    sys.path.insert(0, str(ROOT))
 
 from tools.render_paper_results import CONDITIONS, FAILURES, render
 
