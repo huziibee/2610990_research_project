@@ -1,0 +1,31 @@
+{
+  "schema_version": 1,
+  "date": "2026-10-19",
+  "status": "CANDIDATE_NOT_FROZEN",
+  "allow_ablation_predictions": false,
+  "main_protocol_sha256": null,
+  "ablation_schedule_sha256": null,
+  "interventions": [
+    "structured_grounding",
+    "scene",
+    "dependency_checking",
+    "dialogue"
+  ],
+  "baseline_alias": {
+    "goal_first": "S0"
+  },
+  "planned_case_count": 100,
+  "seeds": [
+    17,
+    29,
+    43,
+    71,
+    101
+  ],
+  "planned_initial_predictions": 2000,
+  "initial_only": true,
+  "primary_model": "gemini-2.5-flash-lite",
+  "requires_main_readiness_gate": true,
+  "requires_explicit_frozen_revision": true,
+  "scientific_caveat": "Dependency-checking removal changes deterministic validation; goal-first is the existing S0 baseline, not independent. No held-out runs permitted until separate freeze and independent semantic references."
+}
