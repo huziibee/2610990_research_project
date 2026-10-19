@@ -4,6 +4,38 @@
 
 This is a **separately labelled one-human, model-assisted author-approval track**. It does not impersonate or manufacture another person. It never describes itself as independently human verified and does **not** silently pass the pre-existing two-human verification gate. The supervisor-approved protocol variant, if adopted, must be clearly documented in the manuscript rather than relabelling this as an independently reviewed gold release. Earlier claims of two-model adjudication require their actual saved evidence (model identities, blinded outputs, timestamps, disagreements and resolutions) to be added before that history can be asserted as verified.
 
+## Recover from the earlier generic approval failure
+
+The original web form suppressed the underlying error. The updated form shows
+the local exception category and message. An explicit chat author attestation
+can be imported **without re-entering a name or clicking the review button**,
+but only when it binds to the exact 100 installed reference contents:
+
+~~~powershell
+git fetch origin
+git switch research/author-review-integration-20261019
+git pull --ff-only origin research/author-review-integration-20261019
+py tools/review_author_batch.py --workspace runs/human_review_20261019 --check
+py tools/review_author_batch.py --workspace runs/human_review_20261019 --approve --approval-file "$env:USERPROFILE\Downloads\Author_Approval_100_Mohammed_Bangie_20261019.json"
+~~~
+
+The `--approval-file` is a **private self-attestation**, not an independent
+review or verified identity credential. Its 100 canonical reference hashes must
+match the current local drafts exactly. If you edited any reference after
+reviewing, this attestation correctly refuses to auto-approve a different set.
+In that situation, preserve those edits and instead run:
+
+~~~powershell
+py tools/review_author_batch.py --workspace runs/human_review_20261019 --approve --actor "Mohammed Bangie" --notes "I compared all 100 references against the source text and accept the drafts and clarification branches as my annotated decisions"
+~~~
+
+The second form approves exactly the currently installed and structurally valid
+drafts using the actual user's declaration. Both methods produce the same
+private ledger receipt and author-reviewed release. A terminal error gives
+the actual failing case or condition, rather than the old generic browser
+message. If an existing `author_review_export` is already present, inspect its
+receipt instead of overwriting it. Neither route modifies frozen data.
+
 ## Simplest setup: one command
 
 From the updated research worktree, save the private
