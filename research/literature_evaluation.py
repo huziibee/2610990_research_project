@@ -217,7 +217,6 @@ def score_literature_diagnostics(expected_predictions, reviews, reference_index,
         critical_pred += len(predicted)
         if cf["asked"]:
             relevance.append(cf["question_relevant"])
-            question[cf["question_information_type"]] += 1
         for name in TIER3:
             if tier["dialogue"][name] is not None:
                 t3[name].append(tier["dialogue"][name])
