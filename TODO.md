@@ -6,7 +6,7 @@ Updated: 2026-10-19. This tracker supersedes the old Qwen3/99-case checklist for
 
 - [x] Dataset renamed/versioned, all 100 sequential IDs and approved routes/strategy sequences recorded.
 - [x] Three historical route disputes resolved to clarify; old-to-new crosswalk supplied.
-- [x] Input/reference separation, integrity and original archive preservation verified; historical synthetic provenance disclosed.
+- [x] Input/reference separation, integrity and original archive preservation verified; historical disputed origin retained for audit; CA-0100 author-corrected to source in a separate amendment.
 - [x] User-requested definition corrected in Data release 1.0.1: source_records counts all 100 current inputs. Record and archive hashes are unchanged.
 - [x] Dataset snapshot frozen in protocol/DATA_FREEZE_20261019.json; settled design locked in protocol/DESIGN_DECISION_LOCK_20261019.json.
 

@@ -12,21 +12,22 @@
       "clarify": 26
     },
     "source_records": 100,
-    "synthetic_records": 1,
+    "synthetic_records": 0,
     "evaluation_only": true,
     "semantic_reference_coverage": null,
     "source_path": "Data/data/source_100.jsonl",
     "source_sha256": "f0ba3edbc0d8692c77fdd6050b0a985d33b92af078d490672c0e69829995f621",
     "route_reference_path": "Data/data/author_approved_route_gold_100.jsonl",
     "route_reference_sha256": "75056271e024869ee03c8f3faf772daa031641522ecbc46bdbcc2072d41843b8",
-    "source_records_definition": "Number of model-input records in the current release, including its approved synthetic record.",
+    "source_records_definition": "All 100 model-input records in the current release; CA-0100 is a source record under the author's 2026-10-19 origin correction.",
     "origin_counts": {
       "frozen_pilot120_subset": 99,
-      "assistant_authored_synthetic": 1
+      "author_confirmed_source_record": 1
     },
-    "synthetic_records_definition": "Subset of source_records with synthetic origin; not added to or excluded from the 100-case evaluation.",
+    "synthetic_records_definition": "Current author-corrected reporting count. Frozen legacy release 1.0.1 metadata retains an earlier disputed synthetic-origin label for CA-0100; see protocol/amendments/CA-0100_source_status_20261019.json. No source content, membership or route has changed.",
     "primary_evaluation_records": 100,
-    "historical_origin_sensitivity": "optional_descriptive_only_not_a_second_primary_dataset"
+    "historical_origin_sensitivity": "optional_descriptive_only_not_a_second_primary_dataset",
+    "origin_correction_amendment": "protocol/amendments/CA-0100_source_status_20261019.json"
   },
   "model": {
     "requested_id": "gemini-2.5-flash-lite",

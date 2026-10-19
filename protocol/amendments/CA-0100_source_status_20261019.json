@@ -1,0 +1,24 @@
+{
+  "amendment_id": "CA-0100-source-status-correction-20261019",
+  "record_id": "CA-0100",
+  "legacy_ids": [
+    "NEW-0100",
+    "CA-1001"
+  ],
+  "correction_basis": "Dataset author's explicit statement on 2026-10-19 that the case is a source record and not synthetic.",
+  "corrected_current_reporting_classification": "source_record",
+  "corrected_current_origin_bucket": "author_confirmed_source_record",
+  "old_frozen_label": "assistant_authored_synthetic",
+  "old_frozen_provenance_origin": "new_synthetic_case_authored_for_user_request",
+  "original_pilot120_membership": "not_established_by_this_amendment",
+  "author_attested": true,
+  "independently_source_verified": false,
+  "historical_origin_claim_still_retained_for_audit": true,
+  "immutable_dataset_records_and_sha256_unchanged": true,
+  "protected_primary_cohort_count": 100,
+  "locked_terminal_routes": {
+    "execute": 74,
+    "clarify": 26
+  },
+  "notes": "Reporting correction only. It must not erase or silently edit the original pinned historical records and their hashes. Do not claim the corrected origin was verified from the original Pilot-120 corpus without independent source evidence."
+}
