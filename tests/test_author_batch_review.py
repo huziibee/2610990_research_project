@@ -112,9 +112,11 @@ class AuthorBatchTest(unittest.TestCase):
             self.assertIs(state["model_assisted"],True)
             self.assertIsNone(state["verification"])
             self.assertIsNone(state["final_approval"])
-            with self.assertRaisesRegex(ValueError,"Existing author approval"):
-                approve_batch(ws,"Actual human researcher",
-                              "I inspected all model-assisted references against source.")
+            second=approve_batch(ws,"Actual human researcher",
+                                 "I inspected all model-assisted references against source.")
+            self.assertTrue(second["existing_release_reused"])
+            self.assertEqual(second["references"],release["references"])
+            self.assertEqual(store.show("CA-0001")["revision"],1)
 
     def test_two_model_report_recorded_without_fake_authentication(self):
         with tempfile.TemporaryDirectory() as tmp:
@@ -135,6 +137,44 @@ class AuthorBatchTest(unittest.TestCase):
             self.assertTrue(all(r["review_models_reported_by_author"]==["Grok","GLM"] for r in rows))
             self.assertTrue(all(r["review_model_provenance"]=="author_attested_not_log_authenticated" for r in rows))
 
+
+    def test_existing_approval_updates_model_labels_without_reapproval(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            ws,store=self.make_workspace(tmp)
+            original=approve_batch(
+                ws,"Actual human researcher",
+                "I independently checked all proposed interpretations against sources.")
+            receipt=approve_batch(
+                ws,"Actual human researcher",
+                "I independently checked all proposed interpretations against sources.",
+                reported_two_models=True,reported_review_models=["Grok","GLM"])
+            self.assertTrue(receipt["existing_release_reused"])
+            self.assertTrue(receipt["two_model_adjudication_reported_by_author"])
+            self.assertEqual(receipt["review_models_reported_by_author"],["Grok","GLM"])
+            self.assertFalse(receipt["two_model_review_logs_authenticated"])
+            self.assertEqual(original["references"],receipt["references"])
+            self.assertEqual(store.show("CA-0001")["revision"],1)
+            written=json.loads((ws/"author_review_export"/"AUTHOR_REVIEW_RECEIPT.json").read_text())
+            self.assertEqual(written["review_models_reported_by_author"],["Grok","GLM"])
+            again=approve_batch(
+                ws,"Actual human researcher",
+                "I independently checked all proposed interpretations against sources.",
+                reported_two_models=True,reported_review_models=["Grok","GLM"])
+            self.assertEqual(again["receipt_sha256"],receipt["receipt_sha256"])
+
+    def test_existing_release_tampering_rejected(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            ws,_=self.make_workspace(tmp)
+            approve_batch(ws,"Actual human researcher",
+                          "I independently checked all proposed interpretations against sources.")
+            receipt_path=ws/"author_review_export"/"AUTHOR_REVIEW_RECEIPT.json"
+            payload=json.loads(receipt_path.read_text())
+            payload["actor"]="Another person"
+            receipt_path.write_text(json.dumps(payload))
+            with self.assertRaisesRegex(ValueError,"fingerprint or identity"):
+                approve_batch(ws,"Actual human researcher",
+                              "I independently checked all proposed interpretations against sources.",
+                              reported_two_models=True,reported_review_models=["Grok","GLM"])
 
     def test_unreviewed_and_fake_identity_rejected(self):
         with tempfile.TemporaryDirectory() as tmp:
