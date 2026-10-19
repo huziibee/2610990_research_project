@@ -4,6 +4,22 @@
 
 This is a **separately labelled one-human, model-assisted author-approval track**. It does not impersonate or manufacture another person. It never describes itself as independently human verified and does **not** silently pass the pre-existing two-human verification gate. The supervisor-approved protocol variant, if adopted, must be clearly documented in the manuscript rather than relabelling this as an independently reviewed gold release. Earlier claims of two-model adjudication require their actual saved evidence (model identities, blinded outputs, timestamps, disagreements and resolutions) to be added before that history can be asserted as verified.
 
+## Simplest setup: one command
+
+From the updated research worktree, save the private
+\`Model_Assisted_100_Improved_Review_Package.zip\` to Downloads. Then run:
+
+\`\`\`powershell
+py tools/start_author_review.py --bundle "$env:USERPROFILE\Downloads\Model_Assisted_100_Improved_Review_Package.zip"
+\`\`\`
+
+The launcher verifies release pins, checks 100 candidate fingerprints,
+initializes a new private local workspace if needed, installs suggestions
+without overwriting modified drafts, and starts both the editing interface
+(port 8765) and the reviewed-all signoff interface (port 8766).
+It can be rerun safely on unchanged draft files. Human approval is **not**
+triggered by launching. Keep the terminal open while reviewing.
+
 ## What is ready before any human click
 
 The frozen case cohort, 74/26 routes and existing 100 model-assisted draft proposals are separate from model inference. Import the **private ZIP** using its included \`install_candidates.py\` into your local, Git-ignored workspace. Do not commit the ZIP or reference drafts to GitHub: these contain protected hidden answers.
