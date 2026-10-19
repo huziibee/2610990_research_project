@@ -42,6 +42,10 @@ Updated: 2026-10-19. This tracker supersedes the old Qwen3/99-case checklist for
 - [x] Clarification/revalidation loop, maximum five simulated turns, with unavailable answers recorded honestly.
 - [x] Route scoring and paired confidence intervals with case/run alignment tests.
 - [x] Prepared blank evaluator-only semantic-reference worksheet and independent-review rubric candidate; existing route approvals preserved.
+- [x] Added local, loopback-only human annotation/review workbench with explicit ledger-bound preparation, adoption, independent verification, disagreement and final approval actions.
+- [x] Added GitHub Actions checks for data release integrity, synthetic tests and non-authorization of held-out evaluation.
+- [ ] Human preparers and independent reviewers complete all 100 semantic references and 26 clarification cases; browser code does not substitute for semantic adjudication.
+- [ ] Confirm new workflow's full repository CI run succeeds before merging.
 - [ ] Implement and verify semantic task comparison/scoring after complete references and equivalents are supplied.
 - [ ] Supply independently verified capability catalogs to activate permitted-action/required-field checks for actual cases; raw prose is not such a catalog.
 - [x] Run regression tests exclusively on synthetic examples and review agent work.
