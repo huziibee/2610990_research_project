@@ -2,6 +2,24 @@
 
 All 100 annotation workspaces and blank drafts are prepared. Existing routes and strategy sequences are locked. The CLI never calls Gemini or any evaluated model. Prefer human-authored references; no protected case has been automatically interpreted for these drafts.
 
+## Local browser-assisted preparation and review
+
+A loopback-only workbench now supports browsing, editing/saving unverified
+drafts, structural validation, candidate submission, human adoption, independent
+verification, disagreement recording and final approval using the **same**
+hash-linked annotation ledger. It is not an automatic gold creator. Launch:
+
+```powershell
+py tools/serve_annotations.py
+```
+
+Open http://127.0.0.1:8765/ locally. Every human review action requires
+an actual actor identity and substantive notes. The ledger rejects review by
+a contributing preparer, verification of unadopted model candidates and
+approval over unresolved disagreements. See
+[workbench guide](../docs/ANNOTATION_WORKBENCH.md). The CLI procedures below
+remain supported.
+
 ## View and prepare a case
 
 From the project folder in PowerShell:
