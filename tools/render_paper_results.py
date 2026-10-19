@@ -13,8 +13,14 @@ import hashlib
 import json
 import math
 from pathlib import Path
+import sys
 import re
 from statistics import mean, stdev
+
+
+ROOT = Path(__file__).resolve().parents[1]
+if __package__ in (None, ""):
+    sys.path.insert(0, str(ROOT))
 
 from research.semantic_metrics import paired_semantic_bootstrap
 
