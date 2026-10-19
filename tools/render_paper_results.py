@@ -310,16 +310,29 @@ def main(argv=None):
     parser.add_argument("--scored-bundle", type=Path, required=True)
     parser.add_argument("--output", type=Path, required=True, help="New, empty output directory")
     parser.add_argument("--synthetic", action="store_true", help="Synthetic engineering tests only")
+    parser.add_argument("--review-manifest", type=Path,
+                        help="Externally authorized review-release manifest; required for real output")
     args = parser.parse_args(argv)
     try:
         source = args.scored_bundle.resolve()
         obj = json.loads(source.read_text(encoding="utf-8"))
         artifacts = render(obj, synthetic=args.synthetic)
+        if args.synthetic:
+            if args.review_manifest is not None:
+                raise ValueError("Synthetic mode does not accept a real review manifest")
+            verified_review_digest = None
+        else:
+            if args.review_manifest is None:
+                raise ValueError("A real reviewed release manifest file must be provided")
+            verified_review_digest = hashlib.sha256(args.review_manifest.read_bytes()).hexdigest()
+            if verified_review_digest != obj["review_manifest_sha256"]:
+                raise ValueError("Review release digest does not match the scored evidence bundle")
         args.output.mkdir(parents=True, exist_ok=False)
         for name, data in artifacts.items():
             (args.output / name).write_text(data, encoding="utf-8")
         provenance = {"source_sha256": hashlib.sha256(source.read_bytes()).hexdigest(),
                       "source_evidence_class": obj["evidence_class"],
+                      "review_manifest_sha256_verified": verified_review_digest,
                       "report_status": "CANDIDATE_REVIEW_REQUIRED", "manuscript_modified": False}
         (args.output / "SOURCE_PROVENANCE.json").write_text(json.dumps(provenance, indent=2)+"\n",
                                                              encoding="utf-8")
