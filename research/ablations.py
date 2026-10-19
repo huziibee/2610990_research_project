@@ -55,3 +55,27 @@ def predict_context_ablation(backend, model_input, *, removal, system="S1", seed
     result = ResearchSystem(backend, verified_capability_catalog=verified_capability_catalog).predict(
         prepared, system=system, seed=seed)
     return assert_no_withheld_evidence(result, removal)
+
+class _WithoutDependencyConsistency(ResearchSystem):
+    """Only suppress relational contradiction checks; keep schema and evidence."""
+
+    def _validate(self, task, model_input, catalog):
+        from research.task_schema import validate_task
+        return validate_task(task, model_input, capability_catalog=catalog,
+                             check_dependency_consistency=False)
+
+
+def predict_dependency_consistency_ablation(backend, model_input, *, system="S1", seed=17,
+                                            verified_capability_catalog=None):
+    """Engineering-only post-processor ablation with unchanged prompts/call budgets.
+
+    An invalid relation that survives this guard is NOT a correct task; later
+    independent semantic evaluation must explicitly penalize it. This function
+    neither executes benchmark inputs nor modifies the frozen S0/S1 runner.
+    """
+    if system not in ("S0", "S1"):
+        raise ValueError("Dependency check ablation accepts only locked main systems")
+    clean = validate_model_input(model_input)
+    return _WithoutDependencyConsistency(
+        backend, verified_capability_catalog=verified_capability_catalog
+    ).predict(clean, system=system, seed=seed)
