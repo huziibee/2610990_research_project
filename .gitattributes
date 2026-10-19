@@ -1,0 +1,11 @@
+# Preserve byte-for-byte release fingerprints across Linux and Windows clones.
+# Git checkout attributes affect worktree line endings, not frozen source blobs.
+Data/** text eol=lf
+Data/archive/*.zip -text
+# Six historical release members were fingerprinted with CRLF endings.
+Data/DATASET_METADATA.json text eol=crlf
+Data/README.md text eol=crlf
+Data/audit/ID_CROSSWALK_100.csv text eol=crlf
+Data/audit/RELEASE_1_0_1_COUNT_DEFINITION.json text eol=crlf
+Data/docs/RELEASE_NOTES.md text eol=crlf
+Data/verify_package.py text eol=crlf
