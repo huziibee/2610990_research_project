@@ -74,6 +74,12 @@ class ClaraDiagnosticTests(unittest.TestCase):
         with self.assertRaises(ValueError):
             verify_catalog_evidence(CASE, wrapper, review)
 
+    def test_catalog_attestation_cannot_be_attached_to_unrelated_preparer(self):
+        wrapper, review = verified()
+        wrapper["verified_by"] = "unrelated_actor"
+        with self.assertRaises(ValueError):
+            diagnose_uncertainty(task(), CASE, catalog_wrapper=wrapper, catalog_review=review)
+
     def test_self_review_or_unmatched_catalog_quote_rejected(self):
         for mode in ("same", "quote", "notes"):
             wrapper, review = verified()
