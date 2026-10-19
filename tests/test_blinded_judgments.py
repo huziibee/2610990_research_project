@@ -44,6 +44,14 @@ class BlindedJudgmentTests(unittest.TestCase):
         self.assertTrue(row["initial_clarification_appropriate"])
         self.assertNotIn("system", row)
 
+    def test_unattested_agreement_cannot_be_fed_to_final_semantic_scorer(self):
+        from research.semantic_metrics import score_semantics
+        report = combine_independent_reviews(self.link, self.review("human-one"), self.review("human-two"))
+        with self.assertRaises(ValueError):
+            score_semantics(self.pred, report["judgments"],
+                            {"SYNTHETIC-001": {"revision": 1, "sha256": "a" * 64,
+                                               "branches": ["primary"]}}, [17])
+
     def test_disagreement_never_generates_scoreable_row(self):
         a, b = self.review("human-one"), self.review("human-two")
         b[0]["fields"]["goal"] = False
