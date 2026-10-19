@@ -9,14 +9,14 @@ from research.reference_schema import reference_template
 from tools.review_author_batch import approve_batch, preflight, _hash, _html_page
 
 
-def task(ready, destination="shelf A"):
+def task(ready, destination="shelf A", branch=False):
     actions=[{"action_id":"a1","capability_id":"move",
               "arguments":{"object":{"type":"object","value":"blue cup","evidence":["scene"]}},
               "constraints":[]}]
     if ready:
         actions[0]["arguments"]["destination"]={
             "type":"location","value":destination,
-            "evidence":["dialogue/0"] if destination=="shelf A" else ["instruction"]}
+            "evidence":["dialogue/0"] if branch else ["instruction"]}
     return {"intended_goal":"Move the blue cup to shelf A",
             "actions":actions,
             "unresolved":[] if ready else [{"field":"destination","reason":"Not provided","critical":True}],
@@ -65,7 +65,7 @@ class AuthorBatchTest(unittest.TestCase):
                            hypothetical_answer_branches=[{
                                "branch_id":"answer-a","question":"Where should the cup go?",
                                "field":"destination","answer":"shelf A","simulated":True,
-                               "reference_task":task(True),"evidence_claims":claims(True,True)}])
+                               "reference_task":task(True,branch=True),"evidence_claims":claims(True,True)}])
             else:
                 ref.update(reference_task=task(True,"shelf A"),critical_unknowns=[],
                            evidence_claims=claims(True),
