@@ -186,7 +186,7 @@ def run_ablation_pass(root=ROOT, *, bundle=None, output=None, execute=False):
         "input_manifest": root / "research_data/MANIFEST.json",
         "main_schedule": root / "protocol/run_schedule_1000.jsonl",
         "ablation_plan": root / "protocol/ablation_plan_v1.json",
-        "ablation_schedule": root / "protocol/ablation_schedule_2000.jsonl",
+        "ablation_schedule": root / "protocol/ablation_schedule_2500.jsonl",
     }
     if bundle is not None:
         bundle = Path(bundle).resolve()
