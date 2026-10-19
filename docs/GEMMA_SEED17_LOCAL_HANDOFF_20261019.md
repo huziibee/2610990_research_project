@@ -46,7 +46,7 @@ The new gate requires:
 
 Documentary signer/reviewer fields and file hashes are not represented as externally authenticated identities or authenticated model-review logs. No people, signatures, approvals or review logs were fabricated.
 
-Earlier S1 initial live evidence exists at `runs/development/20261019T193654Z_9ba00626`. S0 and multi-turn Gemma live checks remain unresolved. No new live calls were made during this development pass: quota availability was not established, and the prior attempts had repeated provider errors. The Qwen cluster attempt is separate and cannot satisfy Gemma readiness.
+Earlier S1 initial live evidence exists at `runs/development/20261019T193654Z_9ba00626`. Following explicit user authorization, current-code live synthetic calls were run; see the live follow-up below. The Qwen cluster attempt is separate and cannot satisfy Gemma readiness.
 
 ## Safe verification and evidence
 
@@ -110,3 +110,11 @@ Efficiency reports deduplicate shared initial calls, retain raw input/output/ava
 - Preserved earlier local work: Gemma helper/backend/development runner, relevant budget tests, protocol amendment/status notes, Qwen smoke source and its failure note. No cluster logs, protected logs, private reference exports, `.env` or keys are committed.
 
 Scientific results remain **NOT_COMPUTED**. Final evaluation and ablations were not launched.
+
+## Authorized live follow-up
+
+Six live provider requests completed using `gemma-4-26b-a4b-it`, minimal thinking and `includeThoughts: false`, without HTTP errors or automatic retries. The first smoke (`runs/development/gemma_seed17_live_20261019_01`) produced valid S0 and S1 initial tasks from three calls. Both asked questions outside the frozen synthetic question whitelist; the oracle released no answer and stopped with `ANSWER_UNAVAILABLE`. Initial smoke success does not establish semantic correctness or multi-turn success.
+
+A separate ordered-question synthetic diagnostic (`runs/development/gemma_seed17_live_20261019_ordered_diagnostic_01`) declared its changed visible scenario and accepted question variants before sending its three requests. All three provider responses passed provider-output parsing, but strict task validation rejected S0 (`before requires whole action references`) and S1 (`Argument type/value mismatch`). Those errors remain recorded; neither failed prediction was retried. This interface diagnostic is distinguished from the uncoached smoke and provides no independent review evidence. No protected input was used in either run.
+
+The updated candidate bundle and gate report are under `runs/readiness/gemma_seed17_live_20261019/`. Readiness is **20 passed / 11 blocked**, `ready=false`, `protected_execution_authorized=false`, `benchmark_executed=false`. Both initial live smoke gates now pass. Successful live two-answer S0/S1 trajectories, scientific reference/matching/subgroup review, reviewed scoring fixtures, final freeze and authorization remain outstanding. Raw requests, receipts, calls and sealed archives are retained locally and ignored by Git. Token totals across all six requests: 2,068 input, 2,214 output, 4,282 total; reasoning-token counts were unavailable. Full per-request latency and usage are in `live_summary.json`. These are synthetic development measurements, not main-study results.
