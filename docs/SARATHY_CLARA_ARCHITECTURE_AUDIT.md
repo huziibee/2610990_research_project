@@ -68,3 +68,11 @@ py -m unittest discover -s tests -v
 ```
 
 Remaining before scientific use: actual independent verification of 100 task references and 26 branch tasks; genuine human referent alignment and catalog authentication; test-driven correction of any full-suite failures; live synthetic Gemini smoke evidence; final signed/fingerprinted freeze. These modules do not bypass any requirement.
+
+## 6. Verified CI execution (2026-10-19)
+
+- [Literature architecture synthetic tests](https://github.com/huziibee/2610990_research_project/actions/runs/39288924627): **30 / 30 pass**, covering three new test modules.
+- Same run, full `unittest discover`: **206 tests, 6 failures + 2 errors**. All eight failures/errors concern existing `Data/DATASET_METADATA.json` source-fingerprint disagreement and secondary assertions that expected later validation steps; unrelated tests completed successfully.
+- [Existing research regression CI](https://github.com/huziibee/2610990_research_project/actions/runs/39288924130): blocked by `Data/verify_package.py` before executing tests. Log: `AssertionError: DATASET_METADATA.json`.
+- This is a **known unresolved repository integrity blocker**. The frozen dataset, source manifest and original verifier were not edited. A separate, explicitly reviewed data release amendment or original-file restoration is required to resolve that mismatch; this branch must not silently replace the integrity baseline.
+- Until source integrity is restored and the full CI passes, this is a **draft branch** and must not merge into main or authorize benchmark inference.
