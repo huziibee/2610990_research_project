@@ -69,10 +69,18 @@ py -m unittest discover -s tests -v
 
 Remaining before scientific use: actual independent verification of 100 task references and 26 branch tasks; genuine human referent alignment and catalog authentication; test-driven correction of any full-suite failures; live synthetic Gemini smoke evidence; final signed/fingerprinted freeze. These modules do not bypass any requirement.
 
-## 6. Verified CI execution (2026-10-19)
+## 6. Verified integrated CI execution (2026-10-19)
 
-- [Literature architecture synthetic tests](https://github.com/huziibee/2610990_research_project/actions/runs/39288924627): **30 / 30 pass**, covering three new test modules.
-- Same run, full `unittest discover`: **206 tests, 6 failures + 2 errors**. All eight failures/errors concern existing `Data/DATASET_METADATA.json` source-fingerprint disagreement and secondary assertions that expected later validation steps; unrelated tests completed successfully.
-- [Existing research regression CI](https://github.com/huziibee/2610990_research_project/actions/runs/39288924130): blocked by `Data/verify_package.py` before executing tests. Log: `AssertionError: DATASET_METADATA.json`.
-- This is a **known unresolved repository integrity blocker**. The frozen dataset, source manifest and original verifier were not edited. A separate, explicitly reviewed data release amendment or original-file restoration is required to resolve that mismatch; this branch must not silently replace the integrity baseline.
-- Until source integrity is restored and the full CI passes, this is a **draft branch** and must not merge into main or authorize benchmark inference.
+- **Source-integrity verifier: PASS** on the integrated branch at commit `d2a92079423e0555ee081c8fcae0d8c2e0ac0dbe`. The latest literature-evaluation base contributes its source-checkout `.gitattributes` rules so the six historical CRLF release members retain their originally fingerprinted bytes in GitHub Actions. No protected dataset blob or primary evaluation rule was modified.
+- **Full repository synthetic tests: 219/219 PASS**: [Research regression checks](https://github.com/huziibee/2610990_research_project/actions/runs/39290889643).
+- **Isolated Sarathy/CLARA tests: 32/32 PASS**, and the same full 219-test suite also passed: [Literature architecture tests](https://github.com/huziibee/2610990_research_project/actions/runs/39290889669).
+- Prior 206-test failures on the literature-architecture branch alone were caused by checkout line-ending mismatches with the frozen metadata manifest. These are superseded by the successful combined-branch run; do not claim the old failing checkout represented changed scientific data.
+- Tests verify deterministic behavior only. They do not establish external human identity, referent truth, capability feasibility, or end-to-end semantic correctness.
+
+## 7. Manuscript integration
+
+The updated latest `Report/Cooccurring_Ambiguity_Paper_Gemini_Working.tex` was taken from the newer `research/literature-evaluation-20261019` manuscript, preserving its three evaluation tiers, pending-results tables, visualizations and bibliography. The architecture additions are now explained in a new methodology subsection, together with corrected task-readiness limitations, the CLARA background distinction, and a link to this audit. The integrated branch has both parent histories; its literature evaluation modules and the architecture diagnostics now coexist.
+
+The LaTeX source passed structural delimiter/environment and citation-key checks, but a typeset PDF has **not** yet been compiled or visually reviewed. Retain the existing manuscript warning about its uncompiled status.
+
+The source and code are ready for review; scientific evaluation remains blocked pending independently approved references, clarification branches, human judgments, live Gemini evidence and a frozen protocol.
