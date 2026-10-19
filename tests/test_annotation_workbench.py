@@ -11,6 +11,7 @@ from urllib.request import Request, urlopen
 import unittest
 
 from research.annotation_workbench import draft_envelope
+from tests.test_reference_schema import example
 from tools.serve_annotations import make_handler
 
 
@@ -19,9 +20,9 @@ class FakeStore:
         self.root = root
         self.events = []
         self.state = {"record_id": "SYNTHETIC-771", "source": {
-            "record_id": "SYNTHETIC-771", "command": 'Move <blue> box & say "hello"',
-            "scene_context": "Blue box on table", "dialogue_history": ["put it there"],
-            "capability_context": "Move(object, location)"},
+            "record_id": "SYNTHETIC-771", "command": "Move the blue cup to shelf A.",
+            "scene_context": "A blue cup is on the desk. <untrusted>", "dialogue_history": [],
+            "capability_context": "move(object, destination) moves an object to a location."},
             "approved_route": {"record_id": "SYNTHETIC-771", "terminal_strategy": "execute",
                                "strategy_sequence": ["execute"]},
             "status": "WAITING_FOR_PREPARATION", "reference": None, "revision": 0, "head": "first"}
@@ -86,16 +87,16 @@ class WorkbenchTests(unittest.TestCase):
 
     def valid_json(self):
         envelope = draft_envelope(self.store.show("SYNTHETIC-771"))
-        envelope["reference"]["reference_task"]["intended_goal"] = "Move blue box"
-        envelope["reference"]["actions"] = envelope["reference"].get("actions", [])
-        # Validation of the full reference is exercised in test_reference_schema.
+        reference, _, _ = example()
+        reference["record_id"] = "SYNTHETIC-771"
+        envelope["reference"] = reference
         return json.dumps(envelope)
 
     def test_html_escapes_source_text(self):
         status, body = self.url("/case/SYNTHETIC-771")
         self.assertEqual(status, 200)
-        self.assertIn("&lt;blue&gt;", body)
-        self.assertNotIn("Move <blue>", body)
+        self.assertIn("&lt;untrusted&gt;", body)
+        self.assertNotIn("<untrusted>", body)
         self.assertIn("UNVERIFIED_HUMAN_EDITABLE_DRAFT", body)
         self.assertIn("/latest", body)
 
@@ -106,13 +107,16 @@ class WorkbenchTests(unittest.TestCase):
         self.assertFalse(self.store.events)
         self.assertTrue((self.root / "drafts/SYNTHETIC-771.json").exists())
 
-    def test_submit_invalid_reference_never_approves(self):
+    def test_submit_requires_actor_and_never_approves(self):
         value = self.valid_json()
         self.assertEqual(self.url("/case/SYNTHETIC-771", data=value, action="submit")[0], 422)
-        # The deliberately incomplete synthetic skeleton is not a valid task.
-        self.assertEqual(self.url("/case/SYNTHETIC-771", data=value, actor="real-preparer",
-                                  action="submit")[0], 422)
-        self.assertFalse(self.store.events)
+        status, body = self.url("/case/SYNTHETIC-771", data=value, actor="real-preparer", action="submit")
+        self.assertEqual(status, 200)
+        self.assertIn("Not approved or gold", body)
+        self.assertEqual(self.store.events, [("real-preparer", "human")])
+        self.assertEqual(self.store.state["status"], "CANDIDATE")
+        self.assertEqual(self.url("/case/SYNTHETIC-771", data=value, actor="real-preparer", action="submit")[0], 422)
+        self.assertEqual(self.url("/case/SYNTHETIC-771/latest")[0], 200)
 
     def test_csrf_and_origin_rejected(self):
         self.assertEqual(self.url("/case/SYNTHETIC-771", data=self.valid_json(), override_token="forged")[0], 403)
