@@ -4,6 +4,55 @@
 
 This is a **separately labelled one-human, model-assisted author-approval track**. It does not impersonate or manufacture another person. It never describes itself as independently human verified and does **not** silently pass the pre-existing two-human verification gate. The supervisor-approved protocol variant, if adopted, must be clearly documented in the manuscript rather than relabelling this as an independently reviewed gold release. Earlier claims of two-model adjudication require their actual saved evidence (model identities, blinded outputs, timestamps, disagreements and resolutions) to be added before that history can be asserted as verified.
 
+## Historical annotation model labels: author correction
+
+The original frozen \`research_data/references/native_annotations_100.jsonl\`
+contains **57 pre-existing Claude model labels** (56 Sonnet, one Opus),
+**42 pre-existing GLM-5.2-high labels**, and a single missing annotator-B
+model/era on **CA-0100**. The author explicitly requested that all pre-existing
+nonblank labels stay unchanged and the single omitted model identity be
+recorded as **GLM**.
+
+The exact author-supplied correction is in
+\`protocol/amendments/CA-0100_annotator_b_glm_20261019.json\`.
+Because the historical native annotation file is SHA-256-pinned, the project
+must **not** edit that file or quietly regenerate its manifest. Instead, run:
+
+~~~powershell
+py tools/export_review_provenance.py --check
+py tools/export_review_provenance.py
+~~~
+
+This creates the additive corrected view:
+\`runs/historical_review_provenance/annotator_b_author_corrected_100.jsonl\`
+plus a checksum and correction manifest. Existing \`annotator_b_model\`
+values survive unchanged. CA-0100 alone gains \`annotator_b_model: "glm"\`
+and \`annotator_b_era: "glm_era"\`. The exact GLM version is not claimed:
+the author supplied the family name only. Its historical
+\`provisional_not_gold\` status, synthetic origin and gates remain unchanged.
+The exported view is **not** an authenticated model inference log.
+
+The author's *separate* report of a Grok+GLM review across all 100 semantic
+reference proposals is recorded in the private semantic-reference export,
+not retrospectively substituted for Claude/GLM historical labels. Use
+\`--report-two-model-adjudication --reported-review-models Grok GLM\` on the
+author sign-off command to preserve that distinction.
+
+### Approval without a downloaded JSON file
+
+The missing Downloads-file error can be bypassed using the author's explicit
+declaration directly:
+
+~~~powershell
+git fetch origin
+git switch --detach origin/main
+py -m tools.review_author_batch --workspace runs/human_review_20261019 --check
+py -m tools.review_author_batch --workspace runs/human_review_20261019 --approve --actor "Mohammed Bangie" --notes "I compared all 100 references against the source text and accept the drafts and clarification branches as my annotated decisions" --report-two-model-adjudication --reported-review-models Grok GLM
+~~~
+
+The command records the local 100-case ledger only when all drafts validate,
+and never changes model-origin or source freeze metadata.
+
 ## Windows direct-execution fix and provenance distinctions
 
 \`py tools/review_author_batch.py ...\` now adds the repository root to its
