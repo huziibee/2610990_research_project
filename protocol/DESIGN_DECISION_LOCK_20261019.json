@@ -1,0 +1,119 @@
+{
+  "allow_held_out_predictions": false,
+  "config_path": "protocol/gemini_protocol_v1.json",
+  "config_sha256": "db3ab2658e186b270b98de1ab0f5f9105598e3440b615365b4d2fe9f3f263e17",
+  "dataset_freeze_sha256": "6a554d4e2163e00ec6e1622bf70fdc6cd0e6457039949d74e2228012e5d03897",
+  "date": "2026-10-19",
+  "missing_artifact_explanation": "See protocol/FREEZE_STATUS.md; absent semantic references/simulation/subgroups/scoring/live-access evidence cannot be manufactured by changing a status label.",
+  "settled": {
+    "ablation_removals": [
+      "goal_first",
+      "structured_grounding",
+      "scene",
+      "dependency_checking",
+      "dialogue"
+    ],
+    "candidate_generation_config": {
+      "candidateCount": 1,
+      "maxOutputTokens": 8192,
+      "responseMimeType": "application/json",
+      "temperature": 0.7,
+      "thinkingConfig": {
+        "includeThoughts": false,
+        "thinkingBudget": 2048
+      },
+      "topP": 0.95
+    },
+    "model": {
+      "access_verified": false,
+      "api": "Gemini Developer API generateContent v1beta",
+      "immutable_revision": null,
+      "provider_precision_quantization_gpu": "NOT_EXPOSED",
+      "record_response_modelVersion": true,
+      "requested_id": "gemini-2.5-flash-lite",
+      "second_model": null
+    },
+    "primary_endpoint": {
+      "initial_policy_correctness_is_separate": true,
+      "name": "complete_task_semantic_correctness_after_up_to_five_simulated_clarification_turns",
+      "question_only_credit": false,
+      "requires_independently_verified_task_reference": true,
+      "requires_verified_simulated_answer_coverage": true,
+      "route_only_credit": false,
+      "status": "NOT_COMPUTED"
+    },
+    "runs": {
+      "concurrency": 1,
+      "main_full_runs": 10,
+      "main_system_count": 2,
+      "max_clarification_turns": 5,
+      "max_transport_retries": 0,
+      "request_timeout_seconds": 90,
+      "respect_retry_after": false,
+      "retry_malformed_output": false,
+      "retry_policy_status": "implemented_development_candidate_not_frozen_evaluation_policy",
+      "retry_wait_seconds": [],
+      "seed_guarantees_determinism": false,
+      "seeds": [
+        17,
+        29,
+        43,
+        71,
+        101
+      ],
+      "warmup_non_test_cases_per_configuration": 3
+    },
+    "statistics": {
+      "average_runs_within_case_first": true,
+      "average_simulation_branches_equally_within_case": true,
+      "bootstrap_replicates": 10000,
+      "bootstrap_seed": 20261019,
+      "confidence_level": 0.95,
+      "interval_method": "paired_case_percentile_bootstrap",
+      "multiple_testing": "secondary_and_subgroup_intervals_exploratory",
+      "primary_comparison": "S1-S0",
+      "secondary_comparison_if_S2_retained": "S2-S1",
+      "subgroups": {
+        "dialogue_relevance_verified_ids": null,
+        "explicit_dependency_verified_ids": null
+      },
+      "unit": "paired_case"
+    },
+    "systems": {
+      "S0": {
+        "initial_interpretation_calls": 1,
+        "per_call_maxOutputTokens": 8192,
+        "per_call_thinkingBudget": 2048,
+        "required": true,
+        "thinking": true
+      },
+      "S1": {
+        "explicit_goal_grounding_dependencies": true,
+        "initial_interpretation_calls": 2,
+        "per_call_maxOutputTokens": 4096,
+        "per_call_thinkingBudget": 1024,
+        "required": true,
+        "thinking": true
+      },
+      "S2": {
+        "adjudication_maxOutputTokens": 8192,
+        "adjudication_thinkingBudget": 2048,
+        "adjudication_trigger": "exact_structured_dictionary_inequality_not_semantic_comparator",
+        "calls_per_interpretation_pipeline": 2,
+        "independent_interpretation_pipelines": 2,
+        "independent_interpretations": 2,
+        "max_adjudication_calls": 1,
+        "max_total_calls_per_turn": 5,
+        "optional_activation_requires_amendment": true,
+        "required": false,
+        "retained": false
+      }
+    }
+  },
+  "status": "DESIGN_DECISIONS_LOCKED_NOT_EVALUATION_READY",
+  "user_decisions": [
+    "All 100 current release inputs are source records",
+    "S0/S1 main; S2 optional",
+    "Gemini 2.5 Flash-Lite replaces Qwen3"
+  ]
+}

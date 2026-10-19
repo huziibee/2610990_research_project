@@ -1,0 +1,24 @@
+{
+  "document_type": "UNVERIFIED_HUMAN_EDITABLE_DRAFT",
+  "record_id": "CA-0026",
+  "expected_head": "23c58e593e8e0175e95469c2c583413d7f508f50749ab8a4b45b07588dc5bfc6",
+  "reference": {
+    "record_id": "CA-0026",
+    "author_approved_route": "execute",
+    "author_approved_strategy_sequence": [
+      "execute"
+    ],
+    "reference_task": null,
+    "acceptable_semantic_alternatives": [],
+    "critical_unknowns": null,
+    "hypothetical_answer_branches": [],
+    "evidence_claims": [],
+    "dialogue_relevant": null,
+    "explicit_linked_dependencies": null,
+    "verification_evidence": null,
+    "verified_capability_catalog": null,
+    "reference_preparer": "[Waiting for semantic reference preparer]",
+    "independent_verifier": "[Waiting for independent verifier]",
+    "semantic_reference_status": "WAITING_FOR_REVIEW"
+  }
+}

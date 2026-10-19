@@ -1,0 +1,59 @@
+{
+  "author_approval_scope": [
+    "terminal_strategy",
+    "strategy_sequence",
+    "synthetic_case_inclusion_for_CA-0100",
+    "CA-0025_capability_attestation"
+  ],
+  "complete_task_semantic_gold_available": false,
+  "dataset_id": "co_occurring_ambiguity_dataset",
+  "dataset_version": "1.0.1",
+  "derived_files": {
+    "model_inputs/evaluation_100.jsonl": {
+      "record_count": 100,
+      "sha256": "b2b13a85bffbf2c632029fbbc20f5201fa0e57390bfcbff4f2107d345a3fb1a5"
+    },
+    "references/annotation_review_history_100.jsonl": {
+      "record_count": 100,
+      "sha256": "55636f416c6d0b35c46f11ac40a7eecbef3ba476481c362aedc4c3c42e6ddb88"
+    },
+    "references/author_approved_routes_100.jsonl": {
+      "record_count": 100,
+      "sha256": "d3e0e61ecf36b30d7d2c593ffc57d0d70415cdeb44fe9afc5bcf369df993c5b7"
+    },
+    "references/native_annotations_100.jsonl": {
+      "record_count": 100,
+      "sha256": "f94305a8f3d4be625630777cb7584310d1734d85df949a522b8362d4f5524b62"
+    }
+  },
+  "development_split_created": false,
+  "evaluation_only": true,
+  "human_review_all_structured_fields": false,
+  "hypothetical_clarification_answers_available": false,
+  "origin_counts": {
+    "assistant_authored_synthetic": 1,
+    "frozen_pilot120_subset": 99
+  },
+  "record_count": 100,
+  "source_files": {
+    "DATASET_METADATA.json": "fb8f518c95926fa6aa30e537c91a51ecd6834cc3f7695ad80cff5432602b4319",
+    "MANIFEST.json": "feb92c6b8022f33ce4f5903a90ee8cf92342a6af5dc7304691c61d06a94cc2e7",
+    "README.md": "85b9826ba8c6a6ac324562ca8fe9940601e1f17863cfac1948f32bec6f9185e9",
+    "archive/Pilot_100_Author_Human_Adjudicated_Routes_v6.zip": "cf5a8b4834b55a008ee32456b461121af3fed3dcddea95d91fde79fe2c6390db",
+    "audit/ALL_100_AUTHOR_REVIEW_STATUS.jsonl": "b74d7a53b954568c1fcff3fec05981bf3585d7fb3a9f9b8b7e44a0e4ba54a6a5",
+    "audit/ALL_100_EXPLICIT_APPROVALS.jsonl": "561a99947678c4122450528f905bd861644b201aa78de46fd10d99b976cc4e8a",
+    "audit/CA-0025_AUTHOR_CAPABILITY_ATTESTATION.json": "6fc02843bfa918539e58f1e306a661b3a873589cd214680db32c64ed3b813cc2",
+    "audit/ID_CROSSWALK_100.csv": "3ffb62f09ad4a86bf78153e2b179d6af1ddbb36b0aca66c0e8209d22058008d7",
+    "audit/ID_CROSSWALK_100.jsonl": "6aff659cfcf003cea5c80188b1fd11c89a58d2c23a863a2585a1ca4c3b75bec1",
+    "audit/RELEASE_1_0_1_COUNT_DEFINITION.json": "22da31bdbc417d620f3e3b9648949866b6aecc05210d164461b97e000d77bd1c",
+    "audit/ROUTE_CORRECTION_HISTORY.json": "eaa3f43e7d1871aacbd75422cbbc9f384e79d7a60139f69e267755fcdbf32d60",
+    "data/author_approved_route_gold_100.jsonl": "75056271e024869ee03c8f3faf772daa031641522ecbc46bdbcc2072d41843b8",
+    "data/gold_100_native_schema.jsonl": "e42c5baaee95efbfff37bd2d1276cbf19a0841d4af0bf37ecf24620af8a8a3d7",
+    "data/gold_100_with_author_review.jsonl": "ca62589076dda8f7fbeebac4dd2ff20e5d88099bd78a5fb09b2e0e727a3c4cad",
+    "data/source_100.jsonl": "f0ba3edbc0d8692c77fdd6050b0a985d33b92af078d490672c0e69829995f621",
+    "docs/RELEASE_NOTES.md": "5ccdf060fd956baa4cbe28f4fdf5341c3aa9f1dbb5646ac8adfb1ec7365229d7",
+    "verify_package.py": "106bc786d64cb5dbf89beea8d298eec39a7982d6b59ce25c5e452bbe5d30a2b6"
+  },
+  "source_records": 100,
+  "source_records_definition": "All 100 input records in this release, including records of synthetic historical origin. Historical origin_counts partition the same 100 records, not additional cases."
+}

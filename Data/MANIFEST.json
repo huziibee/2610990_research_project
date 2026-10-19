@@ -1,18 +1,18 @@
 {
   "dataset_id": "co_occurring_ambiguity_dataset",
   "dataset_name": "Co-occurring Ambiguity Dataset",
-  "dataset_version": "1.0.0",
+  "dataset_version": "1.0.1",
   "date": "2026-10-19",
   "files": [
     {
       "path": "DATASET_METADATA.json",
-      "sha256": "9e1018b5396a555117bb33915825ae2d79e6ade27ba1fb8590893058a01868ef",
-      "size_bytes": 1450
+      "sha256": "fb8f518c95926fa6aa30e537c91a51ecd6834cc3f7695ad80cff5432602b4319",
+      "size_bytes": 1674
     },
     {
       "path": "README.md",
-      "sha256": "f3dc399d9a594a91f0071046ea20c8f161d9b43b2772c893f8af5a801b07f4f1",
-      "size_bytes": 3832
+      "sha256": "85b9826ba8c6a6ac324562ca8fe9940601e1f17863cfac1948f32bec6f9185e9",
+      "size_bytes": 4375
     },
     {
       "path": "archive/Pilot_100_Author_Human_Adjudicated_Routes_v6.zip",
@@ -45,6 +45,11 @@
       "size_bytes": 13107
     },
     {
+      "path": "audit/RELEASE_1_0_1_COUNT_DEFINITION.json",
+      "sha256": "22da31bdbc417d620f3e3b9648949866b6aecc05210d164461b97e000d77bd1c",
+      "size_bytes": 1017
+    },
+    {
       "path": "audit/ROUTE_CORRECTION_HISTORY.json",
       "sha256": "eaa3f43e7d1871aacbd75422cbbc9f384e79d7a60139f69e267755fcdbf32d60",
       "size_bytes": 916
@@ -71,13 +76,13 @@
     },
     {
       "path": "docs/RELEASE_NOTES.md",
-      "sha256": "74b4247c4a99f06b3ca9f05fe5204fec068e397bf9d6bdba60533a7cc268b5a5",
-      "size_bytes": 886
+      "sha256": "5ccdf060fd956baa4cbe28f4fdf5341c3aa9f1dbb5646ac8adfb1ec7365229d7",
+      "size_bytes": 1490
     },
     {
       "path": "verify_package.py",
-      "sha256": "21f2362653ea0fab27f19117d71c1399c2792ff04e03f753c4a19bbdc0a8b7ce",
-      "size_bytes": 4493
+      "sha256": "106bc786d64cb5dbf89beea8d298eec39a7982d6b59ce25c5e452bbe5d30a2b6",
+      "size_bytes": 4890
     }
   ],
   "historical_annotation_fields_independently_human_adjudicated": false,
@@ -98,6 +103,8 @@
     "pilot120_subset": 99,
     "synthetic_case_outside_pilot120": 1
   },
+  "source_records": 100,
+  "source_records_definition": "All 100 input records in this release, including records of synthetic historical origin. Historical origin_counts partition the same 100 records, not additional cases.",
   "source_text_changes_since_v6": 0,
   "source_v6_archive_path": "archive/Pilot_100_Author_Human_Adjudicated_Routes_v6.zip",
   "source_v6_archive_sha256": "cf5a8b4834b55a008ee32456b461121af3fed3dcddea95d91fde79fe2c6390db",

@@ -1,0 +1,147 @@
+{
+  "protocol_version": "1.0.0-candidate",
+  "created": "2026-10-19",
+  "status": "NOT_FROZEN",
+  "allow_held_out_predictions": false,
+  "dataset": {
+    "id": "co_occurring_ambiguity_dataset",
+    "version": "1.0.1",
+    "records": 100,
+    "route_counts": {
+      "execute": 74,
+      "clarify": 26
+    },
+    "source_records": 100,
+    "synthetic_records": 1,
+    "evaluation_only": true,
+    "semantic_reference_coverage": null,
+    "source_path": "Data/data/source_100.jsonl",
+    "source_sha256": "f0ba3edbc0d8692c77fdd6050b0a985d33b92af078d490672c0e69829995f621",
+    "route_reference_path": "Data/data/author_approved_route_gold_100.jsonl",
+    "route_reference_sha256": "75056271e024869ee03c8f3faf772daa031641522ecbc46bdbcc2072d41843b8",
+    "source_records_definition": "Number of model-input records in the current release, including its approved synthetic record.",
+    "origin_counts": {
+      "frozen_pilot120_subset": 99,
+      "assistant_authored_synthetic": 1
+    },
+    "synthetic_records_definition": "Subset of source_records with synthetic origin; not added to or excluded from the 100-case evaluation.",
+    "primary_evaluation_records": 100,
+    "historical_origin_sensitivity": "optional_descriptive_only_not_a_second_primary_dataset"
+  },
+  "model": {
+    "requested_id": "gemini-2.5-flash-lite",
+    "api": "Gemini Developer API generateContent v1beta",
+    "immutable_revision": null,
+    "record_response_modelVersion": true,
+    "access_verified": false,
+    "second_model": null,
+    "provider_precision_quantization_gpu": "NOT_EXPOSED"
+  },
+  "candidate_generation_config": {
+    "temperature": 0.7,
+    "topP": 0.95,
+    "candidateCount": 1,
+    "maxOutputTokens": 8192,
+    "responseMimeType": "application/json",
+    "thinkingConfig": {
+      "thinkingBudget": 2048,
+      "includeThoughts": false
+    }
+  },
+  "runs": {
+    "seeds": [
+      17,
+      29,
+      43,
+      71,
+      101
+    ],
+    "seed_guarantees_determinism": false,
+    "concurrency": 1,
+    "warmup_non_test_cases_per_configuration": 3,
+    "max_clarification_turns": 5,
+    "max_transport_retries": 0,
+    "retry_wait_seconds": [],
+    "respect_retry_after": false,
+    "request_timeout_seconds": 90,
+    "retry_malformed_output": false,
+    "main_system_count": 2,
+    "main_full_runs": 10,
+    "retry_policy_status": "implemented_development_candidate_not_frozen_evaluation_policy"
+  },
+  "systems": {
+    "S0": {
+      "required": true,
+      "initial_interpretation_calls": 1,
+      "thinking": true,
+      "per_call_maxOutputTokens": 8192,
+      "per_call_thinkingBudget": 2048
+    },
+    "S1": {
+      "required": true,
+      "initial_interpretation_calls": 2,
+      "thinking": true,
+      "explicit_goal_grounding_dependencies": true,
+      "per_call_maxOutputTokens": 4096,
+      "per_call_thinkingBudget": 1024
+    },
+    "S2": {
+      "required": false,
+      "retained": false,
+      "independent_interpretations": 2,
+      "max_adjudication_calls": 1,
+      "optional_activation_requires_amendment": true,
+      "independent_interpretation_pipelines": 2,
+      "calls_per_interpretation_pipeline": 2,
+      "max_total_calls_per_turn": 5,
+      "adjudication_maxOutputTokens": 8192,
+      "adjudication_thinkingBudget": 2048,
+      "adjudication_trigger": "exact_structured_dictionary_inequality_not_semantic_comparator"
+    }
+  },
+  "ablation_removals": [
+    "goal_first",
+    "structured_grounding",
+    "scene",
+    "dependency_checking",
+    "dialogue"
+  ],
+  "primary_endpoint": {
+    "name": "complete_task_semantic_correctness_after_up_to_five_simulated_clarification_turns",
+    "status": "NOT_COMPUTED",
+    "requires_independently_verified_task_reference": true,
+    "requires_verified_simulated_answer_coverage": true,
+    "route_only_credit": false,
+    "question_only_credit": false,
+    "initial_policy_correctness_is_separate": true
+  },
+  "statistics": {
+    "primary_comparison": "S1-S0",
+    "secondary_comparison_if_S2_retained": "S2-S1",
+    "unit": "paired_case",
+    "average_runs_within_case_first": true,
+    "average_simulation_branches_equally_within_case": true,
+    "bootstrap_replicates": 10000,
+    "bootstrap_seed": 20261019,
+    "confidence_level": 0.95,
+    "interval_method": "paired_case_percentile_bootstrap",
+    "subgroups": {
+      "dialogue_relevance_verified_ids": null,
+      "explicit_dependency_verified_ids": null
+    },
+    "multiple_testing": "secondary_and_subgroup_intervals_exploratory"
+  },
+  "freeze_gates": [
+    "clean_input_reference_separation_and_negative_leakage_test",
+    "non_evaluation_live_model_access_and_generation_smoke",
+    "independently_verified_semantic_reference_eligibility",
+    "verified_simulation_branches_answers_and_matching_rules",
+    "reviewed_semantic_scoring_rubric_and_correct_incorrect_fixtures",
+    "frozen_dialogue_dependency_and_source_origin_manifests",
+    "explicit_S2_inclusion_and_second_model_scope_decisions",
+    "prompt_schema_code_runtime_and_data_hashes_archived",
+    "documented_exposure_and_deviation_log"
+  ],
+  "budget_comparison": "summed_max_output_and_thinking_caps_matched_S0_S1; input_token_cost_and_actual_usage_measured_separately",
+  "design_decisions_status": "LOCKED_CANDIDATE_PENDING_VERIFICATION_GATES"
+}

@@ -1,3 +1,7 @@
+# Release 1.0.1: source-count terminology
+
+The current release supplies **100 source input records**. `source_records` now explicitly counts all release inputs. Historical origin metadata still records 99 previous-subset records and one synthetic-origin record within that total. The author requested the current-source count correction; this does not alter historical provenance. No source text, IDs, approved routes, strategy sequences or archive bytes changed. The previous 1.0.0 manifest is preserved in `protocol/provenance/Data_MANIFEST_v1.0.0.json` in the research workspace.
+
 # Co-occurring Ambiguity Dataset: release 1.0.0
 
 This release carries forward the **100 route and strategy-sequence decisions already explicitly approved by the author** in Pilot-100 v6. It renames the dataset and gives each active record a new sequential ID; it is **not** a fresh annotation round.

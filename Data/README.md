@@ -1,8 +1,8 @@
 # Co-occurring Ambiguity Dataset
 
-**Version:** 1.0.0 (ID-renumbering and dataset-name release)  
+**Version:** 1.0.1 (current-source count definition; records unchanged)  
 **Date:** 2026-10-19  
-**Records:** 100  
+**Source records in this release:** 100  
 **Author-approved routing:** 100/100  
 **Routes:** 74 execute, 26 clarify  
 **Evaluation-only, protected:** no training, prompt tuning, or model selection.
@@ -42,3 +42,7 @@ The author explicitly approved all 100 **terminal routes and strategy sequences*
 ## Renumbering reproducibility
 
 All six main JSONL source/gold/review/audit files had only their top-level `record_id` changed. Original text and other fields remain byte-equivalent in value after parsing; JSON serialization may differ. `audit/ID_CROSSWALK_100.csv` is the complete 100-row deterministic mapping. The v6 archive is byte-preserved.
+
+## Count definition in version 1.0.1
+
+`source_records = 100` counts every model-input record supplied by this release. Historical origin counts (99 prior frozen-subset records and one synthetic-origin record) describe those same 100 source records; they are not an exclusion or an additional case. This terminology correction changes no input text, ID, route, strategy sequence, or preserved archive. All 100 source records remain protected evaluation inputs.

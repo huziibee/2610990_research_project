@@ -1,0 +1,19 @@
+{
+  "change": "Define source_records as all 100 current-release input rows",
+  "date": "2026-10-19",
+  "historical_origin_counts": {
+    "assistant_authored_synthetic": 1,
+    "frozen_pilot120_subset": 99
+  },
+  "old_manifest_sha256": "d9cd6bb81110e4e95ac1b34f84d1ed046635b1039029d9da5454db6fc2e019f6",
+  "previous_version": "1.0.0",
+  "source_records": 100,
+  "unchanged_record_and_archive_sha256": {
+    "archive/Pilot_100_Author_Human_Adjudicated_Routes_v6.zip": "cf5a8b4834b55a008ee32456b461121af3fed3dcddea95d91fde79fe2c6390db",
+    "data/author_approved_route_gold_100.jsonl": "75056271e024869ee03c8f3faf772daa031641522ecbc46bdbcc2072d41843b8",
+    "data/gold_100_native_schema.jsonl": "e42c5baaee95efbfff37bd2d1276cbf19a0841d4af0bf37ecf24620af8a8a3d7",
+    "data/gold_100_with_author_review.jsonl": "ca62589076dda8f7fbeebac4dd2ff20e5d88099bd78a5fb09b2e0e727a3c4cad",
+    "data/source_100.jsonl": "f0ba3edbc0d8692c77fdd6050b0a985d33b92af078d490672c0e69829995f621"
+  },
+  "version": "1.0.1"
+}

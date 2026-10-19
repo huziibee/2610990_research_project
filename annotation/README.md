@@ -1,0 +1,11 @@
+# Missing semantic reference worksheet
+
+The dataset's route and strategy approvals are already complete. This worksheet does not reopen those decisions. It records the additional information needed to evaluate complete action-ready tasks rather than routing alone.
+
+Every record starts with `semantic_reference_status = WAITING_FOR_REVIEW`, null reference fields and empty alternatives/replies. These entries are **not gold**, and no goal/action answer has been invented. The worksheet is evaluator-only and is not included in model-input files. All 100 cases remain the planned primary cohort; current semantic coverage is 0 verified cases in this worksheet.
+
+For each case, a reference preparer needs to specify the intended goal, required ordered actions and typed arguments, required constraints, allowed semantic alternatives, evidence for each claim and execution-critical unknowns. For clarification cases, record explicit hypothetical answer branches and each branch's complete expected task. A question-to-field mapping must determine which limited answer may be released only after a matching question. Never release an entire hidden task as a simulated reply.
+
+An independent verifier checks every included semantic field against the four input descriptions and records reviewer identity/evidence. Missing reviewers stay `[Waiting for independent verifier]`. A valid JSON reference is insufficient: the verifier checks meaning, unsupported detail, ambiguity and capability consistency. Preserve disagreements and resolutions instead of overwriting audit history. Freeze verified coverage and branch eligibility before predictions. The existing CA-0025 capability attestation must remain distinguished from information actually provided to the model.
+
+Scoring rubric candidate: intended goal, required actions, permissible order, required arguments, constraints and evidence-supported details must all be correct. Clarification is scored separately until a supplied eligible hypothetical answer leads to a complete correct task. Missing reference coverage is `NOT_COMPUTED`, not an incorrect model prediction and not route-based semantic success. Borderline equivalents require independent review with system identity hidden.

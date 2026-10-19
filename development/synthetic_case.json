@@ -1,0 +1,7 @@
+{
+  "record_id": "SYNTHETIC-001",
+  "instruction": "Move the blue cup to shelf A.",
+  "scene": "A blue cup is on the desk. Shelf A is empty.",
+  "dialogue": [],
+  "capabilities": "move(object: object, destination: location) moves an object to a destination; both arguments are required."
+}

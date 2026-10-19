@@ -1,0 +1,12 @@
+{
+  "intended_goal": "Move the blue cup to shelf A",
+  "actions": [{
+    "action_id": "a1", "capability_id": "move",
+    "arguments": {
+      "object": {"type": "object", "value": "blue cup", "evidence": ["instruction", "scene"]},
+      "destination": {"type": "location", "value": "shelf A", "evidence": ["instruction"]}
+    },
+    "constraints": []
+  }],
+  "unresolved": [], "dependencies": [], "readiness": "ACTION_READY", "clarification_question": null
+}

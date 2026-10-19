@@ -10,6 +10,11 @@ base=Path(__file__).resolve().parent
 manifest=json.loads((base/'MANIFEST.json').read_text(encoding='utf-8'))
 assert manifest['dataset_name']=='Co-occurring Ambiguity Dataset'
 assert manifest['record_count']==100 and manifest['label_counts']=={'execute':74,'clarify':26}
+metadata=json.loads((base/'DATASET_METADATA.json').read_text(encoding='utf-8'))
+assert metadata['version']==manifest['dataset_version']=='1.0.1'
+assert metadata['source_records']==metadata['record_count']==100
+assert sum(metadata['origin_counts'].values())==100
+assert metadata['route_counts']=={'execute':74,'clarify':26}
 for member in manifest['files']:
     f=base/member['path']
     assert f.is_file(),member['path']

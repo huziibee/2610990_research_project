@@ -20,7 +20,7 @@
   },
   "original_v6_archive_name": "Pilot_100_Author_Human_Adjudicated_Routes_v6.zip",
   "original_v6_archive_sha256": "cf5a8b4834b55a008ee32456b461121af3fed3dcddea95d91fde79fe2c6390db",
-  "previous_version": "pilot_100_author_human_adjudicated_routes_v6",
+  "previous_version": "1.0.0",
   "record_count": 100,
   "record_id_format": "CA-0001 through CA-0100, sequential four-digit IDs",
   "renaming_rule": "Sort 100 v6 cases numerically by previous native record ID and assign CA-0001..CA-0100 in that order; synthetic former CA-1001 last.",
@@ -28,7 +28,9 @@
     "clarify": 26,
     "execute": 74
   },
+  "source_records": 100,
+  "source_records_definition": "All 100 input records in this release, including records of synthetic historical origin. Historical origin_counts partition the same 100 records, not additional cases.",
   "training_and_prompt_tuning_allowed": false,
   "unapproved_route_count": 0,
-  "version": "1.0.0"
+  "version": "1.0.1"
 }
