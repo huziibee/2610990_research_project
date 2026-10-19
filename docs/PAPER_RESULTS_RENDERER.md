@@ -52,10 +52,10 @@ py -m unittest discover -s tests -v
 Once an **actual independently reviewed** scored bundle has been prepared:
 
 ```powershell
-py tools/render_paper_results.py --scored-bundle runs/scoring/verified_paper_bundle.json --output runs/paper_candidate_001
+py tools/render_paper_results.py --scored-bundle runs/scoring/verified_paper_bundle.json --review-manifest runs/scoring/verified_review_release_manifest.json --output runs/paper_candidate_001
 ```
 
-The output directory must not exist. Nothing writes into the manuscript automatically. Generated `.tex` and `run_variation_figure.tex`, `tradeoff_figure.tex`, `clarification_figure.tex` can be reviewed and manually integrated after authenticity and statistical checks; do not imply completed benchmark results from mere LaTeX output. Synthetic tests call the pure function with `synthetic=True` and use `SYNTHETIC-*` IDs.
+The requested --review-manifest path is mandatory for real scored exports; its byte SHA-256 must match review_manifest_sha256 in the bundle. This validates a content commitment, not independent reviewer identity or approval authenticity. The output directory must not exist. Nothing writes into the manuscript automatically. Generated `.tex` and `run_variation_figure.tex`, `tradeoff_figure.tex`, `clarification_figure.tex` can be reviewed and manually integrated after authenticity and statistical checks; do not imply completed benchmark results from mere LaTeX output. Synthetic tests call the pure function with `synthetic=True` and use `SYNTHETIC-*` IDs.
 
 ## Still open
 
@@ -67,3 +67,5 @@ The output directory must not exist. Nothing writes into the manuscript automati
 - Attach dated provider pricing or explicitly mark monetary cost unavailable; efficiency reporter does not infer prices.
 
 **No empirical accuracy, stability or completion results are asserted by this branch.**
+
+The updated renderer also exports paired_effects_table.tex and paired_case_effects in summary.json. It uses the prespecified case-level 10,000-draw paired bootstrap for S1 minus S0 and ablation minus S1, with subgroup N where applicable. The stand-alone route diagnostics and exact-run pairing audit are described in ENGINEERING_HANDOFF_RESULTS_20261019.md.
