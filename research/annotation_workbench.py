@@ -60,8 +60,14 @@ def draft_envelope(state):
 
 
 def validate_envelope(envelope, state):
+    ref = envelope["reference"]
+    if ref.get("semantic_reference_status", "CANDIDATE") not in ("CANDIDATE", "WAITING_FOR_REVIEW"):
+        raise ValueError("A draft cannot self-declare verified or gold")
+    claimed = ref.get("independent_verifier")
+    if claimed is not None and not (isinstance(claimed, str) and claimed.startswith("[Waiting")):
+        raise ValueError("A draft cannot self-declare an independent verifier")
     clean = source_to_model_input(state["source"])
-    return validate_reference(envelope["reference"], clean, state["approved_route"])
+    return validate_reference(ref, clean, state["approved_route"])
 
 
 def case_page(state, *, draft_text, token, message=""):
