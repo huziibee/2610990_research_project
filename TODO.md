@@ -53,7 +53,7 @@ Updated: 2026-10-19. This tracker supersedes the old Qwen3/99-case checklist for
 ## 4. Experiments (not started)
 
 - [ ] Main comparison: five runs/system, same frozen cases, schema, context and declared inference budgets.
-- [ ] Five independent removals: goal-first, structured grounding, scene, dependency checks, dialogue. Engineering status: scene/dialogue masks implemented, budget-matched non-goal stage comparator implemented with explicit caveats, and isolated dependency-consistency guard removal implemented. Full structured-grounding removal still requires a defensible comparator. No evaluated ablation has run.
+- [ ] Five independent removals: goal-first, structured grounding, scene, dependency checks, dialogue. Engineering status: scene/dialogue masks, budget-matched non-goal first-stage comparator, dependency-consistency guard removal, and explicit-grounding-prompt control have synthetic implementations. The last three test narrower mechanisms than complete architectural removal. Full structured-grounding removal still requires a fair comparator. No evaluated ablation has run. No evaluated ablation has run.
 - [ ] Efficiency: median/P95 end-to-end latency, calls, input/output/reasoning tokens and versioned pricing; report unavailable provider hardware metrics as unavailable.
 - [ ] Simulated clarification completion at turns 0–5, separately from initial decisions and observed human conversations.
 - [ ] Primary/secondary failure categories and independently verified representative examples.
