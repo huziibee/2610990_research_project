@@ -51,6 +51,12 @@ def build_blinded_packet(predictions, references, source_contexts, *, secret):
         seen.add(key)
         if case not in references or case not in source_contexts:
             raise ValueError("Unknown case; no gold may be invented")
+        visible = source_contexts[case]
+        if (type(visible) is not dict or set(visible) != {"instruction", "scene", "dialogue", "capabilities"}
+                or any(type(visible[k]) is not str for k in ("instruction", "scene", "capabilities"))
+                or type(visible["dialogue"]) is not list
+                or any(type(x) is not str for x in visible["dialogue"])):
+            raise ValueError("Review context must include only four model-visible fields")
         ref = references[case]
         if (type(ref.get("revision")) is not int or ref["revision"] < 1
                 or not isinstance(ref.get("sha256"), str) or len(ref["sha256"]) != 64
@@ -67,7 +73,7 @@ def build_blinded_packet(predictions, references, source_contexts, *, secret):
                         "branch_id": branch, "turn": turn, "prediction_sha256": digest,
                         "reference_sha256": ref["sha256"], "reference_revision": ref["revision"]})
         review.append({"assignment_id": assignment_id,
-                       "source_context": source_contexts[case],
+                       "source_context": visible,
                        "reference_task": ref["branches"][branch],
                        "predicted_task": row["task"],
                        "reviewer_id": None, "notes": None,
@@ -76,6 +82,8 @@ def build_blinded_packet(predictions, references, source_contexts, *, secret):
                        "initial_clarification_appropriate": None})
     if len({item["assignment_id"] for item in review}) != len(review):
         raise ValueError("Blinded assignment collision")
+    # Do not retain paired S0/S1 storage order; stable secret-bound IDs blind it.
+    review.sort(key=lambda item: item["assignment_id"])
     return {"packet_status": "UNREVIEWED", "system_blinded": True,
             "benchmark_executed": False, "semantic_correctness": "NOT_COMPUTED",
             "human_review_items": review}, {"private_linkage": mapping}
