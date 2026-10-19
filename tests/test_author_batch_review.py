@@ -5,6 +5,8 @@ import tempfile
 import unittest
 import shutil
 import zipfile
+import subprocess
+import sys
 from hashlib import sha256
 from unittest.mock import patch
 
@@ -206,6 +208,16 @@ class AuthorBatchTest(unittest.TestCase):
             path.write_text(json.dumps(tampered),encoding="utf-8")
             with self.assertRaisesRegex(ValueError,"differs"):
                 read_author_attestation(path,rows)
+
+
+    def test_direct_script_entrypoint_imports_from_outside_repo(self):
+        root=Path(__file__).resolve().parents[1]
+        with tempfile.TemporaryDirectory() as elsewhere:
+            proc=subprocess.run(
+                [sys.executable,str(root/"tools"/"review_author_batch.py"),"--help"],
+                cwd=elsewhere,text=True,capture_output=True,check=False,timeout=20)
+        self.assertEqual(proc.returncode,0,proc.stderr)
+        self.assertIn("--approval-file",proc.stdout)
 
 
 if __name__=="__main__":
