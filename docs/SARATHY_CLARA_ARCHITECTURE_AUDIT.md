@@ -20,10 +20,10 @@ V. Sarathy, M. Fawn, M. McWilliams, M. Scheutz and B. Oosterveld, *On Evaluating
 - **Paper, §3.3, pp. 7–8:** Evaluates correct intent, CPC name, SPC structure, variable bindings and graph structure, including isomorphism/matching-based criteria.
 
 **What we adapted in `research/semantic_relations.py`:**
-1. Project the existing `intended_goal` and ordered `actions` into a *CPC-inspired* graph, without rewriting the model output schema.
+1. Project the existing `intended_goal` and ordered `actions` into a *CPC-inspired* graph with explicit **proposed goal-to-action realization edges**. Such edges represent the system's plan structure, not proof that an action achieves the goal.
 2. Project typed action arguments into *SPC-inspired* reference links. A separate `referent_bindings` mapping permits **externally reviewed** entity IDs; otherwise binding is a literal typed-value placeholder. Do not infer synonyms, deixis or physical identity automatically.
 3. Compare goal literals, action/argument/constraint structure, binding identities, and explicit dependency edges against independently supplied reference projections. Mapping between action indices must be provided explicitly for non-identity alignment.
-4. Flag missing/extra dependencies, duplicate relationships, referent-binding conflicts and directed relationship cycles as deterministic *diagnostics*. These are not a substitute for ground-truth semantic judgments.
+4. Flag missing/extra dependencies, duplicate relationships, referent-binding conflicts and directed relationship cycles as deterministic *diagnostics*. `A before B` means A precedes B; `A depends_on B` means B precedes A. Edges are normalized to prerequisite order before cycle detection. This is not a substitute for ground-truth semantic judgments.
 
 **What we did NOT implement:** Sarathy's DIARC architecture, speech-act parser, cognitive-status/Givenness markers, lambda calculus or lifted predicates, a symbolic perception system, automatic graph isomorphism search, automatic anaphora resolution, or its precise reported metrics. Literal goal equality is **not** synonymous with communicative-intent correctness. Any candidate mapping requires independent human semantic adjudication.
 
