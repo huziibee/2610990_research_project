@@ -133,7 +133,7 @@ def combine_independent_reviews(linkage, first, second):
         result = {name: assignment[name] for name in (
             "record_id", "seed", "branch_id", "turn", "prediction_sha256",
             "reference_sha256", "reference_revision")}
-        result.update(status="independently_verified", preparer_id=a["reviewer_id"],
+        result.update(status="agreement_candidate_unverified", preparer_id=a["reviewer_id"],
                       verifier_id=b["reviewer_id"], fields=dict(a["fields"]),
                       unsupported_detail=a["unsupported_detail"])
         if assignment["turn"] == 0:
