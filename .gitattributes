@@ -1,6 +1,8 @@
 # Preserve byte-for-byte release fingerprints across Linux and Windows clones.
 # Git checkout attributes affect worktree line endings, not frozen source blobs.
 Data/** text eol=lf
+# The frozen manifest itself was hashed with CRLF line endings.
+Data/MANIFEST.json text eol=crlf
 Data/archive/*.zip -text
 # Six historical release members were fingerprinted with CRLF endings.
 Data/DATASET_METADATA.json text eol=crlf
