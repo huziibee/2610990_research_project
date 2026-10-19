@@ -29,7 +29,8 @@ jobs:
         run: python -m unittest discover -s tests -v
       - name: Annotation triage is not evaluation permission
         run: |
-          python tools/annotation_triage.py --summary-only > /tmp/triage.json
+          python tools/annotate.py --workspace runs/ci_annotations init > /tmp/annotation_init.json
+          python tools/annotation_triage.py --workspace runs/ci_annotations --summary-only > /tmp/triage.json
           python - <<'PY'
           import json
           report = json.load(open("/tmp/triage.json", encoding="utf-8"))
