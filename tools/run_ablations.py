@@ -202,7 +202,12 @@ def run_ablation_pass(root=ROOT, *, bundle=None, output=None, execute=False):
             or plan_config.get("main_protocol_sha256") != before["protocol"]
             or plan_config.get("ablation_schedule_sha256") != before["ablation_schedule"]
             or plan_config.get("interventions") != list(INTERVENTIONS)
-            or plan_config.get("baseline_alias") != {"goal_first": "S0"}):
+            or plan_config.get("baseline_alias") != {"goal_first": "S0"}
+            or plan_config.get("planned_case_count") != len(IDS)
+            or plan_config.get("planned_initial_predictions") != EXPECTED_COUNT
+            or plan_config.get("seeds") != SEEDS
+            or plan_config.get("initial_only") is not True
+            or plan_config.get("requires_main_readiness_gate") is not True):
         raise ValueError("Ablation plan is not separately frozen or fingerprints differ")
     if read_jsonl(pinned["main_schedule"]) != planned_schedule(IDS):
         raise ValueError("Main paired schedule differs from locked design")
