@@ -37,6 +37,7 @@ class SarathyGraphTests(unittest.TestCase):
         self.assertEqual(t, initial)
         self.assertEqual(len(graph["cpc"]["actions"]), 2)
         self.assertEqual(len(graph["cpc"]["dependencies"]), 2)
+        self.assertEqual(len(graph["cpc"]["goal_action_links"]), 2)
         self.assertEqual(len(graph["spc"]["argument_referents"]), 4)
         self.assertEqual(graph["semantic_correctness"], "NOT_COMPUTED")
 
@@ -44,6 +45,7 @@ class SarathyGraphTests(unittest.TestCase):
         ref = self.projection()
         report = compare_relationship_graphs(ref, self.projection())
         self.assertTrue(report["cpc_action_structure_equal"])
+        self.assertTrue(report["cpc_goal_action_link_coverage"])
         self.assertTrue(report["spc_binding_structure_equal"])
         self.assertTrue(report["dependency_complete"])
         self.assertTrue(report["goal_literal_equal"])
