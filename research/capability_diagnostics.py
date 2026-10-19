@@ -26,6 +26,8 @@ def verify_catalog_evidence(model_input, wrapper, review):
     if (not all(_text(review[k]) for k in ("preparer_id", "verifier_id", "notes"))
             or review["preparer_id"] == review["verifier_id"]):
         raise ValueError("Distinct real preparer/verifier attestations required")
+    if not isinstance(wrapper, dict) or wrapper.get("verified_by") != review["preparer_id"]:
+        raise ValueError("Capability wrapper preparer must match the actual review record")
     # Reuse exactly the catalog checks already used by S0/S1 prediction logic.
     catalog = ResearchSystem(None, verified_capability_catalog=wrapper)._catalog(visible)
     quotes = review["catalog_quotes"]
