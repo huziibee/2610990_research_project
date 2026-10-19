@@ -11,7 +11,7 @@ class BlindedJudgmentTests(unittest.TestCase):
                       "task": {"readiness": "ACTION_READY"}}]
         self.refs = {"SYNTHETIC-001": {"revision": 1, "sha256": "a" * 64,
                                       "branches": {"primary": {"reference_task": "synthetic expected"}}}}
-        self.context = {"SYNTHETIC-001": {"instruction": "Synthetic only"}}
+        self.context = {"SYNTHETIC-001": {"instruction": "Synthetic only", "scene": "table",\n                                          "dialogue": [], "capabilities": "move"}}
         self.packet, self.link = self.build()
 
     def build(self, predictions=None):
@@ -31,6 +31,17 @@ class BlindedJudgmentTests(unittest.TestCase):
         self.assertNotIn("S1", str(self.packet))
         self.assertNotIn("seed", str(self.packet))
         self.assertEqual(self.link["private_linkage"][0]["seed"], 17)
+
+    def test_review_packets_reject_hidden_context_and_shuffle_storage_order(self):
+        hidden = {"SYNTHETIC-001": {**self.context["SYNTHETIC-001"], "gold": "secret"}}
+        with self.assertRaises(ValueError):
+            build_blinded_packet(self.pred, self.refs, hidden, secret=b"x" * 32)
+        other = copy.deepcopy(self.pred[0])
+        other["seed"] = 29
+        first, _ = self.build([self.pred[0], other])
+        reversed_packet, _ = self.build([other, self.pred[0]])
+        self.assertEqual([x["assignment_id"] for x in first["human_review_items"]],
+                         [x["assignment_id"] for x in reversed_packet["human_review_items"]])
 
     def test_two_distinct_reviews_produce_only_canonical_candidate_fields(self):
         report = combine_independent_reviews(self.link, self.review("human-one"), self.review("human-two"))
