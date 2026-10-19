@@ -132,6 +132,17 @@ class WorkbenchTests(unittest.TestCase):
                     '"record_id": "SYNTHETIC-771", "record_id": "SYNTHETIC-771",', 1)
         self.assertEqual(self.url("/case/SYNTHETIC-771", data=duplicate)[0], 422)
 
+    def test_validation_preview_rejects_forged_gold_status(self):
+        value = json.loads(self.valid_json())
+        value["reference"]["semantic_reference_status"] = "FINAL_APPROVED"
+        self.assertEqual(self.url("/case/SYNTHETIC-771", data=json.dumps(value),
+                                  action="validate")[0], 422)
+        value["reference"]["semantic_reference_status"] = "CANDIDATE"
+        value["reference"]["independent_verifier"] = "fake-reviewer"
+        self.assertEqual(self.url("/case/SYNTHETIC-771", data=json.dumps(value),
+                                  action="validate")[0], 422)
+        self.assertFalse(self.store.events)
+
     def test_empty_skeleton_is_not_gold(self):
         from research.annotation_workbench import validate_envelope
         state = self.store.show("SYNTHETIC-771")
