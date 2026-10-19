@@ -1,0 +1,37 @@
+name: Research regression checks
+
+on:
+  push:
+    branches:
+      - main
+      - "research/**"
+  pull_request:
+
+permissions:
+  contents: read
+
+jobs:
+  integrity-and-unit-tests:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+      - name: Verify frozen data release
+        run: python Data/verify_package.py
+      - name: Full synthetic regression suite
+        run: python -m unittest discover -s tests -v
+      - name: Annotation triage is not evaluation permission
+        run: |
+          python tools/annotation_triage.py --summary-only > /tmp/triage.json
+          python - <<'PY'
+          import json
+          report = json.load(open("/tmp/triage.json", encoding="utf-8"))
+          assert report["benchmark_executed"] is False
+          assert report["readiness_authorized"] is False
+          assert report["semantic_correctness"] == "NOT_COMPUTED"
+          assert report["case_count"] == 100
+          assert report["route_counts"] == {"clarify": 26, "execute": 74}
+          PY
