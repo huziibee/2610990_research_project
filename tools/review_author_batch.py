@@ -15,7 +15,14 @@ import os
 from pathlib import Path
 import re
 import secrets
+import sys
 from urllib.parse import parse_qs, urlsplit
+
+# Support both `py tools/review_author_batch.py` and `py -m tools.review_author_batch`.
+# The direct-script entry point otherwise omits the repository root from sys.path.
+ROOT = Path(__file__).resolve().parents[1]
+if str(ROOT) not in sys.path:
+    sys.path.insert(0, str(ROOT))
 
 from research.annotation_store import AnnotationStore
 from research.input_contract import source_to_model_input
@@ -311,7 +318,7 @@ def main():
     if args.approval_file and (not args.approve or args.actor or args.notes):
         parser.error("--approval-file must be used with --approve and without --actor/--notes")
     if not 1024<=args.port<=65535: raise SystemExit("Invalid port")
-    root=Path(__file__).resolve().parents[1]
+    root=ROOT
     verify_release(root/"Data")
     workspace=args.workspace.resolve()
     if not workspace.is_relative_to((root/"runs").resolve()):
