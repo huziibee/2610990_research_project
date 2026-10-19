@@ -91,6 +91,16 @@ button{{margin:8px 8px 8px 0;padding:9px 14px}}input{{padding:7px}}
 Do not invent commands, arguments, constraints or hypothetical answers.</p>{notice}
 <p><a href="/case/{case}/latest">Load latest ledger revision (without overwriting saved draft)</a></p>
 <main><div><h2>Locked source inputs</h2>{cards}</div><div><h2>Editable, unverified draft</h2>
+<details><summary>Reference editing guide</summary><p>Fill the intended goal and ordered actions.
+Each action needs a capability identifier, typed grounded arguments and any constraints.
+Use source pointers such as <code>instruction</code>, <code>scene</code>,
+<code>dialogue/0</code> and <code>capabilities</code>; the quoted evidence
+claims must identify the exact supporting text.</p>
+<p>For ambiguous cases, list critical unresolved fields, the clarification question
+and separately simulated answer branches (maximum five turns). The initial
+reference must not contain a future reply. Enter explicit human decisions on
+dialogue relevance and linked dependencies. Leave unsupported facts unresolved,
+never invent preferences or execution requirements.</p></details>
 <form method="post" action="/case/{case}">
 <input type="hidden" name="csrf" value="{_escape(token)}">
 <textarea name="draft_json" spellcheck="false" aria-label="Draft JSON">{_escape(draft_text)}</textarea>
