@@ -82,6 +82,7 @@ a{{color:#2159a6}} main{{display:grid;grid-template-columns:1fr 1fr;gap:20px}}
 section{{margin:8px 0;padding:12px;border:1px solid #bbb;border-radius:6px}}
 pre{{white-space:pre-wrap;overflow-wrap:anywhere;max-height:220px;overflow:auto}}
 textarea{{width:100%;height:68vh;box-sizing:border-box;font:13px ui-monospace,monospace}}
+textarea[name=notes]{{height:85px;display:block;margin:6px 0}}
 button{{margin:8px 8px 8px 0;padding:9px 14px}}input{{padding:7px}}
 @media(max-width:900px){{main{{grid-template-columns:1fr}}textarea{{height:50vh}}}}
 </style></head><body><a href="/">All cases</a> · <strong>{case}</strong> · approved route: {route}
@@ -93,14 +94,21 @@ Do not invent commands, arguments, constraints or hypothetical answers.</p>{noti
 <form method="post" action="/case/{case}">
 <input type="hidden" name="csrf" value="{_escape(token)}">
 <textarea name="draft_json" spellcheck="false" aria-label="Draft JSON">{_escape(draft_text)}</textarea>
-<p><label>Actual preparer identity <input name="actor" autocomplete="off" maxlength="120"></label>
+<p><label>Actual human actor (preparer, adopter, reviewer, approver) <input name="actor" autocomplete="off" maxlength="120"></label>
 <label>Provenance <select name="provenance"><option value="human">Human-authored</option>
 <option value="model_candidate">Model-assisted candidate</option></select></label></p>
 <button name="action" value="save" type="submit">Save draft locally</button>
 <button name="action" value="validate" type="submit">Validate structure</button>
 <button name="action" value="submit" type="submit">Submit to review ledger</button>
+<hr><label>Actual human review notes <textarea name="notes" aria-label="Human review notes"></textarea></label>
+<button name="action" value="adopt" type="submit">Adopt model candidate</button>
+<button name="action" value="verify_yes" type="submit">Verify reference</button>
+<button name="action" value="verify_no" type="submit">Record disagreement</button>
+<button name="action" value="approve" type="submit">Final approval</button>
 </form><p>Saving edits only the local draft. Submitting requires an actual preparer identity,
-validates the full reference and creates a tamper-evident ledger event. A separate person must verify it.</p>
+validates the full reference and creates a tamper-evident ledger event. A separate person must verify it.
+Review actions operate only on the exact current ledger reference, not unsaved edits.
+A human reviewer must read the context and provide substantive notes. Do not impersonate a reviewer.</p>
 </div></main></body></html>'''
 
 
