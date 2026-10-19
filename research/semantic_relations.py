@@ -74,6 +74,42 @@ def build_relationship_graph(task, model_input, *, referent_bindings=None, capab
         if dep["relation"] == "before" and (source[0] != "action" or target[0] != "action"):
             raise ValueError("before requires action endpoints")
         relations.append({"relation": dep["relation"], "source": source, "target": target})
+    # Diagnostic checks are separate from model-output validity and never
+    # turn unverified referent labels into ground truth.
+    relationship_issues = []
+    seen_relations = set()
+    directed_edges = []
+    slot_lookup = {(slot["action"], slot["field"]): slot["referent"] for slot in supplemental}
+    for relation in relations:
+        key = (relation["relation"], relation["source"], relation["target"])
+        if key in seen_relations:
+            relationship_issues.append({"code": "DUPLICATE_RELATION", "relation": relation["relation"]})
+        seen_relations.add(key)
+        if relation["relation"] == "same_value":
+            lhs = (relation["source"][1], relation["source"][2])
+            rhs = (relation["target"][1], relation["target"][2])
+            if slot_lookup[lhs] != slot_lookup[rhs]:
+                relationship_issues.append({"code": "CONFLICTING_REFERENT_BINDINGS",
+                                            "relation": "same_value"})
+        elif relation["source"][0] == relation["target"][0] == "action":
+            directed_edges.append((relation["source"][1], relation["target"][1]))
+    adjacency = {i: set() for i in range(len(actions))}
+    for left, right in directed_edges:
+        adjacency[left].add(right)
+    visiting, completed = set(), set()
+    def cyclic(node):
+        if node in visiting:
+            return True
+        if node in completed:
+            return False
+        visiting.add(node)
+        if any(cyclic(next_node) for next_node in adjacency[node]):
+            return True
+        visiting.remove(node)
+        completed.add(node)
+        return False
+    if any(cyclic(i) for i in adjacency if i not in completed):
+        relationship_issues.append({"code": "CYCLIC_ACTION_RELATIONSHIP"})
     # A repeated referent ID denotes a shared binding, not proven object identity.
     return {"diagnostic_kind": "SARATHY_INSPIRED_STRUCTURAL_PROJECTION",
             "semantic_correctness": "NOT_COMPUTED",
@@ -82,6 +118,7 @@ def build_relationship_graph(task, model_input, *, referent_bindings=None, capab
             "spc": {"argument_referents": supplemental},
             "unresolved_fields": sorted(item["field"] for item in task["unresolved"] if item["critical"]),
             "external_binding_count": len(bindings),
+            "relationship_issues": relationship_issues,
             "automated_reference_resolution": False,
             "requires_independent_semantic_review": True}
 
