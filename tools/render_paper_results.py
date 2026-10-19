@@ -200,9 +200,11 @@ def render(bundle, *, synthetic=False):
     # Plain TikZ, already supported in the existing manuscript. No new packages.
     # Figures intentionally show scored marks only, with no interval invented.
     stability = [
-        r"\begin{tikzpicture}[x=.065cm,y=.72cm,font=\scriptsize]",
-        r"\draw[->] (0,0)--(101,0) node[right] {Task correct (\%)};",
+        r"\begin{tikzpicture}[x=.052cm,y=.72cm,font=\scriptsize]",
+        r"\draw[->] (0,0)--(104,0) node[right] {Correct (\%)};",
     ]
+    for tick in (0, 25, 50, 75, 100):
+        stability.append(rf"\draw ({tick},.06)--({tick},-.06) node[below] {{{tick}}};")
     seed_csv = ["system,seed,correctness_percent"]
     stability_summary = {}
     for idx, system in enumerate(("S0", "S1"), 1):
@@ -234,7 +236,13 @@ def render(bundle, *, synthetic=False):
                     r"\draw[->] (0,0)--(7.2,0) node[right] {P50 latency (s)};",
                     r"\draw[->] (0,0)--(0,103) node[above] {Correct (\%)};"]
     seconds_max = max(bundle["latency_seconds"][s]["p50"] for s in ("S0", "S1"))
-    scale = 6.6 / seconds_max if seconds_max > 0 else 1
+    scale = 5.8 / seconds_max if seconds_max > 0 else 1
+    if seconds_max > 0:
+        for fraction in (.25, .5, .75, 1.):
+            coordinate = seconds_max * fraction * scale
+            plot_latency.append(rf"\draw ({coordinate:.4f},1)--({coordinate:.4f},-1) node[below] {{{seconds_max * fraction:.2f}}};")
+    else:
+        plot_latency.append(r"\node[anchor=north] at (0,-1) {0.00};")
     for system in ("S0", "S1"):
         x = bundle["latency_seconds"][system]["p50"] * scale
         y = 100 * avg(system, "complete_task_correct")
