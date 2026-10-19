@@ -1,5 +1,27 @@
 # Local annotation workbench
 
+## Portable local workspace (recommended for new reviewers)
+
+The committed \`annotation/workspace/manifest.json\` is a **historical snapshot**
+with absolute paths from a different workstation. Do not edit its pins or
+delete/rewrite its review history to make them match a new clone. Create a
+fresh, ignored, machine-local workspace instead, under \`runs/\`:
+
+\`\`\`powershell
+py Data/verify_package.py
+py tools/annotate.py --workspace runs/human_review_20261019 init
+py tools/serve_annotations.py --workspace runs/human_review_20261019
+\`\`\`
+
+Open http://127.0.0.1:8765/ and keep using **the same workspace directory**
+across sessions. For CLI commands also add
+\`--workspace runs/human_review_20261019\` before the subcommand. Export from
+that same location. Preserve/back up its manifest, events and drafts before any
+worktree cleanup; \`runs/\` is intentionally Git-ignored, so \`git push\`
+does **not** back up human annotations. This does not alter the dataset freeze,
+routes, held-out inputs, or the original historical workspace.
+
+
 This is a **human-facing, evaluator-only** browser interface for the already
 frozen 100 input records. It never calls Gemini, changes an approved route,
 creates human identities, infers an expected task, or marks anything as gold.
