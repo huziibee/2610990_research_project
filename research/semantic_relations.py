@@ -118,6 +118,9 @@ def build_relationship_graph(task, model_input, *, referent_bindings=None, capab
     return {"diagnostic_kind": "SARATHY_INSPIRED_STRUCTURAL_PROJECTION",
             "semantic_correctness": "NOT_COMPUTED",
             "cpc": {"goal_literal": task["intended_goal"], "actions": actions,
+                    "goal_action_links": [{"source": "goal", "target_action": i,
+                                           "relation": "PROPOSED_REALIZATION"}
+                                          for i in range(len(actions))],
                     "dependencies": sorted(relations, key=lambda r: str(r))},
             "spc": {"argument_referents": supplemental},
             "unresolved_fields": sorted(item["field"] for item in task["unresolved"] if item["critical"]),
@@ -162,6 +165,9 @@ def compare_relationship_graphs(reference, prediction, *, action_alignment=None)
     ref_relations = ref["dependencies"]
     def diff(a, b):
         return [item for item in a if item not in b]
+    mapped_goal_links = [{**link, "target_action": mapping[link["target_action"]]}
+                         for link in pred["goal_action_links"]]
+    goal_link_coverage = all(link in mapped_goal_links for link in ref["goal_action_links"])
     ref_slots = {(s["action"], s["field"], s["type"], s["referent"])
                  for s in reference["spc"]["argument_referents"]}
     pred_slots = {(mapping[s["action"]], s["field"], s["type"], s["referent"])
@@ -169,6 +175,7 @@ def compare_relationship_graphs(reference, prediction, *, action_alignment=None)
     return {"status": "STRUCTURAL_DIAGNOSTIC_NOT_SEMANTIC_SCORE",
             "goal_literal_equal": ref["goal_literal"] == pred["goal_literal"],
             "cpc_action_structure_equal": not missing_actions and not extra_actions,
+            "cpc_goal_action_link_coverage": goal_link_coverage,
             "action_order_identical": list(mapping.values()) == list(range(num_pred)),
             "spc_binding_structure_equal": ref_slots == pred_slots,
             "dependency_complete": not diff(ref_relations, pred_relations),
