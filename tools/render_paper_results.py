@@ -16,6 +16,8 @@ from pathlib import Path
 import re
 from statistics import mean, stdev
 
+from research.semantic_metrics import paired_semantic_bootstrap
+
 CONDITIONS = ("S0", "S1", "goal_first", "structured_grounding",
               "scene", "dependency_checking", "dialogue")
 SEEDS = (17, 29, 43, 71, 101)
@@ -197,6 +199,37 @@ def render(bundle, *, synthetic=False):
                                   f"{100 * record['count'] / record['denominator']:.1f}").rstrip())
     failure_lines += [r"\bottomrule", r"\end{tabular}"]
 
+    # Bootstrap paired CASES, not the five stochastic runs as independent
+    # examples. The established scorer owns the prespecified percentile method.
+    def case_run_map(condition, subset):
+        return {(case, seed): keyed[(case, seed, condition)]["complete_task_correct"]
+                for case in subset for seed in seeds}
+
+    comparisons = {}
+    comparisons["S1_minus_S0"] = paired_semantic_bootstrap(
+        case_run_map("S1", cases), case_run_map("S0", cases),
+        iterations=10000, seed=20261019)
+    for condition in CONDITIONS[2:]:
+        subset = subgroups.get(condition, cases)
+        # The delta in the manuscript is ablation minus full S1; keep
+        # that direction both in displayed intervals and JSON.
+        comparisons[condition + "_minus_S1"] = paired_semantic_bootstrap(
+            case_run_map(condition, subset), case_run_map("S1", subset),
+            iterations=10000, seed=20261019)
+
+    effect_lines = [r"\\begin{tabular}{lrrr}", r"\\toprule",
+                    line("Paired comparison", "N cases", r"Effect (pp)", r"95\\% CI (pp)").rstrip(),
+                    r"\\midrule"]
+    for key, label in [("S1_minus_S0", "S1 minus S0")] + [
+        (condition + "_minus_S1", LABELS[condition] + " minus S1")
+        for condition in CONDITIONS[2:]]:
+        estimate = comparisons[key]
+        low, high = estimate["ci95"]
+        effect_lines.append(line(label, estimate["independent_case_count"],
+                                 f"{100 * estimate['difference']:+.1f}",
+                                 f"[{100 * low:+.1f}, {100 * high:+.1f}]").rstrip())
+    effect_lines += [r"\\bottomrule", r"\\end{tabular}"]
+
     # Plain TikZ, already supported in the existing manuscript. No new packages.
     # Figures intentionally show scored marks only, with no interval invented.
     stability = [
@@ -251,6 +284,7 @@ def render(bundle, *, synthetic=False):
 
     result = {
         "main_results_table.tex": "\n".join(main) + "\n",
+        "paired_effects_table.tex": "\n".join(effect_lines) + "\n",
         "ablation_table.tex": "\n".join(ablations) + "\n",
         "latency_table.tex": "\n".join(latency) + "\n",
         "failure_table.tex": "\n".join(failure_lines) + "\n",
@@ -263,6 +297,7 @@ def render(bundle, *, synthetic=False):
             "case_count": len(cases), "run_count": len(seeds), "sample_size_case_run_per_condition": len(cases) * len(seeds),
             "main_correctness": {s: avg(s, "complete_task_correct") for s in ("S0", "S1")},
             "run_stability": stability_summary,
+            "paired_case_effects": comparisons,
             "ablation_inference_caveat": "Goal stage, grounding prompt and dependency consistency are narrower mechanistic proxies.",
             "automatic_paper_edit": False, "semantic_scores_invented": False,
         }, indent=2) + "\n",
