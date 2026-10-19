@@ -21,6 +21,7 @@ from research.annotation_store import AnnotationStore
 from research.annotation_workbench import (MAX_DRAFT_BYTES, case_page, draft_envelope,
                                             index_page, parse_envelope, validate_envelope)
 from research.integrity import verify_release
+from research.task_schema import ValidationError
 
 
 def make_handler(store, *, port, drafts_dir, token):
@@ -160,6 +161,11 @@ def make_handler(store, *, port, drafts_dir, token):
                     state = updated
                     message = "Human review event recorded; check current status and history."
                 return self.reply(200, case_page(state, draft_text=form["draft_json"], token=token, message=message))
+            except ValidationError as exc:
+                # Show only the local static schema validator's field-level hint.
+                # Message and user draft are HTML-escaped by case_page().
+                return self.reply(422, case_page(state, draft_text=form.get("draft_json", ""),
+                                                 token=token, message=f"Schema issue: {exc}"))
             except (ValueError, KeyError, OSError, TypeError, UnicodeError, json.JSONDecodeError):
                 # No source, provider error body, or hidden answer in HTTP errors.
                 return self.reply(422, "Invalid, stale or incomplete draft. Check the JSON, evidence and ledger head.\n",
