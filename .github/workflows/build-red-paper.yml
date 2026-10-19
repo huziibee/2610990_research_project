@@ -1,0 +1,36 @@
+name: Build Red Research Paper Preview
+on:
+  push:
+    branches:
+      - research/updated-red-paper-20261019
+    paths:
+      - Report/Cooccurring_Ambiguity_Paper_Gemini_Working.tex
+      - .github/workflows/build-red-paper.yml
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  latex-preview:
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@v4
+      - name: Compile manuscript in LaTeX
+        uses: xu-cheng/latex-action@v4
+        with:
+          root_file: Cooccurring_Ambiguity_Paper_Gemini_Working.tex
+          working_directory: Report
+          args: -pdf -file-line-error -halt-on-error -interaction=nonstopmode
+      - name: Confirm PDF exists
+        run: test -s Report/Cooccurring_Ambiguity_Paper_Gemini_Working.pdf
+      - name: Save reader PDF and editable source
+        uses: actions/upload-artifact@v4
+        with:
+          name: red-research-paper-preview-20261019
+          path: |
+            Report/Cooccurring_Ambiguity_Paper_Gemini_Working.pdf
+            Report/Cooccurring_Ambiguity_Paper_Gemini_Working.tex
+          if-no-files-found: error
+          retention-days: 30

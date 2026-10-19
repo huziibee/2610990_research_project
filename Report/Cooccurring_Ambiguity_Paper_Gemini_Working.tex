@@ -20,12 +20,12 @@
 \begin{document}
 \maketitle\thispagestyle{plain}\pagestyle{plain}
 \begin{abstract}
-A single instruction to a robot may contain several ambiguities at once: an indirect request, an unclear object reference, an imprecise time, or a missing destination. These ambiguities need not prevent action if the surrounding scene and conversation provide enough information to resolve them. This paper plans a text-to-text study using Gemini 2.5 Flash-Lite to recover an intended goal, ground a structured task in input evidence, and request clarification when a critical detail is unresolved. Direct generation and structured interpretation are the principal comparison; independent repeated-model review remains optional. The current evaluation-only release contains 100 cases with author-approved routes and strategy sequences. It does not yet provide complete semantic task references or simulated clarification replies. Primary task-correctness and multi-turn experiments therefore remain pending reference completion and protocol freeze. No numerical performance claims are made.
+A single instruction to a robot may contain several ambiguities at once: an indirect request, an unclear object reference, an imprecise time, or a missing destination. These ambiguities need not prevent action if the surrounding scene and conversation provide enough information to resolve them. This paper plans a text-to-text study using Gemini 2.5 Flash-Lite to recover an intended goal, ground a structured task in input evidence, and request clarification when a critical detail is unresolved. Direct generation and structured interpretation are the principal comparison; independent repeated-model review remains optional. The current evaluation-only release contains 100 cases with author-approved routes and strategy sequences. Separately maintained model-assisted semantic-reference and clarification-answer proposals now have a human-review workflow, but they are not automatically independently verified gold. Primary task-correctness and multi-turn experiments therefore remain pending reference release and protocol freeze. No numerical performance claims are made.
 \end{abstract}
 \begin{IEEEkeywords}
 Human--robot interaction, language grounding, ambiguity resolution, clarification, task specification, large language models.
 \end{IEEEkeywords}
-\noindent{\color{todoRed}\footnotesize\textbf{Gemini working source (uncompiled):} This derived planning source updates the preserved original manuscript for the current dataset and Gemini implementation. No revised PDF has been built or visually checked. Red annotations mark pending work. No evaluated predictions or scientific results are reported.}\par\smallskip
+\noindent{\color{todoRed}\footnotesize\textbf{Updated Gemini working manuscript (19 October 2026):} This derived planning source updates the preserved original manuscript for the current dataset and Gemini implementation. Red annotations mark pending scientific work. No evaluated predictions or scientific results are reported.}\par\smallskip
 \todo{Revise the abstract and Introduction after obtaining verified results; report the actual contribution and principal quantitative finding rather than planned contributions.}
 \section{Introduction}
 People rarely describe everyday tasks as complete lists of robot actions. A person might say, ``Put the other cup beside the plate on the left, then move it over there.'' The robot must determine which cup and plate are meant, what ``left'' refers to, whether ``it'' denotes the cup or plate, and where the final destination is. Some answers may be present in the scene or earlier conversation; others may require a question. The useful outcome is not a fluent paraphrase but a task description with the right actions, objects, and constraints.
@@ -92,12 +92,12 @@ Here, $\operatorname{Grounded}(a,x)$ is a \emph{semantic evaluation criterion}: 
 
 \pending{Human-approved semantic references, referent identities, capability attestations, and end-to-end readiness judgments are not yet complete. These criteria do not establish safe physical execution.}
 \subsection{Co-occurring ambiguity dataset}
-We use version 1.0.1 of the \emph{Co-occurring Ambiguity Dataset}, containing 100 source records, all evaluation-only. Historical provenance records 99 from a frozen Pilot-120 subset and one assistant-authored synthetic case; all 100 are included as source inputs in the current release. Each source record supplies an utterance, scene description, dialogue history, and capability description. Author-approved reference routes contain 74 execute and 26 clarify decisions, together with strategy sequences. Native annotation files retain ambiguity labels, capability status, validity, field-status and provenance information. The supplied files do not include complete semantic action/argument specifications, evidence-linked task gold, dependency eligibility labels, or annotated hypothetical clarification replies. This is a remaining evaluation-reference coverage requirement, distinct from the completed dataset organisation and route adjudication.
+We use version 1.0.1 of the \emph{Co-occurring Ambiguity Dataset}, containing 100 source records, all evaluation-only. Historical provenance records 99 from a frozen Pilot-120 subset and one assistant-authored synthetic case; all 100 are included as source inputs in the current release. Each source record supplies an utterance, scene description, dialogue history, and capability description. Author-approved reference routes contain 74 execute and 26 clarify decisions, together with strategy sequences. Native annotation files retain ambiguity labels, capability status, validity, field-status and provenance information. The published dataset package does not itself certify complete action-level semantic gold, dependency eligibility labels or simulated answer paths. Separate model-assisted draft proposals for all 100 records, including the 26 clarify cases, have been prepared for a private human-led review workflow. These drafts remain unverified until a real review release satisfies the chosen protocol; an author's sign-off must not be misreported as two independent human reviews.
 
-The current package records explicit author approval of all 100 terminal routes and strategy sequences, synthetic-case inclusion, and a capability attestation for CA-0025. It explicitly does not claim that all structured annotation fields received new human adjudication or that a second blinded annotator reviewed every record. Historical model-assisted annotation metadata is retained for provenance. All 100 cases remain held out: no training, prompt tuning, debugging, development splitting, or model selection is permitted using these cases. Dataset administration and the published route approvals are complete.
-\todo{Prepare and independently verify the additional semantic task references and hypothetical replies required for the planned primary metric, then freeze the evaluation protocol. Published route disputes are already resolved: former CA-0029, CA-0239 and CA-0565 map to current CA-0005, CA-0025 and CA-0051. Preserve the existing source/reference separation and immutable published hashes; the new derived input boundary adds defensive checks. Use the crosswalk for historical joins and independent development examples.}
+The current package records explicit author approval of all 100 terminal routes and strategy sequences, synthetic-case inclusion, and a capability attestation for CA-0025. It does not claim that candidate draft generation or one-human author attestation independently verified every structured annotation. Historical model-assisted annotation metadata is retained for provenance. All 100 cases remain held out: no training, prompt tuning, debugging, development splitting, or model selection is permitted using these cases. Dataset administration and the published route approvals are complete.
+\todo{Verify the separate private 100-case model-assisted reference import and actual author approval receipt; then independently review the complete tasks, all 26 clarification paths and subgroup eligibility according to the released protocol (or document an explicit supervisor-approved alternative). Keep approved 74/26 routes, crosswalk and source hashes unchanged.}
 
-\todo{Implement and smoke-test the Gemini 2.5 Flash-Lite inference backend, S0, S1, and the optional S2 review; adapt the CLARA-style question/reply/revalidation loop without directly copying unlicensed source.}
+\todo{The Gemini backend, S0/S1/S2 generation and bounded clarification loop are implemented and synthetic-tested. Obtain actual live Gemini S0/S1 evidence on non-held-out SYNTHETIC examples and verify the full protected multi-turn runner before releasing any held-out call.}
 \subsection{Proposed interpretation pipeline}
 Fig.~\ref{fig:pipeline} summarizes the implemented generation scaffold and proposed evaluation boundary. S1 first recovers a goal hypothesis, then generates a grounded task; a model-generated goal is not an evidence source. Deterministic validation checks structure, exact evidence references and internal relationships; capability semantics and full correctness require independent scoring. Optional S2 generates two interpretations from the original input independently; the second branch never sees the first. Only subsequent adjudication may see both proposals, and must decide using input evidence. A clarification answer returns to grounding and revalidation. At most five simulated turns are allowed, and an unavailable answer or unresolved turn cap remains unresolved. The initial implementation is a development scaffold, not an evaluated or semantically verified system. Separately, an evaluator-only diagnostic layer projects generated tasks into relationship graphs and audits capabilities and clarification continuity; these reports do not feed back into prompts or change either terminal readiness value.
 
@@ -136,7 +136,7 @@ Motivated by CLARA's separation of ambiguous and infeasible commands \cite{clara
 
 Finally, a post-hoc clarification-continuity audit replays only approved answer turns into a copy of the prior dialogue and revalidates the task at each recorded turn (at most five replies). It checks that each question corresponds to the preceding unresolved field, that the recorded answer matches the approved release, and that previously established action/argument bindings are retained. Reopened fields, omitted arguments, or contradictory slot updates are reported unless a correction was explicitly authorized for that particular turn and slot. This is a CLARA-inspired revalidation diagnostic, \emph{not} CLARA's uncertainty estimator or an assertion that a syntactically matched answer pragmatically resolved the ambiguity. Both the exact question-to-answer release gate and independent complete-task semantic judging remain separate.
 
-\pending{The three diagnostic modules are implemented and synthetic-tested on the literature-architecture development branch. They do not enter the frozen S0/S1 endpoint or model inputs; scientific scores require approved complete-task references, authentic independent reviewers, and sealed predictions.}
+\pending{The diagnostic modules are integrated into main with synthetic tests passing. They do not enter the S0/S1 prediction input or alter routes. Verified semantic references, independent approval evidence and sealed predictions are still required for scientific claims.}
 
 \subsection{Worked example: one choice resolves two fields}
 Table~\ref{tab:worked} illustrates the difference between detecting several ambiguities and identifying the particular information needed to complete a task. The example is drawn from case CA-0001 in the co-occurring ambiguity dataset. Its scene identifies two selected medicine trays, assigned respectively to a nurse and a ward clerk. Dialogue establishes that the utterance is a delivery request, and the relevant meal service is at 11:00. Neither fact identifies which tray to deliver. The tray choice is therefore unresolved even though the intended action and time are recoverable.
@@ -184,12 +184,18 @@ S2 (optional) & S1 + Gemini review & Independent second interpretation; optional
 
 \FloatBarrier
 \todo{Pre-register the S0/S1/S2 comparison, matched output schema and reasoning budgets, planned ablations, primary endpoint, and per-case paired uncertainty analysis before evaluating the held-out cases.}
+\subsection{Bounded clarification and rollout policy}
+The implemented dialogue loop accepts \emph{at most five}, not exactly five, user-answer turns. It starts with an initial turn-zero prediction and stops immediately if the output is \texttt{ACTION\_READY}. For \texttt{CLARIFY}, it requests a focused question; only the approved reply matching that question is released. After appending that reply to dialogue, it regenerates and revalidates the task. It stops on \texttt{ACTION\_READY}, an unavailable matching approved answer (\texttt{ANSWER\_UNAVAILABLE}), or five turns without readiness (\texttt{TURN\_LIMIT}). Invalid outputs and transport failures are separately logged operational errors, not successful clarification. The model's action-readiness status is not proof of semantic task correctness.
+
+Five seeds (17, 29, 43, 71, 101) are prespecified for the primary S0/S1 comparison, but the immediate one-seed activity is \emph{synthetic development smoke testing}, not held-out evaluation. The existing protected experiment runner enforces its complete 1,000-prediction five-seed initial grid: a one-seed protected pilot needs an explicit protocol amendment rather than a silent schedule change. That initial runner also records \texttt{clarification\_phase\_executed=false}; full protected dialogue orchestration, independent scoring and the final scientific freeze are still required.
+\pending{No protected one-seed pilot or full-dialogue held-out result has been generated. Do not unlock benchmark calls based solely on passing software tests.}
+
 \subsection{Ablations and evaluation}
-Within S1, planned ablations independently remove goal-first interpretation, structured intermediate grounding, scene context, dependency checks, and dialogue history. Dialogue eligibility must distinguish merely present history from history relevant to the interpretation. Dependency analysis requires a frozen eligibility annotation identifying linked fields; ambiguity-type labels alone do not establish dependence. Eligible counts are not yet established. The linked-dependency analysis will remain exploratory.
+Five candidate engineering probes vary explicit goal-first staging, grounding instructions, scene context, selected deterministic dependency-consistency guards, and dialogue history. The grounding-prompt intervention retains the output schema and validator, while the dependency intervention disables only selected post-generation consistency checks rather than the model's dependency reasoning. Therefore, neither represents complete removal of the respective mechanism. Dialogue eligibility must distinguish merely present history from history relevant to the interpretation. Dependency analysis requires a frozen eligibility annotation identifying linked fields; ambiguity-type labels alone do not establish dependence. Eligible counts are not yet established. The linked-dependency analysis will remain exploratory.
 
 The primary measure is \emph{complete task correctness}: whether all required actions, arguments, and constraints match an independently adjudicated reference in meaning. Secondary measures include per-field grounding accuracy, unsupported-argument rate, missing-critical-field rate, execute/clarify decisions, unnecessary clarification, clarification turns, and inference cost per correctly resolved task. Equivalent task descriptions are judged semantically rather than by literal JSON string matching. Each system is evaluated over five prespecified repeated runs, with identical cases and documented decoding settings; case-level paired comparisons and uncertainty intervals account for variation across cases and runs. Runs are repeated for the ablations where computationally feasible, and any reduced repetition is reported explicitly. Confidence intervals are not calculated by treating repeated outputs from the same case as independent examples. Any evaluation using simulated answers will be clearly separated from evaluation with real user replies.
 
-\todo{Write and test the semantic scoring rubric, confusion-matrix logic, failure-category rules, and independent verification workflow before scoring model outputs.}
+\todo{The semantic rubric, confusion-matrix tools, structural literature metrics and paired-case reporting have synthetic tests. Independently review complete references and final trajectory outputs, adjudicate metric disagreements and freeze real scored-export provenance.}
 \subsection{Literature-grounded diagnostic protocol (evaluator only)}
 The predeclared primary endpoint remains \emph{complete task correctness} for S0 versus S1 on the same 100 protected cases and five seeds; secondary literature diagnostics cannot redefine it. A valid task must have the correct intended goal, complete ordered action sequence, correct arguments and constraints, correct dependencies, source-supported evidence, and no unsupported detail. The existing evaluator scores independently verified field judgments and cumulative trajectory success, averaging answer branches within each case/run and then repeated runs within cases for paired inference. Operational errors are denominator failures, not fabricated human field judgments. Route agreement and JSON/schema validity do not establish semantic correctness. The resulting S1--S0 difference uses paired case resampling, not an independent 500-prediction sample.
 
@@ -205,26 +211,55 @@ The predeclared primary endpoint remains \emph{complete task correctness} for S0
 
 \textbf{Eligibility, provenance, and reporting:} diagnostic review records must bind the exact prediction digest and released reference hash/revision and carry independently verified reviewer fields. A separately authenticated release is still required: reviewer names or hashes alone are not proof of human annotation. Missing eligible labels, disputed annotations, absent linked-relationship gold, incomplete paired contrasts, or absent live runs remain \textsc{Pending}. New diagnostics cannot enter generation prompts or override author-approved routes. The tier-specific formulas, schema handoffs, and rubric are documented in \texttt{docs/LITERATURE\_EVALUATION\_20261019.md}; the separate implementation audit and adaptation limits are recorded in \texttt{docs/SARATHY\_CLARA\_ARCHITECTURE\_AUDIT.md}. Tier metrics and the evaluator-only architecture diagnostics remain distinct modules.
 \begin{table}[!tbp]
-\caption{Literature-grounded diagnostic results; no outcomes measured}
-\label{tab:literature-diagnostics}
+\caption{Tier 1: single-turn interpretation (all values pending)}
+\label{tab:tier1}
 \centering\footnotesize
 \begin{tabularx}{\columnwidth}{@{}Xcc@{}}
 \toprule
-\textbf{Diagnostic} & \textbf{S0} & \textbf{S1}\\
+\textbf{Metric} & \textbf{S0} & \textbf{S1}\\
 \midrule
-Tier 1: intent/action/argument accuracy & \todocell & \todocell\\
-Tier 1: required-parameter completeness & \todocell & \todocell\\
-Tier 1: unsupported-assumption incidence & \todocell & \todocell\\
-Tier 2: clarification precision/recall & \todocell & \todocell\\
-Tier 2: critical-field recall/question relevance & \todocell & \todocell\\
-Tier 3: consistency/parameter preservation & \todocell & \todocell\\
-Sarathy: referential/relational correctness & \todocell & \todocell\\
-AmbiK, CoDraw-iCR, IndirectRequests subgroups & \todocell & \todocell\\
-VAGUE-inspired full/withheld text-context difference & \todocell & \todocell\\
+Intended-goal accuracy & \todocell & \todocell\\
+Action-name accuracy & \todocell & \todocell\\
+Argument correctness & \todocell & \todocell\\
+Required-parameter completeness & \todocell & \todocell\\
+Unsupported-assumption incidence & \todocell & \todocell\\
 \bottomrule
 \end{tabularx}
 \end{table}
-\pending{All table entries require sealed predictions, individually reviewed semantic-gold references, independently adjudicated diagnostic labels, locked eligibility, and applicable paired runs. This table contains no synthetic or observed results.}
+\begin{table}[!tbp]
+\caption{Tier 2: clarification decisions and question quality}
+\label{tab:tier2}
+\centering\footnotesize
+\begin{tabularx}{\columnwidth}{@{}Xcc@{}}
+\toprule
+\textbf{Metric} & \textbf{S0} & \textbf{S1}\\
+\midrule
+Clarification precision & \todocell & \todocell\\
+Clarification recall & \todocell & \todocell\\
+Unnecessary clarification & \todocell & \todocell\\
+Critical-field detection recall & \todocell & \todocell\\
+Question relevance (asked only) & \todocell & \todocell\\
+\bottomrule
+\end{tabularx}
+\end{table}
+\begin{table}[!tbp]
+\caption{Tier 3: multi-turn grounding and eventual success}
+\label{tab:tier3}
+\centering\footnotesize
+\begin{tabularx}{\columnwidth}{@{}Xcc@{}}
+\toprule
+\textbf{Metric} & \textbf{S0} & \textbf{S1}\\
+\midrule
+Dialogue consistency after replies & \todocell & \todocell\\
+Previously bound fields preserved & \todocell & \todocell\\
+Correct action-ready at turn 0 & \todocell & \todocell\\
+Correct action-ready by turns 1--5 & \todocell & \todocell\\
+Answer unavailable / turn cap & \todocell & \todocell\\
+\bottomrule
+\end{tabularx}
+\end{table}
+\noindent\textit{Separate secondary analyses.} Sarathy-inspired referential binding and dependency relations are scored only on eligible, independently reviewed reference cases. AmbiK and IndirectRequests strata use their own denominators; CoDraw-inspired question-target frequencies are descriptive. The VAGUE-inspired full-versus-withheld \emph{textual} scene contrast is a within-case paired ablation difference, not an S0/S1 accuracy row.
+\pending{All three tables contain pending, not zero, values. Eligible denominators, authenticated semantic judgments, complete trajectories and relevant paired runs must be verified before any metric is reported.}
 
 \subsection{Failure analysis and scoring procedure}
 Every incorrect prediction will be assigned a primary failure category using the same adjudicated reference: wrong intended goal, wrong entity or argument, missing constraint, unsupported inferred detail, unnecessary clarification, or failure to clarify a critical unknown. Secondary tags may be retained when more than one error occurs, but each case contributes once to the primary error count. Reviewers will examine the input evidence and generated structured task, not only the model's explanation. Table~\ref{tab:failure} reserves space for this breakdown in Results.
@@ -238,7 +273,7 @@ The protected cases and all references must not influence prompts, system select
 
 \todo{Verify live Gemini 2.5 Flash-Lite access and thinking configuration on independent examples; finalize budget fairness, requested seeds, exact prompts, generation limits, API/client versions, warm-up and cost accounting. Freeze these decisions before evaluation. No second model has been selected.}
 \subsection{Hosted-model latency and efficiency scope}
-The initial efficiency study compares S0 and S1 using the selected Gemini 2.5 Flash-Lite API model; S2 is optional. No second model or smaller hosted checkpoint has been selected, so the earlier six-combination design is not an agreed experiment. Any second-model extension requires a frozen comparison and independent compatibility checks before evaluated outputs are viewed. Measure end-to-end client wall-clock latency including sequential calls, validation and clarification generation; report median and 95th percentile, calls and input/output/reasoning tokens. Record API errors, retry policy, client runtime, request concurrency, warm-up exclusions, collection period and dated pricing. Provider-side GPU memory and hardware are unavailable; TTFT and throughput should be reported only if actually measured. Hosted service variability limits hardware-controlled comparisons. Accuracy--cost claims require verified correctness alongside these measurements.
+The initial efficiency study compares S0 and S1 using the selected Gemini 2.5 Flash-Lite API model; S2 is optional. Logs capture actual end-to-end elapsed time, per-stage call count, observed model version and input/output/reasoning token use where available. Estimate request cost using dated API prices and actual token categories, retaining infrastructure errors and distinguishing per-attempt from per-correct-completion cost. The present sealed evaluation runner only records initial predictions; total clarification-loop cost requires completed sealed trajectory logs. No second model or smaller hosted checkpoint has been selected, so the earlier six-combination design is not an agreed experiment. Any second-model extension requires a frozen comparison and independent compatibility checks before evaluated outputs are viewed. Measure end-to-end client wall-clock latency including sequential calls, validation and clarification generation; report median and 95th percentile, calls and input/output/reasoning tokens. Record API errors, retry policy, client runtime, request concurrency, warm-up exclusions, collection period and dated pricing. Provider-side GPU details are unavailable and outside the study; TTFT and throughput are reported only if directly measured. Hosted service variability limits hardware-controlled comparisons. Accuracy--cost claims require verified correctness alongside these measurements.
 
 \FloatBarrier
 \section{Results}
@@ -336,9 +371,9 @@ Table~\ref{tab:ablations} isolates the contribution of intermediate interpretati
 \midrule
 Full S1 & \todocell & \todocell\\
 Without goal-first interpretation & \todocell & \todocell\\
-Without structured grounding & \todocell & \todocell\\
+Without explicit grounding instructions (schema retained) & \todocell & \todocell\\
 Without scene context & \todocell & \todocell\\
-Without dependency checking & \todocell & \todocell\\
+Without selected dependency guards & \todocell & \todocell\\
 Without dialogue (eligible cases) & \todocell & \todocell\\
 \bottomrule
 \end{tabularx}
@@ -374,14 +409,14 @@ Missing required clarification & \todocell & \todocell\\
 \FloatBarrier
 \subsection{Clarification and eventual task completion}
 \todo{Run the up-to-five-turn clarification loop with labeled hypothetical answers; graph verified simulated completion separately from real human outcomes.}
-Figure~\ref{fig:clarification} will show the cumulative fraction of cases that reach a correct action-ready specification after zero through five clarification turns. Plot S1 and optional S2 separately, and distinguish simulated-answer evaluation from any real human interactions. The denominator must be stated clearly, and a case reaching the turn cap without success remains unresolved.
+Figure~\ref{fig:clarification} will show the cumulative fraction of cases that reach a correct action-ready specification after zero through five clarification turns. Plot S0 and S1 when independently scored trajectories are available; S2 is optional. Distinguish simulated-answer evaluation from any real human interactions. The denominator must be stated clearly, and a case reaching the turn cap without success remains unresolved.
 \begin{figure}[!tbp]
 \centering
 \begin{tikzpicture}[x=1cm,y=1cm,font=\scriptsize]
 \draw[->,thick] (.7,.55)--(7.05,.55) node[right] {Turns};
 \draw[->,thick] (.7,.55)--(.7,3.2) node[above,align=center] {Cumulative\\success (\%)};
 \foreach \i/\x in {0/1.1,1/2.15,2/3.2,3/4.25,4/5.3,5/6.35}{\draw (\x,.55)--(\x,.48) node[below] {\i};}
-\node[align=center,text=todoRed] at (3.9,1.9) {TO DO: cumulative success curves\\for S1 (S2 optional)};
+\node[align=center,text=todoRed] at (3.9,1.9) {TO DO: cumulative success curves\\for S0/S1 when measured};
 \end{tikzpicture}
 \caption{Temporary plotting template: eventual task success by clarification turn. No data plotted.}
 \label{fig:clarification}
@@ -398,7 +433,7 @@ Figure~\ref{fig:clarification} will show the cumulative fraction of cases that r
 \pending{Reserved until results and discussion have been completed.}
 \section*{Code and Data Availability}
 \todo{Release or archive source, environment lockfile, requested/returned API model versions, exact prompts, evaluation scripts, frozen annotation version, and any allowable dataset artifacts; verify reuse licenses.}
-The project repository is available at \url{https://github.com/huziibee/Research_Project}. Dataset release conditions, final evaluation splits, and reproducibility artifacts will be specified after the experimental protocol is frozen.
+The working source repository is available at \url{https://github.com/huziibee/2610990_research_project}. Dataset release conditions, final evaluation splits, and reproducibility artifacts will be specified after the experimental protocol is frozen.
 \section*{Acknowledgements}
 All praise and thanks are due to Allah, whose mercy, guidance, and blessings made this work possible, and who granted me the strength, patience, and perseverance to complete it. I am deeply grateful to my supervisors, Steven James and Benjamin Rosman, for their guidance, feedback, encouragement, and for continually helping me strengthen the clarity and rigour of this research. I would also like to thank my parents, Mohammed Ebrahim Bangie and Gulshan Bangie, for their unwavering support, patience, encouragement, and sacrifices throughout my studies. Finally, I thank Taruna Naidoo for her support and helpful advice during the preparation of this research report.
 \noindent{\color{todoRed}\footnotesize\textbf{TO DO --- References:} Check complete authors, publication venues, years, page/DOI or arXiv identifiers, and live URLs. Cite only code that is actually reused, with its repository/license. Historical annotation-model identities must be reported only from verified package provenance; no unverified model-card claim is added here.}\par\smallskip
