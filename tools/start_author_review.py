@@ -77,8 +77,10 @@ def bootstrap(bundle,workspace, *, root=ROOT):
                 continue
             if path.exists():
                 current=json.loads(path.read_text(encoding="utf-8"))
-                if (current["reference"] != reference_template(cid,state["approved_route"])
-                        and current["reference"] != d["reference"]):
+                if (current["reference"] == d["reference"]
+                        and current["expected_head"] == state["head"]):
+                    continue  # Identical installed suggestion; idempotent.
+                if current["reference"] != reference_template(cid,state["approved_route"]):
                     continue  # Preserve human edits and validate them at review time.
             d["expected_head"]=state["head"]
             proposals.append((path,d))
