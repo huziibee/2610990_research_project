@@ -74,7 +74,7 @@ class WorkbenchTests(unittest.TestCase):
             headers.update(extra_headers)
         if data is not None:
             form = {"csrf": self.token if override_token is None else override_token,
-                    "draft_json": data, "actor": actor, "action": action, "provenance": "human"}
+                    "draft_json": data, "actor": actor, "action": action, "provenance": "human", "notes": ""}
             headers["Content-Type"] = "application/x-www-form-urlencoded"
             request = Request(self.base + path, data=urlencode(form).encode(), headers=headers, method="POST")
         else:
