@@ -1,0 +1,52 @@
+{
+  "amendment_id": "gemma4-26b-a4b-single-seed-17-candidate-20261019",
+  "status": "CANDIDATE_ONLY_NOT_FROZEN",
+  "allow_held_out_predictions": false,
+  "replaces_historical_protocol": false,
+  "historical_schedule_path": "protocol/run_schedule_1000.jsonl",
+  "model": {
+    "requested_id": "gemma-4-26b-a4b-it",
+    "thinkingConfig": {
+      "thinkingLevel": "minimal",
+      "includeThoughts": false
+    },
+    "responseJsonSchema": "PRESERVE_PROVIDER_SCHEMA_IN_LOCAL_GEMMA_CODE_PENDING_INTEGRATION",
+    "model_version_runtime_to_capture": true
+  },
+  "systems": {
+    "S0": {
+      "per_call_maxOutputTokens": 4096,
+      "calls": 1
+    },
+    "S1": {
+      "per_call_maxOutputTokens": 2048,
+      "calls": 2
+    }
+  },
+  "runs": {
+    "seeds": [
+      17
+    ],
+    "main_initial_predictions": 200,
+    "ablation_initial_predictions": 500,
+    "max_clarification_turns": 5,
+    "max_auto_retries": 0
+  },
+  "primary_endpoint": "human-adjudicated-complete-task-semantic-correctness-after-up-to-five-simulated-replies",
+  "statistics": {
+    "paired_case_bootstrap": true,
+    "independent_cases": 100,
+    "variation_across_seeds": "NOT_ESTIMABLE"
+  },
+  "pre_release_gates": [
+    "integrate local Gemma code and confirm provider schema and thinking fields",
+    "independent or explicitly supervisor-approved semantic gold",
+    "reviewed clarification answer matching rules",
+    "live synthetic S0 S1 and multistep smoke",
+    "implement sealed protected multi-turn runner with oracle process separation",
+    "scorer and archive pairing supports exactly seed 17",
+    "freeze complete configuration with code prompt and data fingerprints",
+    "quota-aware pacing and interrupted attempt accounting"
+  ],
+  "notes": "No protected evaluation is authorized by this planning amendment. Single-seed experiment is a distinct registered study, NOT equivalent to complete historical five-seed study."
+}
