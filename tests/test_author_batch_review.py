@@ -3,10 +3,15 @@ import json
 from pathlib import Path
 import tempfile
 import unittest
+import shutil
+import zipfile
+from hashlib import sha256
+from unittest.mock import patch
 
 from research.annotation_store import AnnotationStore
 from research.reference_schema import reference_template
 from tools.review_author_batch import approve_batch, preflight, _hash, _html_page
+from tools.start_author_review import bootstrap
 
 
 def task(ready, destination="shelf A", branch=False):
@@ -128,6 +133,44 @@ class AuthorBatchTest(unittest.TestCase):
             with self.assertRaises(ValueError):
                 preflight(ws)
             self.assertEqual(store.show("CA-0001")["revision"],0)
+
+
+    def test_one_command_bootstrap_is_idempotent(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            root=Path(tmp)
+            existing,_=self.make_workspace(tmp)
+            data=root/"Data/data"
+            data.mkdir(parents=True)
+            (root/"annotation").mkdir()
+            files={"source":"data/source_100.jsonl",
+                   "routes":"data/author_approved_route_gold_100.jsonl",
+                   "worksheet":"annotation/semantic_reference_template_100.jsonl"}
+            paths={}
+            for name,relative in files.items():
+                path=root/("Data/"+relative if name!="worksheet" else relative)
+                shutil.copyfile(root/(name+".jsonl"),path)
+                paths[name]=path
+            metadata={"case_count":100,"frozen_routes":{"execute":74,"clarify":26},
+                      "sources":{
+                          "data/source_100.jsonl":{"sha256":sha256(paths["source"].read_bytes()).hexdigest()},
+                          "data/author_approved_route_gold_100.jsonl":{"sha256":sha256(paths["routes"].read_bytes()).hexdigest()}
+                      },"files":[]}
+            archive=root/"private_candidates.zip"
+            with zipfile.ZipFile(archive,"w") as z:
+                for i in range(1,101):
+                    cid=f"CA-{i:04d}";name=f"candidates/{cid}.json"
+                    content=(existing/"drafts"/(cid+".json")).read_bytes()
+                    z.writestr(name,content)
+                    metadata["files"].append({"path":name,"sha256":sha256(content).hexdigest()})
+                z.writestr("PROVENANCE.json",json.dumps(metadata))
+            destination=root/"runs/human_review_20261019"
+            with patch("tools.start_author_review.verify_release"):
+                first=bootstrap(archive,destination,root=root)
+                second=bootstrap(archive,destination,root=root)
+            self.assertEqual(first["new_drafts"],100)
+            self.assertEqual(second["new_drafts"],0)
+            self.assertEqual(len(preflight(destination)[1]),100)
+            self.assertEqual(AnnotationStore(destination).show("CA-0001")["revision"],0)
 
 
 if __name__=="__main__":
