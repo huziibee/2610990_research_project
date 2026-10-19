@@ -1,0 +1,18 @@
+{
+  "archive_file": "author_review_v1.enc",
+  "author_receipt_sha256": "5cdda0cbc69724a0c04a7a12988b442d8b1751ee3b5b00747142bbaf5a3b29c8",
+  "benchmark_executed": false,
+  "branch_count": 26,
+  "case_count": 100,
+  "clarify_cases": 26,
+  "encrypted_sha256": "4290647c43bb69f0caf36c32601f9c6b2693eb399d8f42cf33fcf6ac151d48d0",
+  "encryption": "AES-256-GCM",
+  "execute_cases": 74,
+  "independently_verified": false,
+  "key_in_git": false,
+  "meaning": "Author-reviewed model-assisted semantic references; no second-human verifier asserted",
+  "member_count": 303,
+  "reference_export_sha256": "8bff3db92f2539b284d0fee359dc245979c25553d211b5931273591a0daed138",
+  "schema_version": 1,
+  "status": "AUTHOR_REVIEWED_NOT_INDEPENDENTLY_VERIFIED"
+}
