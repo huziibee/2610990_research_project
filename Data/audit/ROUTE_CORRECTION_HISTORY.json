@@ -1,0 +1,28 @@
+{
+  "added_synthetic_original_id": "NEW-0100",
+  "added_synthetic_record_id": "CA-0100",
+  "dataset_name": "Co-occurring Ambiguity Dataset",
+  "dataset_version": "1.0.0",
+  "note": "ID remapping is not a new adjudication. The three route corrections were explicitly author-approved in v6.",
+  "original_99_routes_unchanged_except": 3,
+  "route_changes": [
+    {
+      "author_approved_terminal_strategy": "clarify",
+      "original_terminal_strategy": "execute",
+      "previous_v6_record_id": "CA-0029",
+      "record_id": "CA-0005"
+    },
+    {
+      "author_approved_terminal_strategy": "clarify",
+      "original_terminal_strategy": "execute",
+      "previous_v6_record_id": "CA-0239",
+      "record_id": "CA-0025"
+    },
+    {
+      "author_approved_terminal_strategy": "clarify",
+      "original_terminal_strategy": "execute",
+      "previous_v6_record_id": "CA-0565",
+      "record_id": "CA-0051"
+    }
+  ]
+}

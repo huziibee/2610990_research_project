@@ -1,0 +1,105 @@
+{
+  "dataset_id": "co_occurring_ambiguity_dataset",
+  "dataset_name": "Co-occurring Ambiguity Dataset",
+  "dataset_version": "1.0.0",
+  "date": "2026-10-19",
+  "files": [
+    {
+      "path": "DATASET_METADATA.json",
+      "sha256": "9e1018b5396a555117bb33915825ae2d79e6ade27ba1fb8590893058a01868ef",
+      "size_bytes": 1450
+    },
+    {
+      "path": "README.md",
+      "sha256": "f3dc399d9a594a91f0071046ea20c8f161d9b43b2772c893f8af5a801b07f4f1",
+      "size_bytes": 3832
+    },
+    {
+      "path": "archive/Pilot_100_Author_Human_Adjudicated_Routes_v6.zip",
+      "sha256": "cf5a8b4834b55a008ee32456b461121af3fed3dcddea95d91fde79fe2c6390db",
+      "size_bytes": 471959
+    },
+    {
+      "path": "audit/ALL_100_AUTHOR_REVIEW_STATUS.jsonl",
+      "sha256": "b74d7a53b954568c1fcff3fec05981bf3585d7fb3a9f9b8b7e44a0e4ba54a6a5",
+      "size_bytes": 42266
+    },
+    {
+      "path": "audit/ALL_100_EXPLICIT_APPROVALS.jsonl",
+      "sha256": "561a99947678c4122450528f905bd861644b201aa78de46fd10d99b976cc4e8a",
+      "size_bytes": 78272
+    },
+    {
+      "path": "audit/CA-0025_AUTHOR_CAPABILITY_ATTESTATION.json",
+      "sha256": "6fc02843bfa918539e58f1e306a661b3a873589cd214680db32c64ed3b813cc2",
+      "size_bytes": 512
+    },
+    {
+      "path": "audit/ID_CROSSWALK_100.csv",
+      "sha256": "3ffb62f09ad4a86bf78153e2b179d6af1ddbb36b0aca66c0e8209d22058008d7",
+      "size_bytes": 4874
+    },
+    {
+      "path": "audit/ID_CROSSWALK_100.jsonl",
+      "sha256": "6aff659cfcf003cea5c80188b1fd11c89a58d2c23a863a2585a1ca4c3b75bec1",
+      "size_bytes": 13107
+    },
+    {
+      "path": "audit/ROUTE_CORRECTION_HISTORY.json",
+      "sha256": "eaa3f43e7d1871aacbd75422cbbc9f384e79d7a60139f69e267755fcdbf32d60",
+      "size_bytes": 916
+    },
+    {
+      "path": "data/author_approved_route_gold_100.jsonl",
+      "sha256": "75056271e024869ee03c8f3faf772daa031641522ecbc46bdbcc2072d41843b8",
+      "size_bytes": 28525
+    },
+    {
+      "path": "data/gold_100_native_schema.jsonl",
+      "sha256": "e42c5baaee95efbfff37bd2d1276cbf19a0841d4af0bf37ecf24620af8a8a3d7",
+      "size_bytes": 135809
+    },
+    {
+      "path": "data/gold_100_with_author_review.jsonl",
+      "sha256": "ca62589076dda8f7fbeebac4dd2ff20e5d88099bd78a5fb09b2e0e727a3c4cad",
+      "size_bytes": 186859
+    },
+    {
+      "path": "data/source_100.jsonl",
+      "sha256": "f0ba3edbc0d8692c77fdd6050b0a985d33b92af078d490672c0e69829995f621",
+      "size_bytes": 95493
+    },
+    {
+      "path": "docs/RELEASE_NOTES.md",
+      "sha256": "74b4247c4a99f06b3ca9f05fe5204fec068e397bf9d6bdba60533a7cc268b5a5",
+      "size_bytes": 886
+    },
+    {
+      "path": "verify_package.py",
+      "sha256": "21f2362653ea0fab27f19117d71c1399c2792ff04e03f753c4a19bbdc0a8b7ce",
+      "size_bytes": 4493
+    }
+  ],
+  "historical_annotation_fields_independently_human_adjudicated": false,
+  "human_author_route_approved": 100,
+  "identifier_changes_since_v6": 100,
+  "label_counts": {
+    "clarify": 26,
+    "execute": 74
+  },
+  "old_id_namespace_warning": "Must use crosswalk; new CA IDs overlap old frozen CA IDs.",
+  "protected_held_out_evaluation_only": true,
+  "provenance_retained": true,
+  "record_count": 100,
+  "route_changes_since_v6": 0,
+  "sequential_id_max": "CA-0100",
+  "sequential_id_min": "CA-0001",
+  "source_counts": {
+    "pilot120_subset": 99,
+    "synthetic_case_outside_pilot120": 1
+  },
+  "source_text_changes_since_v6": 0,
+  "source_v6_archive_path": "archive/Pilot_100_Author_Human_Adjudicated_Routes_v6.zip",
+  "source_v6_archive_sha256": "cf5a8b4834b55a008ee32456b461121af3fed3dcddea95d91fde79fe2c6390db",
+  "unique_record_ids": 100
+}

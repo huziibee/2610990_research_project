@@ -1,0 +1,34 @@
+{
+  "author_approval_scope": [
+    "terminal_strategy",
+    "strategy_sequence",
+    "synthetic_case_inclusion_for_CA-0100",
+    "CA-0025_capability_attestation"
+  ],
+  "author_approved_route_count": 100,
+  "conflict_warning": "New CA-#### identifiers are a standalone namespace and must NOT be joined to the original frozen Pilot-120 records by record_id. Use the crosswalk to join prior IDs.",
+  "dataset_id": "co_occurring_ambiguity_dataset",
+  "dataset_name": "Co-occurring Ambiguity Dataset",
+  "date": "2026-10-19",
+  "evaluation_only": true,
+  "human_review_all_structured_fields": false,
+  "independent_blind_human_review_claimed": false,
+  "model_selection_allowed": false,
+  "origin_counts": {
+    "assistant_authored_synthetic": 1,
+    "frozen_pilot120_subset": 99
+  },
+  "original_v6_archive_name": "Pilot_100_Author_Human_Adjudicated_Routes_v6.zip",
+  "original_v6_archive_sha256": "cf5a8b4834b55a008ee32456b461121af3fed3dcddea95d91fde79fe2c6390db",
+  "previous_version": "pilot_100_author_human_adjudicated_routes_v6",
+  "record_count": 100,
+  "record_id_format": "CA-0001 through CA-0100, sequential four-digit IDs",
+  "renaming_rule": "Sort 100 v6 cases numerically by previous native record ID and assign CA-0001..CA-0100 in that order; synthetic former CA-1001 last.",
+  "route_counts": {
+    "clarify": 26,
+    "execute": 74
+  },
+  "training_and_prompt_tuning_allowed": false,
+  "unapproved_route_count": 0,
+  "version": "1.0.0"
+}

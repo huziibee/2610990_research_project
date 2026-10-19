@@ -1,0 +1,9 @@
+{
+  "caveat": "Source text mentions signs/light barriers but does not independently establish cleaning-cart moving. This is an explicit human author attestation, not new source evidence.",
+  "gold_capability_status": "capable",
+  "human_choice": "capable",
+  "previous_v6_record_id": "CA-0239",
+  "record_id": "CA-0025",
+  "source_capability_description": "Station service robot can move signs and light barriers, scan tags, and deliver sealed items in public and staff zones.",
+  "source_text_changed": false
+}
