@@ -1,5 +1,29 @@
 # Author-led model-assisted semantic review: 100 protected cases
 
+## Corrected model labels and repeatable local sign-off
+
+The historical corrected export now reports **57 Claude Sonnet** and
+**43 GLM 5.2 High** models. CA-0043 maps to Claude Sonnet, and CA-0100
+maps to GLM 5.2 High. The amendment's \`corrected_values\` field retains
+\`{"annotator_b_model":"glm","annotator_b_era":"glm_era"}\`, and the
+normalized export uses the full model name.
+
+To run the already-authorized review and correct both local outputs:
+
+~~~powershell
+git fetch origin
+git switch --detach origin/main
+py -m tools.review_author_batch --workspace runs/human_review_20261019 --approve --actor "Mohammed Bangie" --notes "I compared all 100 references against the source text and accept the drafts and clarification branches as my annotated decisions" --report-two-model-adjudication --reported-review-models Grok GLM
+py -m tools.export_review_provenance
+~~~
+
+If a completed author export already exists, the script verifies its hash,
+reference identities and ledger heads; it returns the existing approval and
+updates the two reported model identities rather than duplicating events.
+Existing corrected model-label exports are likewise refreshed after
+validating the previous file and manifest.
+
+
 **Implementation:** \`tools/review_author_batch.py\` on branch \`research/literature-evaluation-20261019\`.
 
 This is a **separately labelled one-human, model-assisted author-approval track**. It does not impersonate or manufacture another person. It never describes itself as independently human verified and does **not** silently pass the pre-existing two-human verification gate. The supervisor-approved protocol variant, if adopted, must be clearly documented in the manuscript rather than relabelling this as an independently reviewed gold release. Earlier claims of two-model adjudication require their actual saved evidence (model identities, blinded outputs, timestamps, disagreements and resolutions) to be added before that history can be asserted as verified.
