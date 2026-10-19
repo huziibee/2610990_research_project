@@ -205,26 +205,55 @@ The predeclared primary endpoint remains \emph{complete task correctness} for S0
 
 \textbf{Eligibility, provenance, and reporting:} diagnostic review records must bind the exact prediction digest and released reference hash/revision and carry independently verified reviewer fields. A separately authenticated release is still required: reviewer names or hashes alone are not proof of human annotation. Missing eligible labels, disputed annotations, absent linked-relationship gold, incomplete paired contrasts, or absent live runs remain \textsc{Pending}. New diagnostics cannot enter generation prompts or override author-approved routes. The tier-specific formulas, schema handoffs, and rubric are documented in \texttt{docs/LITERATURE\_EVALUATION\_20261019.md}; the separate implementation audit and adaptation limits are recorded in \texttt{docs/SARATHY\_CLARA\_ARCHITECTURE\_AUDIT.md}. Tier metrics and the evaluator-only architecture diagnostics remain distinct modules.
 \begin{table}[!tbp]
-\caption{Literature-grounded diagnostic results; no outcomes measured}
-\label{tab:literature-diagnostics}
+\caption{Tier 1: single-turn interpretation (all values pending)}
+\label{tab:tier1}
 \centering\footnotesize
 \begin{tabularx}{\columnwidth}{@{}Xcc@{}}
 \toprule
-\textbf{Diagnostic} & \textbf{S0} & \textbf{S1}\\
+\textbf{Metric} & \textbf{S0} & \textbf{S1}\\
 \midrule
-Tier 1: intent/action/argument accuracy & \todocell & \todocell\\
-Tier 1: required-parameter completeness & \todocell & \todocell\\
-Tier 1: unsupported-assumption incidence & \todocell & \todocell\\
-Tier 2: clarification precision/recall & \todocell & \todocell\\
-Tier 2: critical-field recall/question relevance & \todocell & \todocell\\
-Tier 3: consistency/parameter preservation & \todocell & \todocell\\
-Sarathy: referential/relational correctness & \todocell & \todocell\\
-AmbiK, CoDraw-iCR, IndirectRequests subgroups & \todocell & \todocell\\
-VAGUE-inspired full/withheld text-context difference & \todocell & \todocell\\
+Intended-goal accuracy & \todocell & \todocell\\
+Action-name accuracy & \todocell & \todocell\\
+Argument correctness & \todocell & \todocell\\
+Required-parameter completeness & \todocell & \todocell\\
+Unsupported-assumption incidence & \todocell & \todocell\\
 \bottomrule
 \end{tabularx}
 \end{table}
-\pending{All table entries require sealed predictions, individually reviewed semantic-gold references, independently adjudicated diagnostic labels, locked eligibility, and applicable paired runs. This table contains no synthetic or observed results.}
+\begin{table}[!tbp]
+\caption{Tier 2: clarification decisions and question quality}
+\label{tab:tier2}
+\centering\footnotesize
+\begin{tabularx}{\columnwidth}{@{}Xcc@{}}
+\toprule
+\textbf{Metric} & \textbf{S0} & \textbf{S1}\\
+\midrule
+Clarification precision & \todocell & \todocell\\
+Clarification recall & \todocell & \todocell\\
+Unnecessary clarification & \todocell & \todocell\\
+Critical-field detection recall & \todocell & \todocell\\
+Question relevance (asked only) & \todocell & \todocell\\
+\bottomrule
+\end{tabularx}
+\end{table}
+\begin{table}[!tbp]
+\caption{Tier 3: multi-turn grounding and eventual success}
+\label{tab:tier3}
+\centering\footnotesize
+\begin{tabularx}{\columnwidth}{@{}Xcc@{}}
+\toprule
+\textbf{Metric} & \textbf{S0} & \textbf{S1}\\
+\midrule
+Dialogue consistency after replies & \todocell & \todocell\\
+Previously bound fields preserved & \todocell & \todocell\\
+Correct action-ready at turn 0 & \todocell & \todocell\\
+Correct action-ready by turns 1--5 & \todocell & \todocell\\
+Answer unavailable / turn cap & \todocell & \todocell\\
+\bottomrule
+\end{tabularx}
+\end{table}
+\noindent\textit{Separate secondary analyses.} Sarathy-inspired referential binding and dependency relations are scored only on eligible, independently reviewed reference cases. AmbiK and IndirectRequests strata use their own denominators; CoDraw-inspired question-target frequencies are descriptive. The VAGUE-inspired full-versus-withheld \emph{textual} scene contrast is a within-case paired ablation difference, not an S0/S1 accuracy row.
+\pending{All three tables contain pending, not zero, values. Eligible denominators, authenticated semantic judgments, complete trajectories and relevant paired runs must be verified before any metric is reported.}
 
 \subsection{Failure analysis and scoring procedure}
 Every incorrect prediction will be assigned a primary failure category using the same adjudicated reference: wrong intended goal, wrong entity or argument, missing constraint, unsupported inferred detail, unnecessary clarification, or failure to clarify a critical unknown. Secondary tags may be retained when more than one error occurs, but each case contributes once to the primary error count. Reviewers will examine the input evidence and generated structured task, not only the model's explanation. Table~\ref{tab:failure} reserves space for this breakdown in Results.
@@ -336,9 +365,9 @@ Table~\ref{tab:ablations} isolates the contribution of intermediate interpretati
 \midrule
 Full S1 & \todocell & \todocell\\
 Without goal-first interpretation & \todocell & \todocell\\
-Without structured grounding & \todocell & \todocell\\
+Without explicit grounding instructions (schema retained) & \todocell & \todocell\\
 Without scene context & \todocell & \todocell\\
-Without dependency checking & \todocell & \todocell\\
+Without selected dependency guards & \todocell & \todocell\\
 Without dialogue (eligible cases) & \todocell & \todocell\\
 \bottomrule
 \end{tabularx}
