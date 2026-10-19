@@ -10,7 +10,7 @@ from unittest.mock import patch
 
 from research.annotation_store import AnnotationStore
 from research.reference_schema import reference_template
-from tools.review_author_batch import approve_batch, preflight, _hash, _html_page
+from tools.review_author_batch import approve_batch, preflight, _hash, _html_page, read_author_attestation
 from tools.start_author_review import bootstrap
 
 
@@ -171,6 +171,41 @@ class AuthorBatchTest(unittest.TestCase):
             self.assertEqual(second["new_drafts"],0)
             self.assertEqual(len(preflight(destination)[1]),100)
             self.assertEqual(AnnotationStore(destination).show("CA-0001")["revision"],0)
+
+
+    def test_exact_attestation_fingerprints_and_mismatch(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            ws,store=self.make_workspace(tmp)
+            _,rows=preflight(ws)
+            att={
+                "schema_version":1,
+                "attestation_type":"ONE_HUMAN_AUTHOR_REVIEW_OF_MODEL_ASSISTED_CANDIDATES",
+                "recorded_from":"user_explicit_statement_in_chat",
+                "actor":"Actual human researcher",
+                "statement":"I reviewed all one hundred candidate references and accept their suggestions.",
+                "review_date":"2026-10-19",
+                "approved_count":100,"clarification_count":26,
+                "source_candidate_archive_sha256":"a"*64,
+                "original_source_sha256":"b"*64,
+                "approved_reference_sha256":{r["record_id"]:r["reference_sha256"] for r in rows},
+                "model_assisted":True,"independently_human_verified":False,
+                "reviewer_identity_authenticated_externally":False,
+                "two_model_review_logs_authenticated":False,
+                "frozen_route_changes":0,"benchmark_executed":False,
+                "status":"AUTHOR_ATTESTATION_SUPPLIED_LEDGER_APPLICATION_PENDING",
+                "note":"Self-attestation for synthetic test only."
+            }
+            path=Path(tmp)/"approval.json"
+            path.write_text(json.dumps(att),encoding="utf-8")
+            who,note=read_author_attestation(path,rows)
+            self.assertEqual(who,"Actual human researcher")
+            self.assertIn("reviewed",note)
+            tampered=att.copy()
+            tampered["approved_reference_sha256"]=dict(att["approved_reference_sha256"])
+            tampered["approved_reference_sha256"]["CA-0001"]="0"*64
+            path.write_text(json.dumps(tampered),encoding="utf-8")
+            with self.assertRaisesRegex(ValueError,"differs"):
+                read_author_attestation(path,rows)
 
 
 if __name__=="__main__":
