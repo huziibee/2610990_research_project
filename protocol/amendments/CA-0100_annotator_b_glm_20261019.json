@@ -1,8 +1,8 @@
 {
   "schema_version": 1,
   "dataset_version": "1.0.1",
-  "amendment_id": "CA-0100-annotator-b-glm-author-correction-20261019",
-  "scope": "Historical annotator-B model identity fields only; all source and derived freeze members remain untouched.",
+  "amendment_id": "CA-0043-CA-0100-model-name-corrections-20261019",
+  "scope": "Correct historical model names for CA-0043 and CA-0100 in the 100-row review export. The SHA-pinned source is not modified.",
   "source_path": "research_data/references/native_annotations_100.jsonl",
   "source_sha256": "f94305a8f3d4be625630777cb7584310d1734d85df949a522b8362d4f5524b62",
   "record_id": "CA-0100",
@@ -16,13 +16,23 @@
   },
   "attested_by": "Mohammed Bangie",
   "attestation_type": "author-reported correction to omitted historical metadata",
-  "attestation_statement": "The blank annotator B model field for CA-0100 should say GLM. Preserve all existing nonblank Claude and GLM labels.",
-  "model_version": "not supplied by the author; do not infer a GLM version",
+  "attestation_statement": "CA-0100 annotator B is GLM 5.2 High, CA-0043 annotator B is Claude Sonnet (not Opus); retain all other labels.",
+  "model_version": "CA-0100 normalized to glm-5.2-high as confirmed by user on 2026-10-19",
   "does_not_change": [
     "frozen source or routes",
     "case origin",
     "gold lifecycle or human gate",
     "underlying model-run log authentication"
   ],
-  "created_on": "2026-10-19"
+  "created_on": "2026-10-19",
+  "additional_model_corrections": [
+    {
+      "record_id": "CA-0043",
+      "field": "annotator_b_model",
+      "previous_value": "claude-4.6-opus-high-thinking",
+      "corrected_value": "claude-4.6-sonnet-medium-thinking",
+      "era": "claude_era"
+    }
+  ],
+  "canonical_model_for_glm_correction": "glm-5.2-high"
 }
