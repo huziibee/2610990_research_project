@@ -122,11 +122,18 @@ class AuthorBatchTest(unittest.TestCase):
             report=approve_batch(
                 ws,"Actual human researcher",
                 "I independently checked all proposed interpretations against sources.",
-                reported_two_models=True)
+                reported_two_models=True, reported_review_models=["Grok", "GLM"])
+            self.assertEqual(report["review_models_reported_by_author"],["Grok","GLM"])
+            self.assertEqual(report["reported_review_scope"],"100 semantic references (author assertion)")
             self.assertTrue(report["two_model_adjudication_reported_by_author"])
             self.assertFalse(report["two_model_review_logs_authenticated"])
             self.assertTrue(report["human_author_approval_attested"])
             self.assertFalse(report["independent_human_verification"])
+            out=(ws/"author_review_export"/"author_reviewed_references_100.jsonl")
+            rows=[json.loads(line) for line in out.read_text(encoding="utf-8").splitlines()]
+            self.assertEqual(len(rows),100)
+            self.assertTrue(all(r["review_models_reported_by_author"]==["Grok","GLM"] for r in rows))
+            self.assertTrue(all(r["review_model_provenance"]=="author_attested_not_log_authenticated" for r in rows))
 
 
     def test_unreviewed_and_fake_identity_rejected(self):
