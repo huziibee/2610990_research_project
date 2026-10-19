@@ -39,7 +39,7 @@ class BlindedJudgmentTests(unittest.TestCase):
         self.assertFalse(report["reviewer_identities_authenticated"])
         self.assertEqual(report["semantic_correctness"], "NOT_COMPUTED")
         row = report["judgments"][0]
-        self.assertEqual(row["status"], "independently_verified")
+        self.assertEqual(row["status"], "agreement_candidate_unverified")
         self.assertEqual(row["reference_sha256"], "a" * 64)
         self.assertTrue(row["initial_clarification_appropriate"])
         self.assertNotIn("system", row)
