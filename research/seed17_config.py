@@ -21,6 +21,9 @@ def validate_config(config):
             or config["schedules"] != {"main": "protocol/seed17/main_200.jsonl", "ablations": "protocol/seed17/ablations_500.jsonl"}
             or config["statistics"] != {"bootstrap_replicates": 10000, "bootstrap_seed": 20261019,
                 "unit": "paired_case_branch_means", "between_seed_variability": "NOT_ESTIMABLE"}
+            or not isinstance(config.get("review_protocol"), dict)
+            or config["review_protocol"].get("protocol_id") != "gemma_seed17_author_approved_agent_assisted_v1"
+            or config["review_protocol"].get("path") != "protocol/seed17/AUTHOR_APPROVED_AGENT_ASSISTED_v1.json"
             or set(config["systems"]) != {"S0", "S1"}):
         raise ValueError("Unsupported single-seed contract")
     for system, calls, cap in (("S0", 1, 4096), ("S1", 2, 2048)):

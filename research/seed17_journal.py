@@ -122,10 +122,13 @@ class QuotaLedger:
 
 
 class RequestJournal:
-    def __init__(self, directory, binding, quota=None, *, clock=time.time):
+    def __init__(self, directory, binding, quota=None, *, clock=time.time, allow_reasoning_tokens=False):
         self.directory = Path(directory)
         self.directory.mkdir(parents=True, exist_ok=True)
         self.binding, self.quota, self.clock = binding, quota, clock
+        if type(allow_reasoning_tokens) is not bool:
+            raise ValueError("Explicit boolean reasoning-usage policy required")
+        self.allow_reasoning_tokens = allow_reasoning_tokens
         self.receipts = []
         self.new_transient_error = False
 
@@ -173,7 +176,7 @@ class RequestJournal:
                             candidate.get("content", {})["parts"] = [p for p in parts if not p.get("thought")]
                         done.update(status="RESPONSE", response=response)
                         reasoning = response.get("usageMetadata", {}).get("thoughtsTokenCount")
-                        if saw_thoughts or (type(reasoning) in (int, float) and reasoning > 0):
+                        if not self.allow_reasoning_tokens and (saw_thoughts or (type(reasoning) in (int, float) and reasoning > 0)):
                             done.update(status="ERROR", code="THINKING_POLICY_VIOLATION", http_status=None,
                                         retry_after_seconds=None)
                             self.new_transient_error = True  # Pause; never repair/retry under a changed policy.

@@ -1,0 +1,65 @@
+{
+  "schema_version": 1,
+  "protocol_id": "gemma_seed17_author_review_v1",
+  "status": "SUPERSEDED_BEFORE_EVALUATION",
+  "candidate_amendment": {
+    "path": "protocol/amendments/AUTHOR_REVIEWED_GOLD_CANDIDATE_20261019.json",
+    "sha256": "6aa57a7365a4a88edbda6cbbd67fb49dff9eb9c0d4b6905c6d34d876217e5b8f"
+  },
+  "selection_authority": "Explicit user instruction adopting the one-human, model-assisted author-review protocol; this is methodology selection, not launch authorization",
+  "review_design": "ONE_HUMAN_AUTHOR_REVIEW_OF_MODEL_ASSISTED_COMPLETE_TASK_REFERENCES",
+  "approval_status": "AUTHOR_REVIEWED_NOT_INDEPENDENTLY_VERIFIED",
+  "author": "Mohammed Bangie",
+  "release": {
+    "receipt_sha256": "5cdda0cbc69724a0c04a7a12988b442d8b1751ee3b5b00747142bbaf5a3b29c8",
+    "reference_export_sha256": "8bff3db92f2539b284d0fee359dc245979c25553d211b5931273591a0daed138",
+    "source_manifest_sha256": "767b00fa5d316b4a71bcf9ba098398b7759681afe85ec94027e23b86cdbca7cf",
+    "archive_sha256": "4290647c43bb69f0caf36c32601f9c6b2693eb399d8f42cf33fcf6ac151d48d0",
+    "archive_manifest_sha256": "c215c0bf41ffba7b99858d622e4ec7acfe7c48beef7e48878bd24a273391ea4c"
+  },
+  "source_bindings": {
+    "source": {
+      "path": "Data/data/source_100.jsonl",
+      "sha256": "f0ba3edbc0d8692c77fdd6050b0a985d33b92af078d490672c0e69829995f621"
+    },
+    "routes": {
+      "path": "Data/data/author_approved_route_gold_100.jsonl",
+      "sha256": "75056271e024869ee03c8f3faf772daa031641522ecbc46bdbcc2072d41843b8"
+    },
+    "worksheet": {
+      "path": "annotation/semantic_reference_template_100.jsonl",
+      "sha256": "a05f50c70cb841cdfc95fd942e2989a37fab033d873098ca3de2c37802379718"
+    }
+  },
+  "counts": {
+    "references": 100,
+    "execute": 74,
+    "clarify": 26,
+    "branches": 26
+  },
+  "matching_policy": "Canonical questions already approved in the exact reference release only; whitespace collapse and casefold; no inferred paraphrases or model-generated replies",
+  "eligibility_policy": "Use the exact author-approved dialogue_relevant and explicit_linked_dependencies boolean labels; never infer labels from predictions",
+  "scoring_policy": {
+    "judgment_status": "author_reviewed",
+    "human_reviewer": "same named author",
+    "system_blinded": true,
+    "notes_required": true,
+    "prediction_and_reference_hashes_required": true,
+    "independent_review_required": false,
+    "fixture_signoff_required": true
+  },
+  "independent_human_verification": false,
+  "reviewer_identity_authenticated_externally": false,
+  "two_model_review_logs_authenticated": false,
+  "limitations": [
+    "One author can introduce annotation and scoring bias; model assistance can reproduce correlated errors.",
+    "No independent reviewer or authenticated model-review logs are asserted.",
+    "Hashes establish integrity and provenance bindings, not semantic truth.",
+    "System blinding reduces exposure to system labels but cannot establish independence or remove recognizable output-style bias.",
+    "Simulated replies cover annotated scenarios, not observed human conversations.",
+    "One seed cannot estimate between-seed variability."
+  ],
+  "allow_held_out_predictions": false,
+  "benchmark_executed": false,
+  "superseded_by": "protocol/seed17/AUTHOR_APPROVED_AGENT_ASSISTED_v1.json"
+}

@@ -1,1 +1,3 @@
-# Uses only the Python standard library; no packages need to be installed.
+# Archive encryption, isolated Live judge and full synthetic regression suite.
+cryptography==49.0.0
+websockets==16.0

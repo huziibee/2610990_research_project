@@ -2,7 +2,8 @@
 import json
 from pathlib import Path
 import sys
-from research.clarification_matching import FrozenClarificationOracle
+from research.seed17_author_review import load_author_release
+from research.clarification_matching import author_approved_oracle
 from research.integrity import read_json, read_jsonl
 from research.seed17_journal import content_hash
 from research.single_seed_plan import schedules
@@ -13,7 +14,8 @@ class VerifiedOracle:
         from research.seed17_gate import check_readiness
         if not check_readiness(root, bundle)["ready"]:
             raise ValueError("No signed-off reference release")
-        self.rows = {r["record_id"]: r for r in read_jsonl(root / bundle["artifacts"]["semantic_references"]["path"])}
+        self.release = load_author_release(root, bundle)
+        self.rows = {r["record_id"]: r for r in self.release["rows"]}
         self.rules = read_json(root / bundle["artifacts"]["clarification_matching_rules"]["path"])
         self.export_hash = bundle["artifacts"]["semantic_references"]["sha256"]
         self.active = {}
@@ -34,8 +36,7 @@ class VerifiedOracle:
             return None
         key = (sequence, branch_id)
         if key not in self.active:
-            self.active[key] = FrozenClarificationOracle(self.rows[record_id], self.rules,
-                reference_export_sha256=self.export_hash, branch_id=branch_id)
+            self.active[key] = author_approved_oracle(self.release, record_id=record_id, branch_id=branch_id)
         return self.active[key](question, turn)
 
 

@@ -1,3 +1,5 @@
+> Current semantic method: [author-approved, agent-assisted evaluation protocol](protocol/seed17/AUTHOR_APPROVED_AGENT_ASSISTED_v1.json), adopted explicitly for Gemma seed 17. The exact 100-reference/26-branch release remains author reviewed, not independently verified. Current paper source: [Gemma seed-17 manuscript](Report/Cooccurring_Ambiguity_Paper_Gemma_Seed17_Working.tex). Earlier paper/protocol descriptions below are historical; protected evaluation remains disabled.
+
 # Gemini research implementation
 
 Current implementation: [Gemma seed-17 local handoff](docs/GEMMA_SEED17_LOCAL_HANDOFF_20261019.md). The protected single-seed runner, oracle boundary, no-reroll journaling, pacing, archive audit and scoring bridge are implemented. Its separate protocol remains CANDIDATE and its freeze UNSIGNED. Run `py tools/validate_seed17_safe.py --output runs/readiness/NEW_NAME` for synthetic-only validation; no protected evaluation is authorized.

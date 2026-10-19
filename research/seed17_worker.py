@@ -111,7 +111,8 @@ def main():
             if request.pop("session", None) != session:
                 raise ValueError("Invalid session")
             if (any(digest(root / name) != sha for name, sha in manifest["code_fingerprints"].items())
-                    or digest(root / "protocol/gemma4_seed17_v1.json") != manifest["protocol_sha256"]):
+                    or digest(root / "protocol/gemma4_seed17_v1.json") != manifest["protocol_sha256"]
+                    or any(digest(root / name) != sha for name,sha in manifest.get("evaluation_fingerprints",{}).items())):
                 raise ValueError("Code or protocol changed since release")
             response = predict_once(run_dir, manifest, request, quota=quota)
         except Exception as exc:

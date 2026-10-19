@@ -1,3 +1,5 @@
+> Historical implementation handoff. The selected semantic method is now the explicitly adopted one-human author-review protocol. See [current methodology handoff](GEMMA_SEED17_AUTHOR_REVIEW_HANDOFF_20261019.md) and `protocol/seed17/AUTHOR_REVIEW_METHOD_v1.json`. The independent-review blockers described below record the earlier gate and are not the selected seed-17 methodology. Protected evaluation remains disabled.
+
 # Gemma 4 protected seed-17 implementation — local handoff
 
 **Implementation and synthetic validation only. Protected evaluation remains disabled.**

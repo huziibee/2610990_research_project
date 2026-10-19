@@ -46,7 +46,7 @@ class Seed17GateTests(unittest.TestCase):
                 failed = {f["gate"] for f in report["failures"]}
                 self.assertIn("signed_off_release", failed)
                 self.assertIn("live_multi_turn", failed)
-                self.assertIn("verified_gold_100", failed)
+                self.assertIn("author_reviewed_gold_100", failed)
 
     def test_blocked_execute_creates_no_model_or_oracle(self):
         with patch("tools.run_single_seed.readiness", return_value={"ready": False}), \

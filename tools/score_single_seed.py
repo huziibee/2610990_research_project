@@ -1,4 +1,4 @@
-"""Audit sealed seed-17 outputs or score independently reviewed trajectories."""
+"""Audit sealed seed-17 outputs or score automated semantic evaluation under the registered seed-17 method."""
 import argparse
 import json
 from pathlib import Path
@@ -13,16 +13,20 @@ from research.seed17_journal import write_json
 def main(argv=None):
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("run", type=Path)
-    parser.add_argument("--judgments", type=Path)
+    parser.add_argument("--judgments", type=Path, help="Legacy raw judgments are not accepted by the automated pathway")
+    parser.add_argument("--automated", action="store_true")
+    parser.add_argument("--run-judge", action="store_true", help="Future isolated judging of an authorized sealed protected run only")
+    parser.add_argument("--bundle", type=Path)
+    parser.add_argument("--judge-directory", type=Path)
     parser.add_argument("--pricing", type=Path)
     parser.add_argument("--synthetic", action="store_true")
     parser.add_argument("--output", type=Path)
     args = parser.parse_args(argv)
     try:
-        if args.judgments:
+        if args.automated or args.judgments or args.run_judge:
             if args.synthetic:
                 raise ValueError("Synthetic audit is not a semantic judgment release")
-            result = score(args.run, read_json(args.judgments), pricing=read_json(args.pricing) if args.pricing else None)
+            result = score(args.run, read_json(args.judgments) if args.judgments else None, bundle=read_json(args.bundle) if args.bundle else None, judge_directory=args.judge_directory, run_judge=args.run_judge, bundle_path=args.bundle, pricing=read_json(args.pricing) if args.pricing else None)
         else:
             report, manifest, predictions = audit(args.run, synthetic=args.synthetic)
             result = {"audit": report, "efficiency": efficiency(args.run, predictions,

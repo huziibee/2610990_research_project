@@ -133,3 +133,13 @@ class FrozenClarificationOracle:
         self._next += 1
         entry["status"] = "matched"
         return step["answer"]
+
+
+def author_approved_oracle(release, *, record_id, branch_id):
+    """Selected AUTHOR_APPROVED_AGENT_ASSISTED pathway; legacy class above unchanged.
+
+    release must come from load_author_release, which checks exact source,
+    receipt, export, ledger, branch and matching/eligibility bindings.
+    """
+    from research.seed17_author_review import AuthorReviewedClarificationOracle
+    return AuthorReviewedClarificationOracle(release,record_id=record_id,branch_id=branch_id)

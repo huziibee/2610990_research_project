@@ -1,3 +1,5 @@
+> Current seed-17 evaluation status and remaining gates: [author-approved, agent-assisted handoff](docs/GEMMA_SEED17_AUTHOR_REVIEW_HANDOFF_20261019.md). Additional human review is not required by the selected method. Earlier independent-review and five-seed tasks below are historical. Protected execution remains disabled.
+
 # Gemini research execution tracker
 
 Current local continuation: [Gemma seed-17 implementation and evidence](docs/GEMMA_SEED17_LOCAL_HANDOFF_20261019.md). The versioned runner, process-isolated oracle, immutable per-call resume journal, conservative pacing and single-seed audit/scoring bridge are implemented. Independent semantic-reference/rule/subgroup review, current live smokes, reviewed scoring evidence and signed launch release remain open. Protected evaluation stays disabled. Earlier checklist entries below are historical.

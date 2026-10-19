@@ -85,7 +85,11 @@ def main(argv=None):
             inputs = {r["record_id"]: r for r in read_jsonl(ROOT / "research_data/model_inputs/evaluation_100.jsonl")}
             schedule = schedules()[0]
             execution = "LIVE_SEED17"
-            release = {"bundle_sha256": digest(args.bundle), "release_checked": True}
+            from research.seed17_author_review import policy
+            selected = policy(ROOT)
+            release = {"bundle_sha256": digest(args.bundle), "release_checked": True,
+                "review_protocol": {"review_protocol":selected["protocol_id"], "author":selected["author"],
+                                    "receipt_sha256":selected["release"]["receipt_sha256"]}}
         else:
             if args.bundle:
                 raise ValueError("Development does not consume protected bundles")
@@ -107,7 +111,10 @@ def main(argv=None):
                     "execution_id": output.resolve().relative_to(ROOT).as_posix(),
                     "cohort_order": list(inputs), "inputs": inputs, "input_sha256": content_hash(inputs),
                     "reference_index": index, "code_fingerprints": fingerprints(),
-                    "protocol_sha256": digest(ROOT / "protocol/gemma4_seed17_v1.json"), **release}
+                    "protocol_sha256": digest(ROOT / "protocol/gemma4_seed17_v1.json"),
+                    "evaluation_fingerprints":{name:digest(ROOT/name) for name in (
+                        "protocol/seed17/judge_v1.json", "protocol/seed17/judge_rubric_v1.json",
+                        "protocol/seed17/AUTHOR_APPROVED_AGENT_ASSISTED_v1.json")}, **release}
         if args.mock:
             from research.seed17_worker import predict_once
             from research.seed17_synthetic import mock_send

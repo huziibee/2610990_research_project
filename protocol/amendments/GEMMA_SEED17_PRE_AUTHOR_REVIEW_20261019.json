@@ -1,0 +1,86 @@
+{
+  "schema_version": 1,
+  "study_id": "gemma4-seed17-v1",
+  "status": "CANDIDATE",
+  "allow_held_out_predictions": false,
+  "historical_protocol": "protocol/gemini_protocol_v1.json",
+  "model": {
+    "requested_id": "gemma-4-26b-a4b-it",
+    "api": "Gemini Developer API generateContent v1beta",
+    "structured_output": "provider_json_schema_and_strict_local_validation"
+  },
+  "candidate_generation_config": {
+    "temperature": 0.7,
+    "topP": 0.95,
+    "candidateCount": 1,
+    "maxOutputTokens": 4096,
+    "responseMimeType": "application/json",
+    "thinkingConfig": {
+      "thinkingLevel": "minimal",
+      "includeThoughts": false
+    }
+  },
+  "systems": {
+    "S0": {
+      "initial_interpretation_calls": 1,
+      "per_call_maxOutputTokens": 4096,
+      "per_call_thinkingBudget": 0,
+      "thinking": false
+    },
+    "S1": {
+      "initial_interpretation_calls": 2,
+      "per_call_maxOutputTokens": 2048,
+      "per_call_thinkingBudget": 0,
+      "thinking": false
+    }
+  },
+  "runs": {
+    "seeds": [
+      17
+    ],
+    "concurrency": 1,
+    "main_initial_predictions": 200,
+    "ablation_initial_predictions": 500,
+    "max_clarification_turns": 5,
+    "max_transport_retries": 0,
+    "retry_malformed_output": false,
+    "request_timeout_seconds": 90
+  },
+  "schedules": {
+    "main": "protocol/seed17/main_200.jsonl",
+    "ablations": "protocol/seed17/ablations_500.jsonl"
+  },
+  "quota": {
+    "reported_limits": {
+      "rpm": 30,
+      "tpm": 16000,
+      "rpd": 14400
+    },
+    "local_reservation_limits": {
+      "rpm": 15,
+      "tpm": 15000,
+      "rpd": 14000
+    },
+    "input_reservation": "UTF8_request_bytes_plus_output_cap_plus_1024",
+    "windows_seconds": {
+      "minute": 61,
+      "day": 86400
+    },
+    "cross_client_visibility": "not_available",
+    "stop_after_transient_provider_failure": true
+  },
+  "review_protocol": "independent_human_verification_required; no alternative authorized",
+  "statistics": {
+    "bootstrap_replicates": 10000,
+    "bootstrap_seed": 20261019,
+    "unit": "paired_case_branch_means",
+    "between_seed_variability": "NOT_ESTIMABLE"
+  },
+  "dataset": {
+    "source_records": 100,
+    "execute": 74,
+    "clarify": 26
+  },
+  "execution_directory": "runs/evaluation/seed17/gemma4-seed17-v1",
+  "historical_schedule_sha256": "89f71f143cb877a1927741f9e810df040c5b0629be4c550e889c7e7ed609f6c2"
+}

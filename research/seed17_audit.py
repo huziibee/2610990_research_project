@@ -195,12 +195,101 @@ def efficiency(directory, predictions, pricing=None):
     return result
 
 
-def score(directory, judgments, *, pricing=None):
-    from research.semantic_metrics import score_semantics, paired_semantic_bootstrap
+def automated_contexts(root, manifest, predictions, release):
+    """Evaluator-only source/reference joins; only approved released replies append."""
+    import copy
+    from research.reference_schema import clarification_turns
+    from research.integrity import read_jsonl
+    rows = {r["record_id"]:r for r in release["rows"]}
+    expected_index = {cid:{"revision":r["revision"],"sha256":content_hash(r["reference"]),
+        "branches":[b["branch_id"] for b in r["reference"]["hypothetical_answer_branches"]] or ["no-answer"]} for cid,r in rows.items()}
+    original_inputs = {r["record_id"]:r for r in read_jsonl(root/"research_data/model_inputs/evaluation_100.jsonl")}
+    if manifest["reference_index"] != expected_index or manifest["inputs"] != original_inputs:
+        raise ValueError("Scoring reference/source index differs from exact author release")
+    contexts={}
+    for system,outputs in predictions.items():
+        contexts[system]={cid:{"branches":{}} for cid in rows}
+        for cid,row in rows.items():
+            ref=row["reference"]
+            for branch_id in expected_index[cid]["branches"]:
+                branch=next((b for b in ref["hypothetical_answer_branches"] if b["branch_id"]==branch_id),None)
+                steps=clarification_turns(branch) if branch else []
+                current=copy.deepcopy(original_inputs[cid]); turns={}
+                trajectory=sorted([r for r in outputs if r["record_id"]==cid and r["branch_id"]==branch_id],key=lambda r:r["turn"])
+                for predicted in trajectory:
+                    turn=predicted["turn"]
+                    if turn:
+                        from research.clarification_matching import normalize_question
+                        if (turn>len(steps) or predicted["answer"]!=steps[turn-1]["answer"]
+                                or normalize_question(predicted["question"])!=normalize_question(steps[turn-1]["question"])):
+                            raise ValueError("Trajectory answer is not the approved matching reply")
+                        current["dialogue"].extend(["Assistant clarification: "+predicted["question"],"User answer (simulated): "+predicted["answer"]])
+                    target=ref["reference_task"] if turn==0 else branch["reference_task"] if turn==len(steps) else None
+                    turns[turn]={"reference_task":target,"alternatives":ref["acceptable_semantic_alternatives"] if not branch else [],
+                        "catalog":ref["verified_capability_catalog"],"visible_input":copy.deepcopy(current)}
+                contexts[system][cid]["branches"][branch_id]=turns
+    return contexts
+
+
+def score(directory, judgments=None, *, pricing=None, bundle=None, judge_directory=None, run_judge=False, bundle_path=None):
+    from research.semantic_metrics import score_automated_semantics, paired_semantic_bootstrap
+    from research.seed17_author_review import load_author_release
+    from research.automated_semantics import packet_for, structural_comparison
+    from research.seed17_judge import load_record
     report, manifest, predictions = audit(directory)
-    scores, summaries = {}, {}
-    for system in ("S0", "S1"):
-        summaries[system], scores[system] = score_semantics(predictions[system], judgments[system], manifest["reference_index"], [17])
-    return {"audit": report, "systems": summaries,
-            "S1_minus_S0": paired_semantic_bootstrap(scores["S1"], scores["S0"]),
-            "efficiency": efficiency(directory, predictions, pricing), "between_seed_variability": "NOT_ESTIMABLE"}
+    root=Path(__file__).resolve().parents[1]
+    if bundle is None:raise ValueError("Exact author-approved release bundle required for automated scoring")
+    release=load_author_release(root,bundle)
+    binding={"review_protocol":release["policy"]["protocol_id"],"author":release["policy"]["author"],
+             "receipt_sha256":release["policy"]["release"]["receipt_sha256"]}
+    if (manifest.get("review_protocol")!=binding or manifest.get("protocol_sha256")!=digest(root/"protocol/gemma4_seed17_v1.json")):
+        raise ValueError("Sealed experiment differs from selected automated protocol")
+    if judgments is not None:raise ValueError("Use immutable evaluator receipts, not unregistered human/raw judgments")
+    contexts=automated_contexts(root,manifest,predictions,release)
+    pending={}
+    for system,outputs in predictions.items():
+        for row in outputs:
+            ctx=contexts[system][row["record_id"]]["branches"][row["branch_id"]][row["turn"]]
+            if structural_comparison(row,ctx)["complete"] is None:
+                packet=packet_for(row,ctx);pending[content_hash(packet)]=packet
+    if run_judge:
+        from research.seed17_gate import check_readiness
+        from research.seed17_processes import ProcessClient
+        from research.seed17_journal import write_json
+        if (not check_readiness(root,bundle)["ready"] or not judge_directory or not bundle_path
+                or read_json(bundle_path)!=bundle):
+            raise ValueError("Protected semantic judging not authorized")
+        jd=Path(judge_directory).resolve();bp=Path(bundle_path).resolve();rd=Path(directory).resolve()
+        if not jd.is_relative_to(root/"runs/judgments") or not bp.is_relative_to(root) or not rd.is_relative_to(root):
+            raise ValueError("Evaluator output/bundle/run must remain inside designated workspace")
+        jd.mkdir(parents=True,exist_ok=True)
+        authorization={"bundle_path":bp.relative_to(root).as_posix(),"bundle_sha256":digest(bp),
+            "run_directory":rd.relative_to(root).as_posix(),"seal_sha256":digest(rd/"seal.json"),
+            "packet_sha256s":sorted(pending)}
+        auth_path=jd/"protected_judge_authorization.json"
+        if auth_path.exists():
+            if read_json(auth_path)!=authorization:raise ValueError("Judge run binding changed")
+        else:write_json(auth_path,authorization)
+        client=ProcessClient(root,"research.seed17_judge",[jd])
+        try:
+            for packet in pending.values():
+                response=client.call({"packet":packet,"synthetic":False})
+                if response.get("status")!="JUDGED":break
+        finally:client.close()
+    decisions={};summaries={};scores={}
+    for system in ("S0","S1"):
+        for row in predictions[system]:
+            ctx=contexts[system][row["record_id"]]["branches"][row["branch_id"]][row["turn"]]
+            if judge_directory and structural_comparison(row,ctx)["complete"] is None:
+                packet=packet_for(row,ctx);decision=load_record(root,judge_directory,packet)
+                if decision is not None:
+                    if decision.get("synthetic") is not False:raise ValueError("Synthetic evaluator receipts cannot score protected predictions")
+                    decisions[content_hash(packet)]=decision
+        summaries[system],scores[system]=score_automated_semantics(predictions[system],decisions,contexts[system],[17])
+    resolved=all(v is not None for system in scores.values() for v in system.values())
+    paired=paired_semantic_bootstrap(scores["S1"],scores["S0"]) if resolved else None
+    return {"audit":report,"systems":summaries,"review_protocol":binding,
+            "evaluation_method":"AUTHOR_APPROVED_AGENT_ASSISTED","label":"automated semantic evaluation",
+            "independent_human_verification":False,"semantic_truth_guaranteed":False,
+            "S1_minus_S0":paired,"paired_interval_status":"COMPUTED" if resolved else "UNRESOLVED_JUDGMENTS",
+            "efficiency":efficiency(directory,predictions,pricing),"between_seed_variability":"NOT_ESTIMABLE"}
