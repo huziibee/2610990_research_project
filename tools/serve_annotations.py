@@ -101,13 +101,13 @@ def make_handler(store, *, port, drafts_dir, token):
                     return self.reply(413, "Draft too large", "text/plain; charset=utf-8")
                 fields = parse_qs(self.rfile.read(size).decode("utf-8"), strict_parsing=True,
                                   keep_blank_values=True)
-                if (set(fields) != {"csrf", "draft_json", "actor", "provenance", "action"}
+                if (set(fields) != {"csrf", "draft_json", "actor", "notes", "provenance", "action"}
                         or any(len(values) != 1 for values in fields.values())):
                     raise ValueError("Malformed form")
                 form = {name: value[0] for name, value in fields.items()}
                 if not secrets.compare_digest(form["csrf"], token):
                     return self.reply(403, "Invalid form token", "text/plain; charset=utf-8")
-                if form["action"] not in ("save", "validate", "submit"):
+                if form["action"] not in ("save", "validate", "submit", "adopt", "verify_yes", "verify_no", "approve"):
                     raise ValueError("Unknown action")
                 envelope = parse_envelope(form["draft_json"], state)
                 if form["action"] == "save":
@@ -131,7 +131,7 @@ def make_handler(store, *, port, drafts_dir, token):
                 elif form["action"] == "validate":
                     validate_envelope(envelope, state)
                     message = "Structurally valid only: human semantic verification remains required."
-                else:
+                elif form["action"] == "submit":
                     if not form["actor"].strip() or form["provenance"] not in ("human", "model_candidate"):
                         raise ValueError("Explicit actual preparer and provenance required")
                     validated = validate_envelope(envelope, state)
@@ -143,6 +143,22 @@ def make_handler(store, *, port, drafts_dir, token):
                                                 provenance=form["provenance"], expected_head=state["head"])
                     state = updated
                     message = "Candidate submitted to human review ledger. Not approved or gold. Reload to edit this revision."
+                else:
+                    if (not form["actor"].strip() or not form["notes"].strip()
+                            or state["revision"] < 1 or envelope["reference"] != state["reference"]):
+                        raise ValueError("Review requires exact current ledger reference, actor and notes")
+                    if form["action"] == "adopt":
+                        updated = store.adopt(state["record_id"], form["actor"],
+                                              notes=form["notes"], expected_head=state["head"])
+                    elif form["action"] in ("verify_yes", "verify_no"):
+                        decision = "approve" if form["action"] == "verify_yes" else "disagree"
+                        updated = store.verify(state["record_id"], form["actor"], decision=decision,
+                                               notes=form["notes"], expected_head=state["head"])
+                    else:
+                        updated = store.approve(state["record_id"], form["actor"],
+                                                notes=form["notes"], expected_head=state["head"])
+                    state = updated
+                    message = "Human review event recorded; check current status and history."
                 return self.reply(200, case_page(state, draft_text=form["draft_json"], token=token, message=message))
             except (ValueError, KeyError, OSError, TypeError, UnicodeError, json.JSONDecodeError):
                 # No source, provider error body, or hidden answer in HTTP errors.
