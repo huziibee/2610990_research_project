@@ -217,9 +217,9 @@ def render(bundle, *, synthetic=False):
             case_run_map(condition, subset), case_run_map("S1", subset),
             iterations=10000, seed=20261019)
 
-    effect_lines = [r"\\begin{tabular}{lrrr}", r"\\toprule",
-                    line("Paired comparison", "N cases", r"Effect (pp)", r"95\\% CI (pp)").rstrip(),
-                    r"\\midrule"]
+    effect_lines = [r"\begin{tabular}{lrrr}", r"\toprule",
+                    line("Paired comparison", "N cases", r"Effect (pp)", r"95\% CI (pp)").rstrip(),
+                    r"\midrule"]
     for key, label in [("S1_minus_S0", "S1 minus S0")] + [
         (condition + "_minus_S1", LABELS[condition] + " minus S1")
         for condition in CONDITIONS[2:]]:
@@ -228,7 +228,7 @@ def render(bundle, *, synthetic=False):
         effect_lines.append(line(label, estimate["independent_case_count"],
                                  f"{100 * estimate['difference']:+.1f}",
                                  f"[{100 * low:+.1f}, {100 * high:+.1f}]").rstrip())
-    effect_lines += [r"\\bottomrule", r"\\end{tabular}"]
+    effect_lines += [r"\bottomrule", r"\end{tabular}"]
 
     # Plain TikZ, already supported in the existing manuscript. No new packages.
     # Figures intentionally show scored marks only, with no interval invented.
