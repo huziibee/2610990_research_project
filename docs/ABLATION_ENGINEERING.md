@@ -36,6 +36,14 @@ This writes `protocol/ablation_schedule_2000.jsonl` exclusively and outputs its 
 
 The 2,000 additional scheduled rows consist of 4 interventions × 100 cases × 5 fixed seeds (17,29,43,71,101). Each intervention is aligned with the existing S1 case/seed schedule. A single run contains exactly one result per (case, seed, intervention) with no retries or overwritten files.
 
+After a completed sealed run, the separate read-only efficiency reporter can summarize latency P50/P95, calls, observed tokens, missing-usage counts, run failures, and model versions. It does not calculate accuracy or hallucinate pricing:
+
+```powershell
+py tools/report_efficiency.py runs/evaluation/YOUR_COMPLETED_RUN_DIRECTORY
+```
+
+Mock outputs are explicitly labelled `MOCK_ENGINEERING_ONLY`. Partial or tampered runs are rejected.
+
 ## Explicit scientific and operational blockers
 
 1. Execute and review the new synthetic test suite; correct any regressions before merging.
