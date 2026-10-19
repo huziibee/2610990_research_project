@@ -97,6 +97,16 @@ class SarathyGraphTests(unittest.TestCase):
         self.assertIn("CYCLIC_ACTION_RELATIONSHIP", codes)
         self.assertEqual(projection["semantic_correctness"], "NOT_COMPUTED")
 
+    def test_depends_on_prerequisite_direction_avoids_false_cycles(self):
+        t = task()
+        # Action 1 is before action 2, and action 2 depends on action 1.
+        # Both mean 1 precedes 2, not a cycle.
+        t["dependencies"].append({"source": "/actions/1", "target": "/actions/0",
+                                  "relation": "depends_on"})
+        projection = self.projection(t)
+        self.assertNotIn("CYCLIC_ACTION_RELATIONSHIP",
+                         [entry["code"] for entry in projection["relationship_issues"]])
+
     def test_conflicting_human_provided_bindings_flagged(self):
         graph = self.projection(referent_bindings={
             "/actions/0/arguments/object": "instance-A",
