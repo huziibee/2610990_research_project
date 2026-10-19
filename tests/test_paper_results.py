@@ -35,7 +35,7 @@ def synthetic_bundle():
 class PaperRendererTests(unittest.TestCase):
     def test_all_expected_manuscript_artifacts_created(self):
         result = render(synthetic_bundle(), synthetic=True)
-        self.assertEqual(len(result), 9)
+        self.assertEqual(len(result), 10)
         self.assertIn(r"\begin{tabular}", result["main_results_table.tex"])
         self.assertIn("S0 direct", result["main_results_table.tex"])
         self.assertIn("S1 goal-first", result["main_results_table.tex"])
@@ -48,6 +48,13 @@ class PaperRendererTests(unittest.TestCase):
         self.assertIn("P50 latency (s)", result["tradeoff_figure.tex"])
         self.assertIn("S0,17,75.00000000", result["per_seed.csv"])
         self.assertEqual(json.loads(result["summary.json"])["status"], "REVIEW_CANDIDATES_ONLY")
+        summary = json.loads(result["summary.json"])
+        effects = summary["paired_case_effects"]
+        self.assertEqual(effects["S1_minus_S0"]["difference"], 0)
+        self.assertEqual(effects["scene_minus_S1"]["difference"], -.25)
+        self.assertEqual(effects["dialogue_minus_S1"]["independent_case_count"], 1)
+        self.assertEqual(effects["scene_minus_S1"]["ci95"], [-.25, -.25])
+        self.assertIn("95\\% CI", result["paired_effects_table.tex"])
 
     def test_incomplete_or_duplicate_grid_rejected(self):
         for mutation in ("missing", "duplicate", "false_case", "seed_changed", "invalid_rate"):
@@ -107,7 +114,7 @@ class PaperRendererTests(unittest.TestCase):
             self.assertEqual(provenance["report_status"], "CANDIDATE_REVIEW_REQUIRED")
             self.assertFalse(provenance["manuscript_modified"])
             self.assertEqual(main(args), 2)
-            self.assertEqual(len(list(output.iterdir())), 10)
+            self.assertEqual(len(list(output.iterdir())), 11)
 
 
 if __name__ == "__main__":
