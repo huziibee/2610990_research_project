@@ -6,13 +6,13 @@
   "files": [
     {
       "path": "DATASET_METADATA.json",
-      "sha256": "9e0b7116dc81159270d65d7f115bdaf38e4942fc1d467c73be04e9620e5229b6",
-      "size_bytes": 1638
+      "sha256": "fb8f518c95926fa6aa30e537c91a51ecd6834cc3f7695ad80cff5432602b4319",
+      "size_bytes": 1674
     },
     {
       "path": "README.md",
-      "sha256": "e0f77c46b1902e6d0ab2c25dcd20d790f6ab048240710fc1d93a9d3cbc4b7d0c",
-      "size_bytes": 4327
+      "sha256": "85b9826ba8c6a6ac324562ca8fe9940601e1f17863cfac1948f32bec6f9185e9",
+      "size_bytes": 4375
     },
     {
       "path": "archive/Pilot_100_Author_Human_Adjudicated_Routes_v6.zip",
@@ -36,8 +36,8 @@
     },
     {
       "path": "audit/ID_CROSSWALK_100.csv",
-      "sha256": "bf77c12d0e5b50fa705a89602915efdd8641f27877bda9b6f6b0eaeac10ef976",
-      "size_bytes": 4773
+      "sha256": "3ffb62f09ad4a86bf78153e2b179d6af1ddbb36b0aca66c0e8209d22058008d7",
+      "size_bytes": 4874
     },
     {
       "path": "audit/ID_CROSSWALK_100.jsonl",
@@ -46,8 +46,8 @@
     },
     {
       "path": "audit/RELEASE_1_0_1_COUNT_DEFINITION.json",
-      "sha256": "d55b15171da1082059e43bbd547d3318a3eb4035e7ac95b18462123e7b6be691",
-      "size_bytes": 998
+      "sha256": "22da31bdbc417d620f3e3b9648949866b6aecc05210d164461b97e000d77bd1c",
+      "size_bytes": 1017
     },
     {
       "path": "audit/ROUTE_CORRECTION_HISTORY.json",
@@ -76,13 +76,13 @@
     },
     {
       "path": "docs/RELEASE_NOTES.md",
-      "sha256": "a9a85c04bf81832deccfcd79ed765ece3d1e10c77893e892775b860a5873aa1e",
-      "size_bytes": 1470
+      "sha256": "5ccdf060fd956baa4cbe28f4fdf5341c3aa9f1dbb5646ac8adfb1ec7365229d7",
+      "size_bytes": 1490
     },
     {
       "path": "verify_package.py",
-      "sha256": "ea0c51d601bac6744531f39821049c47143c4114a8e10154bf1e69f31307a280",
-      "size_bytes": 4816
+      "sha256": "106bc786d64cb5dbf89beea8d298eec39a7982d6b59ce25c5e452bbe5d30a2b6",
+      "size_bytes": 4890
     }
   ],
   "historical_annotation_fields_independently_human_adjudicated": false,
