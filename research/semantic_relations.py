@@ -92,7 +92,11 @@ def build_relationship_graph(task, model_input, *, referent_bindings=None, capab
                 relationship_issues.append({"code": "CONFLICTING_REFERENT_BINDINGS",
                                             "relation": "same_value"})
         elif relation["source"][0] == relation["target"][0] == "action":
-            directed_edges.append((relation["source"][1], relation["target"][1]))
+            # 'A depends_on B' means B must precede A, while 'A before B'
+            # means A must precede B. Normalize both to precedence arrows.
+            left, right = relation["source"][1], relation["target"][1]
+            directed_edges.append((right, left) if relation["relation"] == "depends_on"
+                                  else (left, right))
     adjacency = {i: set() for i in range(len(actions))}
     for left, right in directed_edges:
         adjacency[left].add(right)
