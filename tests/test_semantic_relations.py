@@ -85,6 +85,25 @@ class SarathyGraphTests(unittest.TestCase):
             with self.subTest(bindings=bindings), self.assertRaises(ValueError):
                 self.projection(referent_bindings=bindings)
 
+    def test_duplicate_relation_and_cycle_detected_without_changing_validation(self):
+        t = task()
+        t["dependencies"].append(copy.deepcopy(t["dependencies"][0]))
+        t["dependencies"].extend([
+            {"source": "/actions/0", "target": "/actions/1", "relation": "depends_on"},
+            {"source": "/actions/1", "target": "/actions/0", "relation": "depends_on"}])
+        projection = self.projection(t)
+        codes = {entry["code"] for entry in projection["relationship_issues"]}
+        self.assertIn("DUPLICATE_RELATION", codes)
+        self.assertIn("CYCLIC_ACTION_RELATIONSHIP", codes)
+        self.assertEqual(projection["semantic_correctness"], "NOT_COMPUTED")
+
+    def test_conflicting_human_provided_bindings_flagged(self):
+        graph = self.projection(referent_bindings={
+            "/actions/0/arguments/object": "instance-A",
+            "/actions/1/arguments/object": "instance-B"})
+        self.assertIn("CONFLICTING_REFERENT_BINDINGS",
+                      [issue["code"] for issue in graph["relationship_issues"]])
+
     def test_bad_alignment_and_repeated_mapping_rejected(self):
         graph = self.projection()
         for mapping in ({0: 0, 1: 0}, {0: 5, 1: 1}, {0: 0}, {0: "0", 1: 1}):
