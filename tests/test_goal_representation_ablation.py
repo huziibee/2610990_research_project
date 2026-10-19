@@ -34,9 +34,9 @@ class GoalRepresentationAblationTests(unittest.TestCase):
                          ["S1.context", "S1.context_ground"])
         self.assertEqual([r["stage_context"] for r in backend.records],
                          [None, {"context_summary": "A cup is on the desk, move exists"}])
-        self.assertEqual(sum(r["settings"]["max_output_tokens"] for r in backend.records), 8192)
-        self.assertEqual(sum(r["settings"]["thinking_budget"] for r in backend.records), 2048)
-        self.assertEqual(set(seen[0]["generationConfig"]["responseJsonSchema"]["properties"]),
+        self.assertEqual(sum(r["settings"]["max_output_tokens"] for r in backend.records), 4096)
+        self.assertEqual(sum(r["settings"]["thinking_budget"] for r in backend.records), 0)
+        self.assertEqual(set(backend.records[0]["validation_json_schema"]["properties"]),
                          {"context_summary"})
         self.assertNotIn("intended_goal", json.dumps(seen[0]["contents"][0]["parts"][0]["text"]))
 

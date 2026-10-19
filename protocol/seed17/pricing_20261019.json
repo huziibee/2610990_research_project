@@ -1,0 +1,11 @@
+{
+  "model": "gemma-4-26b-a4b-it",
+  "as_of": "2026-10-19",
+  "source": "https://ai.google.dev/gemini-api/docs/pricing#gemma-4",
+  "published_tier": "Free Tier",
+  "input_usd_per_million": 0,
+  "output_usd_per_million": 0,
+  "account_tier_verified": false,
+  "status": "PUBLISHED_FREE_TIER_RATE_ONLY_ACCOUNT_NOT_VERIFIED",
+  "invoice_available": false
+}

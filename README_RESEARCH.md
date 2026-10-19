@@ -1,5 +1,9 @@
 # Gemini research implementation
 
+Current implementation: [Gemma seed-17 local handoff](docs/GEMMA_SEED17_LOCAL_HANDOFF_20261019.md). The protected single-seed runner, oracle boundary, no-reroll journaling, pacing, archive audit and scoring bridge are implemented. Its separate protocol remains CANDIDATE and its freeze UNSIGNED. Run `py tools/validate_seed17_safe.py --output runs/readiness/NEW_NAME` for synthetic-only validation; no protected evaluation is authorized.
+
+> Current model amendment (2026-10-19): use `gemma-4-26b-a4b-it`, thinking OFF (`thinkingLevel: minimal`), provider JSON schema and strict local validation. S0 output cap 4096; S1 2048 per stage. Synthetic smoke tests first, then one full seed (17) after readiness release and runner/scoring amendments. Earlier Gemini/thinking-enabled and five-seed descriptions below are historical and superseded for the next run. See [model amendment](protocol/amendments/GEMMA_THINKING_OFF_20261019.json). Held-out predictions remain disabled.
+
 Start with [TODO.md](TODO.md) for completed work and [protocol/FREEZE_STATUS.md](protocol/FREEZE_STATUS.md) for the exact remaining gates. Main design: all **100 source input records**, S0 direct versus S1 structured, five runs each, Gemini 2.5 Flash-Lite with thinking enabled in both. S2 is optional. No evaluated predictions or scientific results have been produced.
 
 ## Run local checks

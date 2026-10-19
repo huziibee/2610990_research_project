@@ -1,0 +1,23 @@
+{
+  "schema_version": 1,
+  "date": "2026-10-19",
+  "authorization": "User requested gemma-4-26b-a4b-it instead of Gemini 2.5, thinking off, smoke tests before one full seed.",
+  "previous_protocol_sha256": "27cc9a42db742770b14ba157ec30917108e9ed31f66f3ae05eaed82a288869a4",
+  "new_protocol_sha256": "e73b6d650bc4053bf22f132f2360ea09c4061edf43dad20f040d6499f805bae0",
+  "requested_model": "gemma-4-26b-a4b-it",
+  "thinking_config": {
+    "thinkingLevel": "minimal",
+    "includeThoughts": false
+  },
+  "output_caps": {
+    "S0": 4096,
+    "S1_per_stage": 2048
+  },
+  "output_mode": "provider_json_schema_and_local_validation",
+  "diagnostic_limits": "Provider INTERNAL HTTP 500 occurred with and without responseJsonSchema and at multiple output caps; no causal fix or provider maximum inferred. Unconstrained JSON-mode S1 probes failed; provider JSON schema is retained with strict local goal/task validation, without repair or automatic retries.",
+  "phase": "SYNTHETIC_SMOKE_ONLY",
+  "held_out_predictions_authorized": false,
+  "historical_lock_and_snapshots": "Preserved as historical evidence; their config/code hashes are stale and must be renewed at final freeze.",
+  "single_seed_next": 17,
+  "single_seed_execution_support": "Pending separate runner/scoring schedule amendment before held-out execution."
+}

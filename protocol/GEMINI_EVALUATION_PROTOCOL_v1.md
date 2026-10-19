@@ -1,4 +1,6 @@
-# Gemini evaluation protocol v1 — freeze candidate
+# Gemini evaluation protocol v1 â€” freeze candidate
+
+> Current model amendment (2026-10-19): use `gemma-4-26b-a4b-it`, thinking OFF (`thinkingLevel: minimal`), provider JSON schema and strict local validation. S0 output cap 4096; S1 2048 per stage. Synthetic smoke tests first, then one full seed (17) after readiness release and runner/scoring amendments. Earlier Gemini/thinking-enabled and five-seed descriptions below are historical and superseded for the next run. See [model amendment](amendments/GEMMA_THINKING_OFF_20261019.json). Held-out predictions remain disabled.
 
 Status: **DESIGN DECISIONS LOCKED; FULL PROTOCOL NOT FROZEN**. Created 2026-10-19 before held-out prediction calls in this implementation session. A protocol document is not evidence that its gates are satisfied. Stable design choices are recorded now and are not expected to change through routine implementation. Remaining gates require missing evidence rather than a repeated decision about already settled choices. See `FREEZE_STATUS.md`, `FREEZE_GATES.md` and `gemini_protocol_v1.json`.
 

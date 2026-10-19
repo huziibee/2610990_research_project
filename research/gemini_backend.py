@@ -15,20 +15,21 @@ from research.generation_schema import response_schema
 
 
 class InferenceError(RuntimeError):
-    def __init__(self, message, *, code="INFERENCE_FAILURE", http_status=None):
+    def __init__(self, message, *, code="INFERENCE_FAILURE", http_status=None, retry_after_seconds=None):
         super().__init__(message)
-        allowed = {"INFERENCE_FAILURE", "MISSING_API_KEY", "CONNECTION_FAILURE", "TIMEOUT", "HTTP_FAILURE", "RESPONSE_DECODING_FAILURE"}
+        allowed = {"INFERENCE_FAILURE", "MISSING_API_KEY", "CONNECTION_FAILURE", "TIMEOUT", "HTTP_FAILURE", "RESPONSE_DECODING_FAILURE", "RESOURCE_PAUSE", "THINKING_POLICY_VIOLATION"}
         self.code = code if code in allowed else "INFERENCE_FAILURE"
         self.http_status = http_status if type(http_status) is int and 100 <= http_status <= 599 else None
+        self.retry_after_seconds = retry_after_seconds if type(retry_after_seconds) in (int, float) and 0 <= retry_after_seconds <= 86400 else None
 
 
 @dataclass(frozen=True)
 class GenerationSettings:
-    model: str = "gemini-2.5-flash-lite"
+    model: str = "gemma-4-26b-a4b-it"
     temperature: float = 0.7
     top_p: float = 0.95
-    max_output_tokens: int = 4096
-    thinking_budget: int = 1024
+    max_output_tokens: int = 2048
+    thinking_budget: int = 0
     timeout_seconds: int = 90
 
     def __post_init__(self):
@@ -38,9 +39,19 @@ class GenerationSettings:
             raise ValueError("Invalid temperature")
         if type(self.top_p) not in (int, float) or not 0 < self.top_p <= 1:
             raise ValueError("Invalid top_p")
-        for name in ("max_output_tokens", "thinking_budget", "timeout_seconds"):
+        for name in ("max_output_tokens", "timeout_seconds"):
             if type(getattr(self, name)) is not int or getattr(self, name) <= 0:
                 raise ValueError(f"Invalid {name}")
+        if type(self.thinking_budget) is not int or self.thinking_budget < 0:
+            raise ValueError("Invalid thinking_budget")
+        if self.model.startswith("gemma-") and self.thinking_budget != 0:
+            raise ValueError("Gemma research runs require thinking off")
+
+    def thinking_config(self):
+        # Gemma uses a level toggle, not Gemini's token-budget control.
+        if self.model.startswith("gemma-"):
+            return {"thinkingLevel": "minimal", "includeThoughts": False}
+        return {"thinkingBudget": self.thinking_budget, "includeThoughts": False}
 
 
 def _unique_object(pairs):
@@ -103,7 +114,16 @@ class GeminiBackend:
                 return json.loads(response.read().decode("utf-8"))
         except HTTPError as exc:
             # Never include provider response text or request headers in errors.
-            raise InferenceError(f"Gemini HTTP {exc.code}", code="HTTP_FAILURE", http_status=exc.code) from None
+            try:
+                retry_after = min(86400, max(0, float(exc.headers.get("Retry-After", ""))))
+            except (ValueError, TypeError, AttributeError):
+                try:
+                    from email.utils import parsedate_to_datetime
+                    retry_after = min(86400, max(0, parsedate_to_datetime(exc.headers.get("Retry-After", "")).timestamp() - time.time()))
+                except (ValueError, TypeError, AttributeError, OverflowError):
+                    retry_after = None
+            raise InferenceError(f"Gemini HTTP {exc.code}", code="HTTP_FAILURE", http_status=exc.code,
+                                 retry_after_seconds=retry_after) from None
         except TimeoutError:
             raise InferenceError("Gemini request timed out", code="TIMEOUT") from None
         except (URLError, OSError):
@@ -117,9 +137,11 @@ class GeminiBackend:
             raise ValueError("seed must be a nonnegative signed 32-bit integer")
         _validate_context(stage, context, model_input, direct)
         large_budget = direct or stage == "S2.adjudicate"
+        direct_cap = 4096 if self.settings.model.startswith("gemma-") else 8192
         settings = replace(self.settings,
-                           max_output_tokens=8192 if large_budget else self.settings.max_output_tokens,
-                           thinking_budget=2048 if large_budget else self.settings.thinking_budget)
+                           max_output_tokens=direct_cap if large_budget else self.settings.max_output_tokens,
+                           thinking_budget=2048 if large_budget and self.settings.thinking_budget > 0
+                           else self.settings.thinking_budget)
         payload = {
             "systemInstruction": {"parts": [{"text": system_prompt}]},
             "contents": [{"role": "user", "parts": [{"text": json.dumps({
@@ -128,13 +150,15 @@ class GeminiBackend:
                 "seed": seed, "maxOutputTokens": settings.max_output_tokens,
                 "responseMimeType": "application/json",
                 "responseJsonSchema": response_schema(model_input, stage),
-                "thinkingConfig": {"thinkingBudget": settings.thinking_budget,
-                                   "includeThoughts": False}},
+                "thinkingConfig": settings.thinking_config()},
         }
+        schema = payload["generationConfig"]["responseJsonSchema"]
         record = {"record_id": model_input["record_id"], "stage": stage, "seed": seed,
                   "settings": asdict(settings), "input": visible, "stage_context": context,
                   "system_prompt": system_prompt, "status": "ERROR"}
-        record["response_json_schema"] = payload["generationConfig"]["responseJsonSchema"]
+        record["response_json_schema"] = payload["generationConfig"].get("responseJsonSchema")
+        record["validation_json_schema"] = schema
+        record["thinking_config"] = payload["generationConfig"]["thinkingConfig"]
         start = time.perf_counter()
         try:
             response = self.transport(payload, settings)
@@ -171,6 +195,7 @@ class GeminiBackend:
             record["error_type"] = type(exc).__name__
             record["error_code"] = exc.code if isinstance(exc, InferenceError) else "INFERENCE_FAILURE"
             record["http_status"] = exc.http_status if isinstance(exc, InferenceError) else None
+            record["retry_after_seconds"] = exc.retry_after_seconds if isinstance(exc, InferenceError) else None
             if isinstance(exc, InferenceError):
                 raise
             raise InferenceError("Unexpected response or transport failure") from None

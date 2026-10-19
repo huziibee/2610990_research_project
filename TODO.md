@@ -1,5 +1,9 @@
 # Gemini research execution tracker
 
+Current local continuation: [Gemma seed-17 implementation and evidence](docs/GEMMA_SEED17_LOCAL_HANDOFF_20261019.md). The versioned runner, process-isolated oracle, immutable per-call resume journal, conservative pacing and single-seed audit/scoring bridge are implemented. Independent semantic-reference/rule/subgroup review, current live smokes, reviewed scoring evidence and signed launch release remain open. Protected evaluation stays disabled. Earlier checklist entries below are historical.
+
+> Current model amendment (2026-10-19): use `gemma-4-26b-a4b-it`, thinking OFF (`thinkingLevel: minimal`), provider JSON schema and strict local validation. S0 output cap 4096; S1 2048 per stage. Synthetic smoke tests first, then one full seed (17) after readiness release and runner/scoring amendments. Earlier Gemini/thinking-enabled and five-seed descriptions below are historical and superseded for the next run. See [model amendment](protocol/amendments/GEMMA_THINKING_OFF_20261019.json). Held-out predictions remain disabled.
+
 Updated: 2026-10-19. This tracker supersedes the old Qwen3/99-case checklist for implementation planning. No evaluated predictions or scientific results have been produced in this work session.
 
 ## Confirmed dataset work (already complete)
@@ -55,7 +59,7 @@ Updated: 2026-10-19. This tracker supersedes the old Qwen3/99-case checklist for
 - [ ] Main comparison: five runs/system, same frozen cases, schema, context and declared inference budgets.
 - [ ] Five independent removals: goal-first, structured grounding, scene, dependency checks, dialogue. Engineering status: scene/dialogue masks, budget-matched non-goal first-stage comparator, dependency-consistency guard removal, and explicit-grounding-prompt control have synthetic implementations. The last three test narrower mechanisms than complete architectural removal. Full structured-grounding removal still requires a fair comparator. No evaluated ablation has run. No evaluated ablation has run.
 - [ ] Efficiency: median/P95 end-to-end latency, calls, input/output/reasoning tokens and versioned pricing; report unavailable provider hardware metrics as unavailable.
-- [ ] Simulated clarification completion at turns 0–5, separately from initial decisions and observed human conversations.
+- [ ] Simulated clarification completion at turns 0â€“5, separately from initial decisions and observed human conversations.
 - [ ] Primary/secondary failure categories and independently verified representative examples.
 
 ## 5. Manuscript and release

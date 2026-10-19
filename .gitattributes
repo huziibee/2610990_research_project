@@ -6,3 +6,7 @@ protocol/DATA_FREEZE_20261019.json -text
 protocol/run_schedule_1000.jsonl -text
 protocol/gemini_protocol_v1.json -text
 annotation/semantic_reference_template_100.jsonl -text
+protocol/gemma4_seed17_v1.json -text
+protocol/seed17/*.jsonl -text
+protocol/seed17/FREEZE.json -text
+protocol/seed17/pricing_20261019.json -text

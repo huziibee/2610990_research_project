@@ -1,0 +1,12 @@
+{
+  "schema_version": 1,
+  "study_id": "gemma4-seed17-v1",
+  "status": "UNSIGNED",
+  "config_path": "protocol/gemma4_seed17_v1.json",
+  "config_sha256": "c637525b993da722edfa2370ee30b80e76e6744ab66596de7ce15d52fb1d2cf7",
+  "authorized_by": "[Waiting for explicit authorization]",
+  "signed_utc": null,
+  "scope": "seed17_main_with_approved_clarification_only",
+  "authorization_granted": false,
+  "notes": "Implementation and synthetic validation only. No protected evaluation authorized."
+}

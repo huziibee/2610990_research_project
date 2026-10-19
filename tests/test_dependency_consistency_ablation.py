@@ -70,8 +70,8 @@ class DependencyConsistencyTests(unittest.TestCase):
         ablated = GeminiBackend(transport=lambda p, s: response(bad))
         self.assertEqual(predict_dependency_consistency_ablation(ablated, CASE, system="S0"), bad)
         self.assertEqual(len(ablated.records), 1)
-        self.assertEqual(ablated.records[0]["settings"]["max_output_tokens"], 8192)
-        self.assertEqual(ablated.records[0]["settings"]["thinking_budget"], 2048)
+        self.assertEqual(ablated.records[0]["settings"]["max_output_tokens"], 4096)
+        self.assertEqual(ablated.records[0]["settings"]["thinking_budget"], 0)
 
     def test_ablation_rejects_non_bool_flag_and_optional_s2(self):
         with self.assertRaises(ValidationError):
