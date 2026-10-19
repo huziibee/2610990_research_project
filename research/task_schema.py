@@ -47,12 +47,15 @@ def _pointer(document, path):
     return value
 
 
-def validate_task(task: dict, model_input: dict, *, capability_catalog: list | None = None) -> dict:
+def validate_task(task: dict, model_input: dict, *, capability_catalog: list | None = None,
+                  check_dependency_consistency: bool = True) -> dict:
     """Reject structurally invalid tasks and known capability contradictions.
 
     Evidence pointers prove a source exists, not that it supports the claim.
     Semantic evidence support must be independently scored.
     """
+    if type(check_dependency_consistency) is not bool:
+        raise ValidationError("Dependency consistency toggle must be boolean")
     _keys(task, TASK_FORMAT, "task")
     _string(task["intended_goal"], "intended_goal")
     for field in ("actions", "unresolved", "dependencies"):
@@ -135,7 +138,7 @@ def validate_task(task: dict, model_input: dict, *, capability_catalog: list | N
             if (not isinstance(source, dict) or not isinstance(target, dict)
                     or "value" not in source or "value" not in target):
                 raise ValidationError("same_value must reference typed arguments")
-            if source["type"] != target["type"] or source["value"] != target["value"]:
+            if check_dependency_consistency and (source["type"] != target["type"] or source["value"] != target["value"]):
                 raise ValidationError("Contradictory same_value dependency")
         if dependency["relation"] == "before":
             if any(len(dependency[key].split("/")) != 3 for key in ("source", "target")):
@@ -145,7 +148,7 @@ def validate_task(task: dict, model_input: dict, *, capability_catalog: list | N
                 right = int(dependency["target"].split("/")[2])
             except (ValueError, IndexError):
                 raise ValidationError("before requires action references") from None
-            if left >= right:
+            if check_dependency_consistency and left >= right:
                 raise ValidationError("Contradictory action order")
     critical = any(item["critical"] for item in task["unresolved"])
     if task["readiness"] == "ACTION_READY":
