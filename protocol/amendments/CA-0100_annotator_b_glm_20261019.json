@@ -1,0 +1,28 @@
+{
+  "schema_version": 1,
+  "dataset_version": "1.0.1",
+  "amendment_id": "CA-0100-annotator-b-glm-author-correction-20261019",
+  "scope": "Historical annotator-B model identity fields only; all source and derived freeze members remain untouched.",
+  "source_path": "research_data/references/native_annotations_100.jsonl",
+  "source_sha256": "f94305a8f3d4be625630777cb7584310d1734d85df949a522b8362d4f5524b62",
+  "record_id": "CA-0100",
+  "expected_original": {
+    "annotator_b_model": null,
+    "annotator_b_era": null
+  },
+  "corrected_values": {
+    "annotator_b_model": "glm",
+    "annotator_b_era": "glm_era"
+  },
+  "attested_by": "Mohammed Bangie",
+  "attestation_type": "author-reported correction to omitted historical metadata",
+  "attestation_statement": "The blank annotator B model field for CA-0100 should say GLM. Preserve all existing nonblank Claude and GLM labels.",
+  "model_version": "not supplied by the author; do not infer a GLM version",
+  "does_not_change": [
+    "frozen source or routes",
+    "case origin",
+    "gold lifecycle or human gate",
+    "underlying model-run log authentication"
+  ],
+  "created_on": "2026-10-19"
+}
