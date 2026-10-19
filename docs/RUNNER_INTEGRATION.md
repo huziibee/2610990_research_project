@@ -12,7 +12,7 @@ py -m unittest discover -s tests -v
 py tools/run_experiment.py --phase ablations
 ```
 
-The dry run reports readiness gates and the proposed 2,500 initial ablation calls/cases, but performs no model inference. Full semantic evaluation remains `NOT_COMPUTED`. Keep this worktree separate from the active annotation checkout.
+The dry run reports readiness gates and the proposed 2,500 initial ablation predictions (normally two model calls each), but performs no model inference. Full semantic evaluation remains `NOT_COMPUTED`. Keep this worktree separate from the active annotation checkout.
 
 Create the deterministic, candidate 2,500-row schedule exactly once:
 
