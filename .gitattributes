@@ -1,0 +1,8 @@
+# Preserve exact frozen bytes across Windows/Linux Git checkouts.
+# These inputs and archives are SHA-256 pinned; automatic CRLF conversion breaks integrity.
+Data/** -text
+research_data/** -text
+protocol/DATA_FREEZE_20261019.json -text
+protocol/run_schedule_1000.jsonl -text
+protocol/gemini_protocol_v1.json -text
+annotation/semantic_reference_template_100.jsonl -text
