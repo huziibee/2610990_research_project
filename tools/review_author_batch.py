@@ -78,6 +78,36 @@ def preflight(workspace):
     return store, reviewed
 
 
+def read_author_attestation(path, reviewed):
+    """Consume the user's explicit self-attestation only for the exact referenced drafts.
+
+    The document does not authenticate identity and cannot replace an independent
+    human review. It never upgrades any record to legacy FINAL_APPROVED.
+    """
+    data=json.loads(Path(path).read_text(encoding="utf-8"))
+    expected={"schema_version","attestation_type","recorded_from","actor","statement",
+              "review_date","approved_count","clarification_count",
+              "source_candidate_archive_sha256","original_source_sha256",
+              "approved_reference_sha256","model_assisted","independently_human_verified",
+              "reviewer_identity_authenticated_externally","two_model_review_logs_authenticated",
+              "frozen_route_changes","benchmark_executed","status","note"}
+    if (not isinstance(data,dict) or set(data)!=expected
+            or data["schema_version"]!=1
+            or data["attestation_type"]!="ONE_HUMAN_AUTHOR_REVIEW_OF_MODEL_ASSISTED_CANDIDATES"
+            or data["recorded_from"]!="user_explicit_statement_in_chat"
+            or data["approved_count"]!=100 or data["clarification_count"]!=26
+            or data["model_assisted"] is not True
+            or data["independently_human_verified"] is not False
+            or data["reviewer_identity_authenticated_externally"] is not False
+            or data["two_model_review_logs_authenticated"] is not False
+            or data["frozen_route_changes"]!=0 or data["benchmark_executed"] is not False
+            or data["status"]!="AUTHOR_ATTESTATION_SUPPLIED_LEDGER_APPLICATION_PENDING"):
+        raise ValueError("Incorrect or misleading author attestation format")
+    if {item["record_id"]:item["reference_sha256"] for item in reviewed}!=data["approved_reference_sha256"]:
+        raise ValueError("Draft set differs from the user's approved fingerprint list; manual reapproval required")
+    return data["actor"],data["statement"]
+
+
 def approve_batch(workspace, actor, notes):
     """Persist one HUMAN's explicit approval; never synthesize second reviewer.
 
@@ -271,11 +301,15 @@ def main():
                         help="Record the user's explicitly authorized one-human author review; no browser required")
     parser.add_argument("--actor",type=str,help="Actual reviewer name, not a fabricated verifier")
     parser.add_argument("--notes",type=str,help="User's actual review declaration (20+ characters)")
+    parser.add_argument("--approval-file",type=Path,
+                        help="Private user-provided attestation bound to the exact 100 draft hashes")
     args=parser.parse_args()
     if args.check and args.approve:
         parser.error("Choose either --check or --approve")
-    if args.approve and (not args.actor or not args.notes):
-        parser.error("--approve requires both --actor and --notes")
+    if args.approve and not args.approval_file and (not args.actor or not args.notes):
+        parser.error("--approve requires --approval-file or both --actor and --notes")
+    if args.approval_file and (not args.approve or args.actor or args.notes):
+        parser.error("--approval-file must be used with --approve and without --actor/--notes")
     if not 1024<=args.port<=65535: raise SystemExit("Invalid port")
     root=Path(__file__).resolve().parents[1]
     verify_release(root/"Data")
@@ -284,7 +318,9 @@ def main():
         raise SystemExit("Use a local, Git-ignored runs/ review workspace")
     _,items=preflight(workspace)
     if args.approve:
-        report=approve_batch(workspace,args.actor,args.notes)
+        actor,notes=(read_author_attestation(args.approval_file,items)
+                     if args.approval_file else (args.actor,args.notes))
+        report=approve_batch(workspace,actor,notes)
         print(json.dumps({"status":report["status"],"case_count":report["case_count"],
                           "reviewer":report["actor"],"receipt":str(workspace/"author_review_export"/"AUTHOR_REVIEW_RECEIPT.json"),
                           "independently_verified":False},indent=2))
