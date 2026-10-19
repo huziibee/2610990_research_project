@@ -4,6 +4,36 @@
 
 This is a **separately labelled one-human, model-assisted author-approval track**. It does not impersonate or manufacture another person. It never describes itself as independently human verified and does **not** silently pass the pre-existing two-human verification gate. The supervisor-approved protocol variant, if adopted, must be clearly documented in the manuscript rather than relabelling this as an independently reviewed gold release. Earlier claims of two-model adjudication require their actual saved evidence (model identities, blinded outputs, timestamps, disagreements and resolutions) to be added before that history can be asserted as verified.
 
+## Windows direct-execution fix and provenance distinctions
+
+\`py tools/review_author_batch.py ...\` now adds the repository root to its
+Python import search path before loading \`research.annotation_store\`.
+The equivalent \`py -m tools.review_author_batch ...\` also works from the
+repository root. The CLI retains the real, source-pinned hash validation and
+will show the first actual failing condition if the local workspace is missing
+or the approved draft fingerprints do not match.
+
+To record the author's stated **two-model adjudication history** without
+misrepresenting external authentication, append
+\`--report-two-model-adjudication\` to the \`--approve\` command. The private
+author receipt then records these distinct findings:
+
+| Statement | Evidence and meaning |
+| --- | --- |
+| \`human_author_approval_attested: true\` | The actual human expressly accepted the 100 model-assisted references |
+| \`reviewer_identity_self_attested: true\` | The person's stated name appears in the acceptance |
+| \`two_model_adjudication_reported_by_author: true\` | Author explicitly reports that two models adjudicated the cases |
+| \`independent_human_verification: false\` | No different human verified the same author's preparations in this ledger |
+| \`reviewer_identity_authenticated_externally: false\` | No external identity-provider credential was checked by this workflow |
+| \`two_model_review_logs_authenticated: false\` | This export has not authenticated the two models' underlying per-case outputs |
+
+These are **separate facts**, not contradictory conclusions. A two-model plus
+one-human protocol may be approved as the chosen scientific methodology; it
+does not turn into a two-independent-human protocol or authenticated model
+audit simply by changing boolean values. If archived model logs or separately
+authenticated review evidence exist, attach or verify those records through
+a separately versioned release.
+
 ## Recover from the earlier generic approval failure
 
 The original web form suppressed the underlying error. The updated form shows
@@ -16,7 +46,7 @@ git fetch origin
 git switch research/author-review-integration-20261019
 git pull --ff-only origin research/author-review-integration-20261019
 py tools/review_author_batch.py --workspace runs/human_review_20261019 --check
-py tools/review_author_batch.py --workspace runs/human_review_20261019 --approve --approval-file "$env:USERPROFILE\Downloads\Author_Approval_100_Mohammed_Bangie_20261019.json"
+py tools/review_author_batch.py --workspace runs/human_review_20261019 --approve --approval-file "$env:USERPROFILE\Downloads\Author_Approval_100_Mohammed_Bangie_20261019.json" --report-two-model-adjudication
 ~~~
 
 The `--approval-file` is a **private self-attestation**, not an independent
