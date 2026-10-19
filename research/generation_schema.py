@@ -10,6 +10,9 @@ def response_schema(model_input, stage):
     context = model_visible_context(model_input)
     if stage.endswith(".goal"):
         return obj({"intended_goal": {"type": "string", "description": "Intended goal only; do not rename this key"}})
+    if stage == "S1.context":
+        return obj({"context_summary": {"type": "string",
+                                       "description": "Observable source facts only, without a proposed goal"}})
     evidence_sources = [name for name, value in context.items() if value]
     text = {"type": "string"}
     argument = obj({
