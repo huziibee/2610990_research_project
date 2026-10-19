@@ -35,6 +35,16 @@ preparer identity and correct human/model-assisted provenance; it runs the
 existing validation and creates a hash-linked *candidate* event, not an
 approval.
 
+The same page also supports **Adopt model candidate**, **Verify reference**,
+**Record disagreement**, and **Final approval**. These are explicit human
+actions requiring a real actor name and substantive notes. Review actions
+apply only to the *exact current ledger reference*; they reject unsaved
+edits and stale heads. The ledger rejects self-verification, verification
+without explicit adoption of model-assisted candidates, final approval
+before independent verification, and approval over unresolved
+disagreements. Disagreement acknowledgment is deliberately left to the
+existing reviewer-specific CLI workflow.
+
 After a submission, the saved draft has an old history head. The button
 **Load latest ledger revision** displays a new envelope bound to the current
 head without destroying the saved draft. Correct references by revising them,
