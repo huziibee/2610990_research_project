@@ -15,7 +15,14 @@ import os
 from pathlib import Path
 import re
 import secrets
+import sys
 from urllib.parse import parse_qs, urlsplit
+
+# Support both `py tools/review_author_batch.py` and `py -m tools.review_author_batch`.
+# The direct-script entry point otherwise omits the repository root from sys.path.
+ROOT = Path(__file__).resolve().parents[1]
+if str(ROOT) not in sys.path:
+    sys.path.insert(0, str(ROOT))
 
 from research.annotation_store import AnnotationStore
 from research.input_contract import source_to_model_input
@@ -108,7 +115,7 @@ def read_author_attestation(path, reviewed):
     return data["actor"],data["statement"]
 
 
-def approve_batch(workspace, actor, notes):
+def approve_batch(workspace, actor, notes, *, reported_two_models=False):
     """Persist one HUMAN's explicit approval; never synthesize second reviewer.
 
     Resumable when a process stops halfway through writing candidate/adoption
@@ -119,6 +126,8 @@ def approve_batch(workspace, actor, notes):
         raise ValueError("Enter your actual reviewer identity")
     if not isinstance(notes, str) or len(notes.strip()) < 20:
         raise ValueError("Enter substantive approval notes (20+ characters)")
+    if type(reported_two_models) is not bool:
+        raise ValueError("Two-model history is an explicit author assertion, not a scored label")
     store, reviewed = preflight(workspace)
     export = Path(workspace) / "author_review_export"
     if export.exists():
@@ -150,7 +159,12 @@ def approve_batch(workspace, actor, notes):
         "timestamp_utc": datetime.now(timezone.utc).isoformat(),
         "case_count": 100, "route_counts": {"execute": 74, "clarify": 26},
         "reviewer_attests_all_100_checked": True,
+        "human_author_approval_attested": True,
+        "reviewer_identity_self_attested": True,
+        "reviewer_identity_authenticated_externally": False,
         "independent_human_verification": False,
+        "two_model_adjudication_reported_by_author": reported_two_models,
+        "two_model_review_logs_authenticated": False,
         "two_model_adjudication_evidence": "NOT_VERIFIED_BY_THIS_EXPORT",
         "benchmark_executed": False, "semantic_results": "NOT_COMPUTED",
         "source_manifest_sha256": digest(Path(workspace) / "manifest.json"),
@@ -303,6 +317,8 @@ def main():
     parser.add_argument("--notes",type=str,help="User's actual review declaration (20+ characters)")
     parser.add_argument("--approval-file",type=Path,
                         help="Private user-provided attestation bound to the exact 100 draft hashes")
+    parser.add_argument("--report-two-model-adjudication",action="store_true",
+                        help="Record your report of two-model adjudication; never claims logs were authenticated")
     args=parser.parse_args()
     if args.check and args.approve:
         parser.error("Choose either --check or --approve")
@@ -310,8 +326,10 @@ def main():
         parser.error("--approve requires --approval-file or both --actor and --notes")
     if args.approval_file and (not args.approve or args.actor or args.notes):
         parser.error("--approval-file must be used with --approve and without --actor/--notes")
+    if args.report_two_model_adjudication and not args.approve:
+        parser.error("--report-two-model-adjudication is valid only with --approve")
     if not 1024<=args.port<=65535: raise SystemExit("Invalid port")
-    root=Path(__file__).resolve().parents[1]
+    root=ROOT
     verify_release(root/"Data")
     workspace=args.workspace.resolve()
     if not workspace.is_relative_to((root/"runs").resolve()):
@@ -320,7 +338,8 @@ def main():
     if args.approve:
         actor,notes=(read_author_attestation(args.approval_file,items)
                      if args.approval_file else (args.actor,args.notes))
-        report=approve_batch(workspace,actor,notes)
+        report=approve_batch(workspace,actor,notes,
+                             reported_two_models=args.report_two_model_adjudication)
         print(json.dumps({"status":report["status"],"case_count":report["case_count"],
                           "reviewer":report["actor"],"receipt":str(workspace/"author_review_export"/"AUTHOR_REVIEW_RECEIPT.json"),
                           "independently_verified":False},indent=2))

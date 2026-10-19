@@ -5,6 +5,8 @@ import tempfile
 import unittest
 import shutil
 import zipfile
+import subprocess
+import sys
 from hashlib import sha256
 from unittest.mock import patch
 
@@ -97,6 +99,11 @@ class AuthorBatchTest(unittest.TestCase):
             self.assertEqual(release["case_count"],100)
             self.assertEqual(release["status"],"AUTHOR_REVIEWED_NOT_INDEPENDENTLY_VERIFIED")
             self.assertIs(release["independent_human_verification"],False)
+            self.assertIs(release["human_author_approval_attested"],True)
+            self.assertIs(release["reviewer_identity_self_attested"],True)
+            self.assertIs(release["reviewer_identity_authenticated_externally"],False)
+            self.assertIs(release["two_model_adjudication_reported_by_author"],False)
+            self.assertIs(release["two_model_review_logs_authenticated"],False)
             self.assertEqual(len(release["references"]),100)
             self.assertTrue((ws/"author_review_export"/"author_reviewed_references_100.jsonl").exists())
             state=store.show("CA-0001")
@@ -108,6 +115,19 @@ class AuthorBatchTest(unittest.TestCase):
             with self.assertRaisesRegex(ValueError,"Existing author approval"):
                 approve_batch(ws,"Actual human researcher",
                               "I inspected all model-assisted references against source.")
+
+    def test_two_model_report_recorded_without_fake_authentication(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            ws,_=self.make_workspace(tmp)
+            report=approve_batch(
+                ws,"Actual human researcher",
+                "I independently checked all proposed interpretations against sources.",
+                reported_two_models=True)
+            self.assertTrue(report["two_model_adjudication_reported_by_author"])
+            self.assertFalse(report["two_model_review_logs_authenticated"])
+            self.assertTrue(report["human_author_approval_attested"])
+            self.assertFalse(report["independent_human_verification"])
+
 
     def test_unreviewed_and_fake_identity_rejected(self):
         with tempfile.TemporaryDirectory() as tmp:
@@ -206,6 +226,16 @@ class AuthorBatchTest(unittest.TestCase):
             path.write_text(json.dumps(tampered),encoding="utf-8")
             with self.assertRaisesRegex(ValueError,"differs"):
                 read_author_attestation(path,rows)
+
+
+    def test_direct_script_entrypoint_imports_from_outside_repo(self):
+        root=Path(__file__).resolve().parents[1]
+        with tempfile.TemporaryDirectory() as elsewhere:
+            proc=subprocess.run(
+                [sys.executable,str(root/"tools"/"review_author_batch.py"),"--help"],
+                cwd=elsewhere,text=True,capture_output=True,check=False,timeout=20)
+        self.assertEqual(proc.returncode,0,proc.stderr)
+        self.assertIn("--approval-file",proc.stdout)
 
 
 if __name__=="__main__":
