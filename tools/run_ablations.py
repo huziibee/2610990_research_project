@@ -146,6 +146,22 @@ def _execute_ablation_rows(root, output, inputs, schedule, settings, fingerprint
     return seal
 
 
+def prepare_ablation_schedule(root=ROOT):
+    """Create the frozen candidate schedule once; no data reads or model calls."""
+    root = Path(root).resolve()
+    target = root / "protocol/ablation_schedule_2000.jsonl"
+    rows = planned_ablation_schedule(IDS)
+    if len(rows) != EXPECTED_COUNT:
+        raise ValueError("Unexpected ablation schedule size")
+    # Exclusive creation prevents accidental schedule revisions or rerolls.
+    with target.open("x", encoding="utf-8", newline="\n") as out:
+        for row in rows:
+            _append(out, row)
+    return {"status": "SCHEDULE_CANDIDATE_ONLY", "benchmark_executed": False,
+            "schedule": str(target), "rows": len(rows), "sha256": digest(target),
+            "interventions": INTERVENTIONS, "baseline_alias": {"goal_first": "S0"}}
+
+
 def run_ablation_pass(root=ROOT, *, bundle=None, output=None, execute=False):
     root = Path(root).resolve()
     pinned = {
@@ -160,7 +176,6 @@ def run_ablation_pass(root=ROOT, *, bundle=None, output=None, execute=False):
         if not bundle.is_relative_to(root):
             raise ValueError("Readiness bundle must remain inside workspace")
         pinned["readiness_bundle"] = bundle
-    before = {key: digest(path) for key, path in pinned.items()}
     readiness = isolated_preflight(root, bundle)
     plan = {"phase": "INITIAL_ABLATIONS_ONLY", "mode": "PREFLIGHT_PLAN",
             "benchmark_executed": False, "planned_predictions": EXPECTED_COUNT,
@@ -168,6 +183,8 @@ def run_ablation_pass(root=ROOT, *, bundle=None, output=None, execute=False):
             "seeds": SEEDS, "readiness": readiness}
     if not execute:
         return plan
+    # A candidate schedule is not required merely to inspect preflight status.
+    before = {key: digest(path) for key, path in pinned.items()}
     if not readiness["ready"]:
         raise ValueError("Experiment is not ready; no ablation model calls permitted")
     if bundle is None or output is None:
