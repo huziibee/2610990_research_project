@@ -251,8 +251,11 @@ def serve(workspace, port=8766):
                              "<p>Private reference release saved to: "
                              +escape(str(Path(workspace)/"author_review_export"))+"</p>"
                              "<p>This did not launch benchmark evaluation or merge GitHub branches.</p>")
-            except (ValueError,OSError,KeyError,TypeError,UnicodeError):
-                self.respond(422,"Approval not recorded. Confirm all 100 drafts are valid and unused.")
+            except (ValueError,OSError,KeyError,TypeError,UnicodeError) as exc:
+                # Local-only diagnostic, HTML escaped. No gold or source passage is printed.
+                self.respond(422,"<h2>Approval not recorded</h2><p>Reason: "+
+                             escape(type(exc).__name__+": "+str(exc))+
+                             "</p><p>Use the --check CLI to diagnose without writing review events.</p>")
     with ThreadingHTTPServer(("127.0.0.1",port),Handler) as server:
         print("Review portal: http://127.0.0.1:%d/" % port,flush=True)
         try: server.serve_forever()
@@ -264,7 +267,15 @@ def main():
     parser.add_argument("--workspace",type=Path,required=True)
     parser.add_argument("--port",type=int,default=8766)
     parser.add_argument("--check",action="store_true")
+    parser.add_argument("--approve",action="store_true",
+                        help="Record the user's explicitly authorized one-human author review; no browser required")
+    parser.add_argument("--actor",type=str,help="Actual reviewer name, not a fabricated verifier")
+    parser.add_argument("--notes",type=str,help="User's actual review declaration (20+ characters)")
     args=parser.parse_args()
+    if args.check and args.approve:
+        parser.error("Choose either --check or --approve")
+    if args.approve and (not args.actor or not args.notes):
+        parser.error("--approve requires both --actor and --notes")
     if not 1024<=args.port<=65535: raise SystemExit("Invalid port")
     root=Path(__file__).resolve().parents[1]
     verify_release(root/"Data")
@@ -272,7 +283,12 @@ def main():
     if not workspace.is_relative_to((root/"runs").resolve()):
         raise SystemExit("Use a local, Git-ignored runs/ review workspace")
     _,items=preflight(workspace)
-    if args.check:
+    if args.approve:
+        report=approve_batch(workspace,args.actor,args.notes)
+        print(json.dumps({"status":report["status"],"case_count":report["case_count"],
+                          "reviewer":report["actor"],"receipt":str(workspace/"author_review_export"/"AUTHOR_REVIEW_RECEIPT.json"),
+                          "independently_verified":False},indent=2))
+    elif args.check:
         print(json.dumps({"status":"READY_FOR_AUTHOR_REVIEW_NOT_APPROVED",
                           "cases":len(items),
                           "clarify":sum(x["route"]=="clarify" for x in items),
