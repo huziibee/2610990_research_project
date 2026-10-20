@@ -87,10 +87,12 @@ class ThoughtMarkerProbeTests(unittest.TestCase):
         d = self._case([], {"candidatesTokenCount": 10}, rejected=False)
         self.assertEqual(d["thought_marker_diagnostic"]["marked_parts"], 0)
 
-    def test_isolated_judge_policy_still_accepts_and_redacts_thoughts(self):
+    def test_isolated_judge_policy_allows_usage_but_rejects_private_thoughts(self):
         d = self._case([{"thought": True, "text": "PRIVATE_SYNTHETIC_THOUGHT"}],
-                       {"thoughtsTokenCount": 13}, rejected=False, allow_reasoning=True)
+                       {"thoughtsTokenCount": 13}, rejected=True, allow_reasoning=True)
         self.assertTrue(d["thought_marker_diagnostic"]["positive_thought_token_count"])
+        allowed = self._case([], {"thoughtsTokenCount": 13}, rejected=False, allow_reasoning=True)
+        self.assertEqual(allowed["response"]["usageMetadata"]["thoughtsTokenCount"], 13)
 
 
 if __name__ == "__main__":
