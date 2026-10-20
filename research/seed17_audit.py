@@ -74,7 +74,7 @@ def audit(directory, *, synthetic=False):
             from research.systems import COMMON, TASK_PROMPT
             expected_prompt = (TASK_PROMPT if system == "S0" else (
                 COMMON + 'Recover the intended goal. Return exactly {"intended_goal":"..."}; do not guess execution details.'
-                if call["stage"] == "S1.goal" else TASK_PROMPT + " Use the proposed goal as a hypothesis and ground each argument in input evidence."))
+                if call["stage"] == "S1.goal" else TASK_PROMPT))
             if (call["settings"] != expected_settings or call["input"] != visible
                     or call["system_prompt"] != expected_prompt
                     or call["seed"] != 17 or call["record_id"] != current["record_id"]
