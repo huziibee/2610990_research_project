@@ -11,7 +11,7 @@ class PrivateStagingTests(unittest.TestCase):
         self.temp=tempfile.TemporaryDirectory();self.addCleanup(self.temp.cleanup)
         self.base=Path(self.temp.name);self.root=self.base/'repo';self.root.mkdir()
         self.workspace=self.root/'runs/human_review_20261019'
-        self.key=b'SYNTHETIC_KEY_NOT_A_SECRET_1234567'
+        self.key=bytes(range(32))
         self.assertEqual(len(self.key),32)
         self.env={module.SECRET_NAME:base64.b64encode(self.key).decode()}
         self.evidence={'case_count':100,'execute_cases':74,'clarify_cases':26,'clarification_branches':26,
