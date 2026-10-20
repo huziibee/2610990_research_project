@@ -1,8 +1,9 @@
 """Pre-experiment candidate: canonical JSON, schema documented in prompt.
 
 Bypasses provider-side schema compilation ONLY, not strict local task/schema
-validation. This is an explicitly different transport policy: never qualify it
-as the old provider-enforced protocol. No protected records or oracle gold.
+validation. Optional plain-text transport also bypasses provider JSON-MIME
+processing. Neither policy is the registered provider-enforced experiment.
+No protected records or oracle gold.
 """
 from __future__ import annotations
 import copy
@@ -21,11 +22,13 @@ from research.generation_schema import response_schema
 import tools.probe_seed17_wire_codec as runner
 
 
-def canonical_payload(payload):
+def canonical_payload(payload, *, json_mime=True):
+    if type(json_mime) is not bool:raise ValueError('Explicit MIME policy required')
     actual=copy.deepcopy(payload)
     schema=actual['generationConfig'].pop('responseJsonSchema')
     if actual['generationConfig'].get('responseMimeType')!='application/json':
-        raise ValueError('JSON MIME mode required')
+        raise ValueError('Expected original JSON MIME configuration')
+    if not json_mime:actual['generationConfig'].pop('responseMimeType')
     actual['systemInstruction']['parts'][0]['text'] += (
         '\nThe following is the REQUIRED output JSON schema. Return exactly ONE JSON OBJECT, '
         'never an array, markdown or a quoted JSON string. Your response is locally rejected '
@@ -41,8 +44,9 @@ class CanonicalBackend(runner.WireBackend):
     def generate(self,prompt,item,*,seed,stage,context=None,direct=False):
         if item.get('record_id')!='SYNTHETIC-001':raise ValueError('Invented fixture only')
         self.logical+=1;logical=self.logical
+        json_mime=self.mode!='canonical_plain_text_local_validation'
         def transport(original,settings):
-            payload=canonical_payload(original)
+            payload=canonical_payload(original,json_mime=json_mime)
             write_json(self.output/'wire'/f'{logical:03d}.json',{'payload':payload,'settings':asdict(settings)})
             for attempt in range(1,self.attempts+1):
                 identity={'logical':logical,'stage':stage,'attempt':attempt}
@@ -77,7 +81,8 @@ class CanonicalBackend(runner.WireBackend):
                 self.records[-1]['wire_schema_enforced_by_provider']=False
                 self.records[-1]['validation_schema']=response_schema(item,stage)
                 self.records[-1]['schema_supplied_in_prompt']=True
-                self.records[-1]['actual_wire_mode']='canonical_json_local_validation_candidate'
+                self.records[-1]['actual_wire_mode']=self.mode
+                self.records[-1]['provider_json_mime_requested']=json_mime
 
 
 def main():
@@ -86,9 +91,11 @@ def main():
     p.add_argument('--output',type=Path,required=True)
     p.add_argument('--attempts',type=int,default=1)
     p.add_argument('--mock',action='store_true')
+    p.add_argument('--plain-text',action='store_true')
     a=p.parse_args()
+    mode='canonical_plain_text_local_validation' if a.plain_text else 'canonical_json_local_validation'
     with patch.object(runner,'WireBackend',CanonicalBackend):
-        result=runner.run(a.output,mode='canonical_json_local_validation',attempts=a.attempts,mock=a.mock)
+        result=runner.run(a.output,mode=mode,attempts=a.attempts,mock=a.mock)
     return 0 if result['complete'] else 2
 
 if __name__=='__main__':raise SystemExit(main())
