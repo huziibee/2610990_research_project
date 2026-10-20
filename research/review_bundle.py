@@ -7,7 +7,7 @@ from __future__ import annotations
 
 from collections import Counter
 
-MATCHING_METHOD = "exact_normalized_approved_question_variants_v1"
+MATCHING_METHOD = "anchored_question_intent_v2"
 
 
 def _nonempty(value):
@@ -101,7 +101,7 @@ def build_review_bundle(export_manifest, rows, *, reference_sha256, expected_ids
                 turn_count += 1
                 rule_turns.append({"turn": number, "field": turn["field"],
                                    "question": turn["question"],
-                                   "question_variants": [turn["question"]]})
+                                   "canonical_question": turn["question"]})
             branch_rules.append({"branch_id": branch["branch_id"], "turns": rule_turns})
         item = {"record_id": case, "semantic_reference_revision": revision,
                 "approved_route": route, "dialogue_relevant": ref["dialogue_relevant"],

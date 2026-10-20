@@ -1,15 +1,27 @@
-# Coding-agent project instructions
+# Current research execution instructions
 
-**Current mission**: finish the Gemma seed-17 research experiment **end to end**, including S0/S1 live clarification, reproducible unsigned technical freeze, separately authorized 100-case main experiment, **all five 100-case ablations**, isolated semantic judging, sealed statistical results and engineering handoff. **DO NOT write or edit the paper, LaTeX manuscript, or research prose report.**
+Read `docs/FIVE_SEED_EXECUTION.md` first. The current authorized task is the
+Gemini 3.5 Flash-Lite **five-seed ambiguity study**, including main S0/S1, all five
+ablations, isolated semantic judging, numerical analysis and figures. **Do not
+write the paper.** Older seed-17/Gemma runbooks are preserved history, not the
+current execution command or authority.
 
-**FIRST READ IN FULL**: [docs/SEED17_END_TO_END_CODING_AGENT_RUNBOOK_20261020.md](docs/SEED17_END_TO_END_CODING_AGENT_RUNBOOK_20261020.md). That file is the authoritative roadmap: latest state, architecture, evidence, existing CLI commands, five interventions, explicit main/ablation authorization and steps A–K through actual results. Next read `docs/SEED17_CODING_AGENT_HANDOFF_20261020.md`, protocol files, and current source code; source validators prevail over old status documents.
+Current entrypoint: `python tools/finish_five_seed.py --execute-all` in an
+appropriately credentialed environment. Without `--execute-all` it is read-only.
+The actual user has delegated both scopes and the final verified hash binding;
+`protocol/five_seed/session_delegation_v1.json` records their words. No new blanket
+approval loop is required, and no signature or user signing timestamp may be
+invented. Authorization still cannot replace technical verification.
 
-Work continuously and independently where permitted. **Use parallel subagents/worktrees** for (A) provider/official live smoke, (B) private reference/integrity gate, (C) five ablation audits/tests, (D) judge/scoring/analysis, (E) release/CI and (F) adversarial negative audits. Coordinate shared provider quota and serially integrate code before freezing. Give each subagent a nonoverlapping worktree and unique evidence directories. A designated orchestrator is the only owner of protected execution.
+Invariant: unchanged original 100 author-reviewed references/26 branches,
+seeds 17/29/43/71/101, 1000 main and 2500 ablation initial predictions, up to five
+approved replies, no automatic retries of protected failed or unknown sends.
+No mandatory safety capability catalog. Keep typed schema, evidence, dependency
+checks (except the precise dependency ablation), conservative approved-question
+matching, and all failures/unknowns in denominators. Preserve all raw receipts.
 
-Core invariants: 100 approved author-reviewed, agent-assisted source references (74 execute, 26 clarify; 26 approved branches), seed 17, 200 main S0/S1 initial predictions, 500 ablation initial predictions, up to five simulated clarification answers per trajectory, exact schedule/source pins and frozen metrics. Do not change original data, erase failure receipts, fabricate oracle answers, weaken schema, or use protected gold to tune prompts. Failed/ambiguous protected provider attempts are **never silently resent**. Synthetic HTTP 5xx retry probes are not protected-run permission or freeze evidence.
-
-GitHub CI passing is **not** proof of live success. Latest consolidated regression: 390 passing tests; prior synthetic live HTTP 5xx probe failed ([run](https://github.com/huziibee/2610990_research_project/actions/runs/39423937361)). The technical freeze and protected results were not complete at the time of this handoff. The private reference release is intentionally not stored publicly; verify it only in an authorized local environment.
-
-**Crucial separate approvals**: a fully hash-bound unsigned technical release must exist before asking for actual verbatim user authorization of that exact protected main scope. An additional distinct verbatim authorization is required for the exact 500-case ablation scope. See `research/seed17_freeze.py::validate_launch_authorization` and `research/seed17_ablation.py::validate_authorization`. Never invent signoff, signatures or authorization timestamps. Continue autonomously through all nonauthorization tasks; ask for the exact missing approval only at the actual gate.
-
-Success means both real sealed runs and complete audited semantic/statistical result artifacts, with unresolved judgments reported honestly. No paper production.
+Independent code audits/tests may run in parallel, but only one coordinator owns
+provider requests, quota, private-oracle state and protected journal. Do not edit
+frozen code after observing results. Use current tests and actual immutable
+archives, never summaries or mock values, to certify results. Secrets and private
+references stay out of Git, issues, public logs and downloadable public artifacts.

@@ -16,14 +16,16 @@ ROOT = Path(__file__).resolve().parents[1]
 class Seed17GateTests(unittest.TestCase):
     def test_exact_config_and_no_single_seed_redefinition_of_historical_gate(self):
         config = read_json(ROOT / "protocol/gemma4_seed17_v1.json")
-        self.assertEqual(validate_config(config).model, "gemma-4-26b-a4b-it")
+        self.assertEqual(validate_config(config).model, "gemini-3.5-flash-lite")
         historical = (ROOT / "research/evaluation_gate.py").read_text(encoding="utf-8")
         self.assertIn('[17, 29, 43, 71, 101]', historical)
         self.assertNotIn('gemma', historical.lower())
 
     def test_changed_seed_budget_thinking_schema_or_retry_policy_refused(self):
         base = read_json(ROOT / "protocol/gemma4_seed17_v1.json")
-        mutations = [lambda c: c["runs"].update(seeds=[17, 29]),
+        mutations = [lambda c: c["model"].update(profile="canonical"),
+                     lambda c: c.update(reasoning_usage_policy="zero reasoning guaranteed"),
+                     lambda c: c["runs"].update(seeds=[17, 29]),
                      lambda c: c["runs"].update(max_transport_retries=1),
                      lambda c: c["candidate_generation_config"].update(responseMimeType="text/plain"),
                      lambda c: c["candidate_generation_config"].update(thinkingConfig={"thinkingLevel": "high"}),
@@ -72,14 +74,18 @@ class Seed17GateTests(unittest.TestCase):
                     bundle["artifacts"][name] = {"path": path.name, "sha256": digest(path)}
 
                 def send(payload, settings):
+                    schema = payload["generationConfig"]["responseFormat"]["text"]["schema"]
                     value = ({"intended_goal": TASK["intended_goal"]}
-                             if payload["generationConfig"]["responseJsonSchema"]["required"] == ["intended_goal"] else TASK)
-                    return {"responseId": "invented-gate-fixture", "modelVersion": "gemma-4-26b-a4b-it",
+                             if schema["required"] == ["intended_goal"] else TASK)
+                    from research.seed17_wire_codec import encode_task
+                    if schema["required"] != ["intended_goal"]:
+                        value = encode_task(value)
+                    return {"responseId": "invented-gate-fixture", "modelVersion": "gemini-3.5-flash-lite",
                         "usageMetadata": {"promptTokenCount": 100, "candidatesTokenCount": 50, "thoughtsTokenCount": 0},
                         "candidates": [{"finishReason": "STOP", "content": {"parts": [{"text": json.dumps(value)}]}}]}
 
                 for system in ("S0", "S1"):
-                    backend = GeminiBackend(replace(GenerationSettings(timeout_seconds=300),
+                    backend = GeminiBackend(replace(validate_config(read_json(protocol)),
                         max_output_tokens=4096 if system == "S0" else 2048), transport=send)
                     task = ResearchSystem(backend).predict(CASE, system, 17)
                     calls = copy.deepcopy(backend.records)

@@ -82,7 +82,7 @@ class EvaluationGateTests(unittest.TestCase):
         add("reviewed_coverage", {"independently_verified": True, "reference_sha256": digest(path), "cases": [
             {"record_id": f"CA-{i:04d}", "dialogue_relevant": False, "explicit_dependency": False,
              "semantic_reference_revision": 1, "approved_route": "execute", "branch_count": 0, "branch_ids": []} for i in range(1, 101)]})
-        add("clarification_matching_rules", {"method": "exact_normalized_approved_question_variants_v1", "independently_verified": True,
+        add("clarification_matching_rules", {"method": "anchored_question_intent_v2", "independently_verified": True,
             "reference_sha256": digest(path), "independent_review": {"preparer_id": "author", "verifier_id": "reviewer", "notes": "Reviewed fixture"},
             "cases": [{"record_id": row["record_id"], "reference_revision": 1, "branches": []} for row in refs]})
         task = {"intended_goal": "Move cup", "actions": [{"action_id": "a", "capability_id": "move", "arguments": {},
@@ -285,7 +285,7 @@ class EvaluationGateTests(unittest.TestCase):
             def update_matching(value):
                 value["reference_sha256"] = ref_sha
                 value["cases"][0]["branches"] = [{"branch_id": "branch-a", "turns": [{"turn": 1, "field": "destination",
-                    "question": "Where should the cup go?", "question_variants": ["Where should the cup go?"]}]}]
+                    "canonical_question": "Where should the cup go?"}]}]
             self.refresh(root, bundle, "clarification_matching_rules", update_matching)
             result = check_readiness(root, bundle)
             self.assertTrue(result["ready"], result["failures"])

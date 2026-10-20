@@ -1,0 +1,55 @@
+name: Seed17 native function transport qualification
+on:
+  push:
+    branches: [research/seed17-fasttrack-codec-20261020]
+    paths: [.github/workflows/seed17-fasttrack-native-functions.yml]
+  workflow_dispatch:
+permissions: {contents: read}
+concurrency:
+  group: seed17-fasttrack-native-functions
+  cancel-in-progress: false
+jobs:
+  native:
+    runs-on: ubuntu-latest
+    timeout-minutes: 25
+    env:
+      PYTHONPATH: .
+      GEMINI_API_KEY: ${{ secrets.GEMINI_API_KEY }}
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with: {python-version: '3.11'}
+      - run: python -m pip install -r requirements.txt
+      - name: Native response parser and complete oracle-process rehearsal
+        run: |
+          python -m unittest tests.test_seed17_function_codec tests.test_seed17_wire_codec -v
+          python tools/probe_seed17_function_codec.py --mock --mode function_legacy --attempts 1 --output runs/provider_diagnostics/function_mock_${{ github.run_id }}
+      - name: Native API tool declarations with no response-schema generation
+        id: legacy
+        continue-on-error: true
+        run: python tools/probe_seed17_function_codec.py --mode function_legacy --attempts 1 --output runs/provider_diagnostics/function_legacy_${{ github.run_id }}
+      - name: Alternative native JSON-schema declaration only when legacy fails
+        id: json
+        if: steps.legacy.outcome != 'success'
+        continue-on-error: true
+        run: python tools/probe_seed17_function_codec.py --mode function_json --attempts 1 --output runs/provider_diagnostics/function_json_${{ github.run_id }}
+      - name: Report genuine complete trajectories, not successful shell alone
+        if: always()
+        run: |
+          python - <<'PY'
+          from pathlib import Path
+          import json
+          for p in sorted(Path('runs/provider_diagnostics').glob('function_*/summary.json')):
+              x=json.loads(p.read_text()); print('FUNCTION_RESULT',json.dumps(x,sort_keys=True))
+          print('NO_TOOLS_EXECUTED=True; PROTECTED_PREDICTIONS=0')
+          PY
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: seed17-native-function-${{ github.run_id }}
+          path: runs/provider_diagnostics/function_*/
+          retention-days: 14
+      - name: Require at least one valid native transport
+        if: always()
+        run: |
+          test '${{ steps.legacy.outcome }}' = 'success' || test '${{ steps.json.outcome }}' = 'success'

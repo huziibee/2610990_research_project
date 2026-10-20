@@ -21,6 +21,10 @@ class MainAuthorizationHelperTests(unittest.TestCase):
             path = self.root / name
             path.parent.mkdir(parents=True, exist_ok=True)
             write_json(path, {'synthetic': True})
+        validation_contract = self.root / 'protocol/seed17/output_validation_contract_v1.json'
+        validation_contract.parent.mkdir(parents=True, exist_ok=True)
+        validation_contract.write_bytes((Path(__file__).resolve().parents[1] /
+            'protocol/seed17/output_validation_contract_v1.json').read_bytes())
         snapshot = self.base / 'snapshot.json'
         write_json(snapshot, {'files': {}, 'runtime': current_runtime()})
         entry = {'path': snapshot.relative_to(self.root).as_posix(), 'sha256': digest(snapshot)}

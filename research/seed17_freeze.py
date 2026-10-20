@@ -52,6 +52,8 @@ def technical_record(root, bundle, *, schema_version=2):
     files = dict(snapshot['files'])
     # Schema 1 remains replayable; new engineering releases exclude paper/PDF work.
     anchors = ['protocol/DATA_FREEZE_20261019.json', 'protocol/gemini_protocol_v1.json']
+    if schema_version == 2:
+        anchors.append('protocol/seed17/output_validation_contract_v1.json')
     if schema_version == 1:
         anchors.insert(0, 'Report/Cooccurring_Ambiguity_Paper_Gemma_Seed17_Working.tex')
     if schema_version == 2 and snapshot.get('runtime') != current_runtime():

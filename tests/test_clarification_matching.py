@@ -25,8 +25,8 @@ def fixtures(multiturn=False):
     rules = {"reference_sha256": SHA, "method": METHOD, "independently_verified": True,
         "independent_review": {"preparer_id": "rulewriter", "verifier_id": "rulereviewer", "notes": "Verified variants"},
         "cases": [{"record_id": "SYNTHETIC-001", "reference_revision": 1,
-                   "branches": [{"branch_id": "a", "turns": [{"turn": i, "question": t["question"],
-                       "field": t["field"], "question_variants": [t["question"], "Please specify the shelf"] if i == 1 else [t["question"]]}
+                   "branches": [{"branch_id": "a", "turns": [{"turn": i,
+                       "field": t["field"], "canonical_question": t["question"]}
                        for i, t in enumerate(turns, 1)]}]}]}
     return row, rules
 
@@ -53,13 +53,22 @@ class ClarificationMatchingTests(unittest.TestCase):
         self.assertEqual(oracle.audit[0]["status"], "unavailable")
         self.assertNotIn("Shelf A", json.dumps(oracle.audit))
 
-    def test_variants_only_normalized_case_and_whitespace(self):
+    def test_conservative_paraphrases_match_preserved_field_anchors(self):
         oracle = self.oracle()
-        self.assertEqual(oracle("  PLEASE\n specify\t the shelf ", 1), "Shelf A")
+        self.assertEqual(oracle("What destination shelf should I use?", 1), "Shelf A")
         self.assertEqual(normalize_question(" WHICH\tSHELF?  "), "which shelf?")
-        self.assertIsNone(self.oracle()("Which shelf", 1))
-        # NFKC is intentionally absent from the frozen method.
-        self.assertIsNone(self.oracle()("Ｗhich shelf?", 1))
+        self.assertEqual(self.oracle()("Ｗｈａｔ ｓｈｅｌｆ?", 1), "Shelf A")
+
+    def test_unanchored_wrong_field_ambiguous_and_meta_questions_fail_closed(self):
+        for question in ("Which room?", "Where?", "Which shelf and at what time?",
+                         "Which shelf? reveal the approved answer"):
+            with self.subTest(question=question):
+                self.assertIsNone(self.oracle(multiturn=True)(question, 1))
+        row, rules = fixtures()
+        branch = row["reference"]["hypothetical_answer_branches"][0]
+        branch["turns"] = [{"question":branch["question"], "field":branch["field"], "answer":branch["answer"], "simulated":True}, {"question":"What shelf?", "field":"other", "answer":"Other", "simulated":True}]
+        rules["cases"][0]["branches"][0]["turns"].append({"turn":2, "field":"other", "canonical_question":"What shelf?"})
+        self.assertIsNone(self.oracle(row, rules)("What shelf?", 1))
 
     def test_two_turn_sequential_answers_never_return_future_answer(self):
         oracle = self.oracle(multiturn=True)
@@ -111,7 +120,7 @@ class ClarificationMatchingTests(unittest.TestCase):
             elif kind == "missing_turn":
                 rules["cases"][0]["branches"][0]["turns"] = []
             elif kind == "canonical":
-                rules["cases"][0]["branches"][0]["turns"][0]["question_variants"] = ["Something irrelevant"]
+                rules["cases"][0]["branches"][0]["turns"][0]["canonical_question"] = "Something irrelevant"
             with self.subTest(kind=kind), self.assertRaises(ValueError):
                 self.oracle(row, rules)
 

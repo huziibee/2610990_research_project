@@ -1,0 +1,61 @@
+{
+  "schema_version": 1,
+  "amendment_id": "seed17_gemini35_model_codec_20261020_v1",
+  "status": "AUTHOR_APPROVED_DESIGN_AMENDMENT_NOT_EXECUTION_AUTHORIZATION",
+  "reason": "Original Gemma setup lacks complete paired qualification; successful synthetic Gemini 3.5 Flash-Lite control motivates approved model and codec amendment. Fresh current-code qualification remains required.",
+  "author_verbatim_approval": "Approve Gemini 3.5 Flash-Lite model/codec amendment",
+  "approval_source": "Actual user answer in this session; identity and signed timestamp not supplied",
+  "signed_utc": null,
+  "protected_main_authorized": false,
+  "protected_ablations_authorized": false,
+  "preserved_history": {
+    "protocol/gemma4_seed17_v1.json": {
+      "path": "protocol/seed17/history/pre_gemini35_amendment_20261020_v1/gemma4_seed17_v1.json",
+      "sha256": "db2ca7473d38c0b8e45f516bac395afeda3766e16503c6f6d371f1f16c399c67"
+    },
+    "protocol/seed17/ablation_contract_v1.json": {
+      "path": "protocol/seed17/history/pre_gemini35_amendment_20261020_v1/ablation_contract_v1.json",
+      "sha256": "8b9ebd1824ea0c102403e006bbe6e9bdb76a10ef581fb65d0c913fc24ddd9cb6"
+    },
+    "protocol/seed17/FREEZE.json": {
+      "path": "protocol/seed17/history/pre_gemini35_amendment_20261020_v1/FREEZE.json",
+      "sha256": "9804e5a35fb1236f69079cbe203ead0df07e89570d820c981937e678ae0dcffc"
+    }
+  },
+  "updated_artifacts": {
+    "protocol/gemma4_seed17_v1.json": "339dc2dc7f4c56239e4518c609ce417fe64a74d46a1f430f95330f1cd14a0f63",
+    "protocol/seed17/ablation_contract_v1.json": "aec869cfd9abf61dccfd6a37ebe1302285a50e63fd97cef11b2e42a328434bd9",
+    "protocol/seed17/FREEZE.json": "6af3a1d8a4b94b60d39f282eea6972bfe7b9e5d2b9683fc61480eda4e08ac2bc",
+    "protocol/seed17/output_validation_contract_v1.json": "b388129369802f8c3b53210c3f2f09ef052a7e8749c5f1183863a42a59ad226e"
+  },
+  "changes": {
+    "model": "gemini-3.5-flash-lite",
+    "profile": "seed17_gemini35_wire_v1",
+    "codec": "lossless named arguments, preserving local typed-task validation",
+    "responseFormat": {
+      "text": {
+        "mimeType": "APPLICATION_JSON"
+      }
+    },
+    "thinkingConfig": {
+      "thinkingLevel": "minimal",
+      "includeThoughts": false
+    },
+    "reasoning_usage_policy": "Provider-reported reasoning tokens are permitted and recorded; minimal thinking is not a zero-reasoning guarantee.",
+    "codec_implementation": {
+      "version": "seed17_lossless_named_arguments_v1",
+      "path": "research/seed17_wire_codec.py",
+      "sha256_lf_normalized_utf8": "32395b54c9308b4588a06b99199ad49fea970738282ad4f1ff3511ba3990a419",
+      "hash_method": "Decode UTF-8 with universal newlines; encode UTF-8; SHA-256. Exact raw code bytes additionally bound by technical freeze."
+    },
+    "shared_wire_instruction": "The common codec prompt includes semantic guidance to check required arguments after answers and clarify unknowns. It is retained identically in all systems and ablations, including structured_grounding. That intervention removes the baseline explicit grounding prompt only, not all grounding guidance.",
+    "output_validation_contract": "protocol/seed17/output_validation_contract_v1.json; exact capability identifiers, required arguments and declared argument types must come from this strict visible syntax or a separately attested source-bound catalog. Structural evidence pointers do not establish semantic entailment."
+  },
+  "unchanged_invariants": [
+    "100 cases: 74 execute and 26 clarify; 26 approved branches",
+    "seed 17; main 200 initial predictions; five ablations 500 initial predictions",
+    "S0 cap4096; S1 goal2048 and ground2048; timeout300 seconds",
+    "zero automatic retries; original references and matching unchanged",
+    "separate exact hash-bound main and ablation authorizations required"
+  ]
+}

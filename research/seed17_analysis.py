@@ -1,4 +1,4 @@
-"""Offline, case-paired results with explicit unknowns; no provider calls.
+﻿"""Offline, case-paired results with explicit unknowns; no provider calls.
 
 Branch means are computed within cases before population averages. Semantic
 unknowns never disappear into complete-case denominators or become zeroes.
@@ -70,15 +70,15 @@ def _valid_value(value):
     return value is None or type(value) is bool
 
 
-def validate_records(records):
+def validate_records(records, *, seeds=(17,)):
     if not records:
         raise ValueError('Nonempty analysis grid required')
     seen = set()
     systems = {}
     for row in records:
         key = tuple(row[k] for k in ('system', 'record_id', 'seed', 'branch_id'))
-        if key in seen or row['seed'] != 17 or not all(isinstance(v, str) and v for v in (key[0], key[1], key[3])):
-            raise ValueError('Duplicate, invalid or non-seed17 analysis record')
+        if key in seen or row['seed'] not in seeds or not all(isinstance(v, str) and v for v in (key[0], key[1], key[3])):
+            raise ValueError('Duplicate, invalid or unregistered-seed analysis record')
         seen.add(key)
         systems.setdefault(row['system'], set()).add(key[1:])
         if row['initial_expected'] not in ('ACTION_READY', 'CLARIFY') or row['initial_predicted'] not in ('ACTION_READY', 'CLARIFY', 'ERROR'):

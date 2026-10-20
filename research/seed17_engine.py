@@ -185,7 +185,7 @@ def execute(directory, manifest, inputs, model, oracle, *, resume=False,
                     load(path)
                     continue
                 current = copy.deepcopy(inputs[cid])
-                rows = [{"record_id": cid, "seed": 17, "branch_id": branch, "turn": 0,
+                rows = [{"record_id": cid, "seed": planned["seed"], "branch_id": branch, "turn": 0,
                          **{k: initial[k] for k in ("status", "task", "calls", "error")},
                          "question": None, "answer": None}]
                 progress = directory / "turns" / f"{seq:06d}" / content_hash(branch)
@@ -198,8 +198,12 @@ def execute(directory, manifest, inputs, model, oracle, *, resume=False,
                     if previous["status"] == "error":
                         reason = "ERROR"
                         break
-                    task = (validate_task(previous["task"], current) if validate_prediction is None
-                            else validate_prediction(previous["task"], current, planned))
+                    if validate_prediction is None:
+                        from research.systems import ResearchSystem
+                        catalog = ResearchSystem(None)._catalog(current)
+                        task = validate_task(previous["task"], current, capability_catalog=catalog)
+                    else:
+                        task = validate_prediction(previous["task"], current, planned)
                     if task["readiness"] == "ACTION_READY":
                         reason = "ACTION_READY"
                         break
@@ -241,7 +245,7 @@ def execute(directory, manifest, inputs, model, oracle, *, resume=False,
                     turn_path = progress / f"{turn:06d}.json"
                     if durable and turn_path.exists():
                         row = load(turn_path)
-                        if any(row.get(k) != v for k,v in {"record_id":cid,"seed":17,"branch_id":branch,
+                        if any(row.get(k) != v for k,v in {"record_id":cid,"seed":planned["seed"],"branch_id":branch,
                                 "turn":turn,"question":question,"answer":answer}.items()):
                             raise AmbiguousAttempt("Saved turn does not match released reply")
                     else:
@@ -249,7 +253,7 @@ def execute(directory, manifest, inputs, model, oracle, *, resume=False,
                                                   "branch_id": branch, "turn": turn})
                         if response["status"] == "paused":
                             return pause("WORKER_OR_RESOURCE_PAUSE")
-                        row = {"record_id": cid, "seed": 17, "branch_id": branch, "turn": turn,
+                        row = {"record_id": cid, "seed": planned["seed"], "branch_id": branch, "turn": turn,
                                **{k: response[k] for k in ("status", "task", "calls", "error")},
                                "question": question, "answer": answer}
                         if durable:
@@ -260,7 +264,7 @@ def execute(directory, manifest, inputs, model, oracle, *, resume=False,
                         "ACTION_READY" if row["task"]["readiness"] == "ACTION_READY" else "TURN_LIMIT")
                     if reason in ("ACTION_READY", "ERROR"):
                         break
-                result = {"record_id": cid, "system": system, "seed": 17, "branch_id": branch,
+                result = {"record_id": cid, "system": system, "seed": planned["seed"], "branch_id": branch,
                           "sequence": seq, "termination": reason, "trajectory": rows,
                           "semantic_correctness": "NOT_COMPUTED"}
                 store(path, result)
@@ -272,4 +276,4 @@ def execute(directory, manifest, inputs, model, oracle, *, resume=False,
         write_json(directory / "seal.json", {"status": "COMPLETE", "files": members,
                     "initial_predictions": len(manifest["schedule"]), "semantic_correctness": "NOT_COMPUTED"})
         return {"status": "COMPLETE", "initial_predictions": len(manifest["schedule"]),
-                "protected_evaluation": manifest["execution"] == "LIVE_SEED17"}
+                "protected_evaluation": manifest["execution"] in ("LIVE_SEED17", "LIVE_FIVE_SEED")}

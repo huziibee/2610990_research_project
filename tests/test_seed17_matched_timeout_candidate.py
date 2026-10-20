@@ -14,7 +14,7 @@ class Seed17MatchedTimeoutContractTests(unittest.TestCase):
         self.assertEqual(config["runs"]["request_timeout_seconds"],300)
         settings=validate_config(config)
         self.assertEqual(settings.timeout_seconds,300)
-        self.assertEqual(settings.model,"gemma-4-26b-a4b-it")
+        self.assertEqual(settings.model,"gemini-3.5-flash-lite")
         self.assertEqual(settings.max_output_tokens,2048)
         self.assertEqual(settings.thinking_budget,0)
         self.assertEqual(config["systems"]["S0"]["per_call_maxOutputTokens"],4096)

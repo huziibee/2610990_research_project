@@ -95,18 +95,18 @@ def derived_rules_and_coverage(release):
                'author_receipt_sha256':selected['release']['receipt_sha256'],
                'reference_sha256':selected['release']['reference_export_sha256'],
                'independently_verified':False, 'derivation':'exact_projection_of_author_approved_references'}
-    matching = {**binding, 'method':'exact_normalized_approved_question_variants_v1','cases':[]}
+    matching = {**binding, 'method':'anchored_question_intent_v2','cases':[]}
     coverage = {**binding, 'cases':[]}
     for row in rows:
         ref = row['reference']; branches = ref['hypothetical_answer_branches']
         matching['cases'].append({'record_id':row['record_id'], 'reference_revision':row['revision'], 'branches':[
             {'branch_id':b['branch_id'], 'turns':[{'turn':n,'field':t['field'],'question':t['question'],
-             'question_variants':[t['question']], 'answer_sha256':content_hash(t['answer'])} for n,t in enumerate(clarification_turns(b),1)]} for b in branches]})
+             'canonical_question':t['question'], 'answer_sha256':content_hash(t['answer'])} for n,t in enumerate(clarification_turns(b),1)]} for b in branches]})
         coverage['cases'].append({'record_id':row['record_id'],'semantic_reference_revision':row['revision'],
             'approved_route':ref['author_approved_route'],'dialogue_relevant':ref['dialogue_relevant'],
             'explicit_dependency':ref['explicit_linked_dependencies'],'branch_count':len(branches),
             'branch_ids':[b['branch_id'] for b in branches], 'answer_branches_author_approved':bool(branches),
-            'question_matching':'approved_canonical_questions_only',
+            'question_matching':'anchored_question_intent_v2',
             'capability_eligibility':'ATTESTED_CATALOG' if ref['verified_capability_catalog'] is not None else 'VISIBLE_CAPABILITIES_ONLY_NO_CATALOG',
             'capability_catalog_sha256':content_hash(ref['verified_capability_catalog']),
             **release['source_bindings'][row['record_id']]})
@@ -145,7 +145,7 @@ class AuthorReviewedClarificationOracle:
         self.audit = []
 
     def __call__(self, question, turn):
-        from research.clarification_matching import normalize_question
+        from research.clarification_matching import matches_question
         if self.closed:
             return None
         if type(turn) is not int or turn != self.next_turn:
@@ -156,10 +156,8 @@ class AuthorReviewedClarificationOracle:
             self.closed = True
             return None
         step = self.path[turn-1]
-        try:
-            match = normalize_question(question) == normalize_question(step['question'])
-        except ValueError:
-            match = False
+        match = matches_question(question, [item['question'] for item in self.path])
+        match = match and matches_question(question, [step['question']])
         if not match:
             self.closed = True
             return None

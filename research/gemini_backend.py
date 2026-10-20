@@ -14,6 +14,8 @@ from research.input_contract import model_visible_context
 from research.task_schema import validate_task
 from research.generation_schema import response_schema
 
+SEED17_GEMINI_PROFILE = "seed17_gemini35_wire_v1"
+
 
 class InferenceError(RuntimeError):
     def __init__(self, message, *, code="INFERENCE_FAILURE", http_status=None, retry_after_seconds=None,
@@ -87,8 +89,15 @@ class GenerationSettings:
     max_output_tokens: int = 2048
     thinking_budget: int = 0
     timeout_seconds: int = 90
+    profile: str = "canonical"
 
     def __post_init__(self):
+        if self.profile not in ("canonical", SEED17_GEMINI_PROFILE):
+            raise ValueError("Unknown generation profile")
+        if self.profile == SEED17_GEMINI_PROFILE and (
+                self.model != "gemini-3.5-flash-lite" or self.thinking_budget != 0
+                or self.max_output_tokens not in (2048, 4096)):
+            raise ValueError("Unsupported seed17 Gemini model, budget or cap")
         if not isinstance(self.model, str) or not self.model or "/" in self.model:
             raise ValueError("Invalid model identifier")
         if type(self.temperature) not in (int, float) or not 0 <= self.temperature <= 2:
@@ -105,7 +114,7 @@ class GenerationSettings:
 
     def thinking_config(self):
         # Gemma uses a level toggle, not Gemini's token-budget control.
-        if self.model.startswith("gemma-"):
+        if self.model.startswith("gemma-") or self.profile == SEED17_GEMINI_PROFILE:
             return {"thinkingLevel": "minimal", "includeThoughts": False}
         return {"thinkingBudget": self.thinking_budget, "includeThoughts": False}
 
@@ -145,6 +154,42 @@ def _validate_context(stage, context, model_input, direct):
             validate_task(task, model_input)
     else:
         raise ValueError("Unknown inference stage")
+
+
+def build_request(base_settings, system_prompt, model_input, *, seed, stage, context=None, direct=False):
+    """Build the exact provider payload without transport or filesystem access."""
+    visible = model_visible_context(model_input)
+    if type(seed) is not int or not 0 <= seed <= 2147483647:
+        raise ValueError("seed must be a nonnegative signed 32-bit integer")
+    _validate_context(stage, context, model_input, direct)
+    large_budget = direct or stage == "S2.adjudicate"
+    wire_profile = base_settings.profile == SEED17_GEMINI_PROFILE
+    direct_cap = 4096 if base_settings.model.startswith("gemma-") or wire_profile else 8192
+    settings = replace(base_settings,
+                       max_output_tokens=direct_cap if large_budget else (2048 if wire_profile else base_settings.max_output_tokens),
+                       thinking_budget=2048 if large_budget and base_settings.thinking_budget > 0
+                       else base_settings.thinking_budget)
+    payload = {
+        "systemInstruction": {"parts": [{"text": system_prompt}]},
+        "contents": [{"role": "user", "parts": [{"text": json.dumps({
+            "input": visible, "stage_context": context}, ensure_ascii=False)}]}],
+        "generationConfig": {"temperature": settings.temperature, "topP": settings.top_p, "candidateCount": 1,
+            "seed": seed, "maxOutputTokens": settings.max_output_tokens,
+            "responseMimeType": "application/json",
+            "responseJsonSchema": response_schema(model_input, stage),
+            "thinkingConfig": settings.thinking_config()},
+    }
+    schema = payload["generationConfig"]["responseJsonSchema"]
+    if wire_profile:
+        from research.seed17_wire_codec import VERSION, WIRE_INSTRUCTION, wire_schema
+        actual_schema = wire_schema(model_input, stage)
+        generation = payload["generationConfig"]
+        del generation["responseJsonSchema"]
+        del generation["responseMimeType"]
+        generation["responseFormat"] = {"text": {"mimeType": "APPLICATION_JSON", "schema": actual_schema}}
+        if not stage.endswith(".goal") and stage != "S1.context":
+            payload["systemInstruction"]["parts"][0]["text"] += WIRE_INSTRUCTION
+    return payload, settings, schema
 
 
 class GeminiBackend:
@@ -189,33 +234,20 @@ class GeminiBackend:
             raise InferenceError("Gemini response decoding failure", code="RESPONSE_DECODING_FAILURE") from None
 
     def generate(self, system_prompt, model_input, *, seed, stage, context=None, direct=False):
+        payload, settings, schema = build_request(self.settings, system_prompt, model_input,
+            seed=seed, stage=stage, context=context, direct=direct)
         visible = model_visible_context(model_input)
-        if type(seed) is not int or not 0 <= seed <= 2147483647:
-            raise ValueError("seed must be a nonnegative signed 32-bit integer")
-        _validate_context(stage, context, model_input, direct)
-        large_budget = direct or stage == "S2.adjudicate"
-        direct_cap = 4096 if self.settings.model.startswith("gemma-") else 8192
-        settings = replace(self.settings,
-                           max_output_tokens=direct_cap if large_budget else self.settings.max_output_tokens,
-                           thinking_budget=2048 if large_budget and self.settings.thinking_budget > 0
-                           else self.settings.thinking_budget)
-        payload = {
-            "systemInstruction": {"parts": [{"text": system_prompt}]},
-            "contents": [{"role": "user", "parts": [{"text": json.dumps({
-                "input": visible, "stage_context": context}, ensure_ascii=False)}]}],
-            "generationConfig": {"temperature": settings.temperature, "topP": settings.top_p, "candidateCount": 1,
-                "seed": seed, "maxOutputTokens": settings.max_output_tokens,
-                "responseMimeType": "application/json",
-                "responseJsonSchema": response_schema(model_input, stage),
-                "thinkingConfig": settings.thinking_config()},
-        }
-        schema = payload["generationConfig"]["responseJsonSchema"]
+        wire_profile = settings.profile == SEED17_GEMINI_PROFILE
         record = {"record_id": model_input["record_id"], "stage": stage, "seed": seed,
                   "settings": asdict(settings), "input": visible, "stage_context": context,
                   "system_prompt": system_prompt, "status": "ERROR"}
         record["response_json_schema"] = payload["generationConfig"].get("responseJsonSchema")
         record["validation_json_schema"] = schema
         record["thinking_config"] = payload["generationConfig"]["thinkingConfig"]
+        if wire_profile:
+            from research.seed17_wire_codec import VERSION
+            record.update(actual_wire_schema=payload["generationConfig"]["responseFormat"]["text"]["schema"], wire_mode="modern", codec_version=VERSION,
+                          effective_system_prompt=payload["systemInstruction"]["parts"][0]["text"])
         start = time.perf_counter()
         try:
             response = self.transport(payload, settings)
@@ -246,6 +278,11 @@ class GeminiBackend:
                 raise InferenceError("Malformed JSON response") from None
             if not isinstance(parsed, dict):
                 raise InferenceError("Model response must be a JSON object")
+            if wire_profile:
+                from research.seed17_wire_codec import decode_task
+                if not stage.endswith(".goal") and stage != "S1.context":
+                    parsed = decode_task(parsed)
+                record["canonical_decoded_output"] = parsed
             record["status"] = "OK"
             return parsed
         except Exception as exc:

@@ -1,0 +1,24 @@
+name: Seed17 tracked source snapshot
+on:
+  push:
+    branches: [research/seed17-fasttrack-codec-20261020]
+    paths: [.github/workflows/seed17-source-snapshot.yml]
+  workflow_dispatch:
+permissions: {contents: read}
+jobs:
+  snapshot:
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - uses: actions/checkout@v4
+      - name: Archive tracked public source only, never ignored runs or environment files
+        run: |
+          mkdir -p /tmp/seed17-source
+          git rev-parse HEAD > /tmp/seed17-source/commit.txt
+          git archive --format=zip --output=/tmp/seed17-source/source.zip HEAD
+          sha256sum /tmp/seed17-source/source.zip > /tmp/seed17-source/source.sha256
+      - uses: actions/upload-artifact@v4
+        with:
+          name: seed17-source-${{ github.run_id }}
+          path: /tmp/seed17-source/
+          retention-days: 14

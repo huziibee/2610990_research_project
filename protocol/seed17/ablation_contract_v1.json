@@ -9,19 +9,43 @@
   "matched_baseline": "S1",
   "calls_per_prediction": 2,
   "max_output_tokens_per_call": 2048,
-  "model": "gemma-4-26b-a4b-it",
-  "thinking": {"thinkingLevel": "minimal", "includeThoughts": false},
+  "model": "gemini-3.5-flash-lite",
+  "thinking": {
+    "thinkingLevel": "minimal",
+    "includeThoughts": false
+  },
   "schedule": "historical planned_ablation_schedule(IDS, [17]); unchanged ordering; system=S1 is routing metadata",
   "interventions": {
     "goal_first": "Replace explicit goal intermediate with context_summary; second stage derives goal from same visible inputs. This tests explicit goal representation, not absence of implicit goal inference.",
-    "structured_grounding": "Remove explicit grounding instructions from second-stage prompt only. Preserve provider JSON schema, structured representation and local validation.",
+    "structured_grounding": "Delete only the sentence 'Ground the instruction and any proposed intended_goal in the supplied scene, dialogue and capabilities.' from the S1.ground prompt. Retain COMMON verbatim, all task-format and clarification instructions, the same goal stage, visible inputs, provider response schema, shared codec instruction, typed representation, validation, call budgets, and clarification controller. This estimates the effect of that explicit sentence; it does not remove semantic grounding or structured output.",
     "scene": "Replace scene with existing SCENE_MASK for every stage and turn; reject scene evidence. Preserve all other visible fields.",
     "dependency_checking": "Disable deterministic dependency-consistency checks only. Preserve prompts, schemas, typed arguments and evidence validation. Evaluation must still penalize invalid dependencies.",
     "dialogue": "Withhold the entire dialogue field at every stage and turn, including original dialogue and subsequently approved simulated replies. Preserve instruction, scene, capabilities. The oracle may release approved answers, but those answers remain masked from this condition; inability to resolve remains in the denominator."
   },
-  "clarification": {"max_turns": 5, "oracle": "same separately isolated author-approved exact-matching oracle", "stop": ["ACTION_READY", "ANSWER_UNAVAILABLE", "ERROR", "TURN_LIMIT"], "fabricated_answers": false},
+  "clarification": {
+    "max_turns": 5,
+    "oracle": "same separately isolated author-approved exact-matching oracle",
+    "stop": [
+      "ACTION_READY",
+      "ANSWER_UNAVAILABLE",
+      "ERROR",
+      "TURN_LIMIT"
+    ],
+    "fabricated_answers": false
+  },
   "retry_policy": "no automatic transport, malformed-output, failed-result or ambiguous-send retries; explicit resume replays durable receipts only",
   "authorization": "separate explicit ablation authorization bound to technical freeze, contract, schedule, fixed output directory and base artifacts; main authorization alone is insufficient",
   "semantic_evaluation": "AUTHOR_APPROVED_AGENT_ASSISTED; isolated frozen evaluator; no generation feedback; missing judgments unresolved",
-  "denominators": "100 source cases per intervention; retain failures and unresolved judgments; case-level pairing against S1; no between-seed variability estimate"
+  "denominators": "100 source cases per intervention; retain failures and unresolved judgments; case-level pairing against S1; no between-seed variability estimate",
+  "profile": "seed17_gemini35_wire_v1",
+  "structured_output": "lossless_named_arguments_codec_and_strict_local_validation",
+  "output_validation_contract": "protocol/seed17/output_validation_contract_v1.json",
+  "responseFormat": {
+    "text": {
+      "mimeType": "APPLICATION_JSON"
+    }
+  },
+  "reasoning_usage_policy": "Provider-reported reasoning tokens are permitted and recorded; minimal thinking is not a zero-reasoning guarantee.",
+  "design_amendment": "protocol/seed17/GEMINI35_MODEL_CODEC_AMENDMENT_20261020_v1.json",
+  "structured_grounding_amendment": "protocol/seed17/STRUCTURED_GROUNDING_AMENDMENT_20261020_v1.json"
 }

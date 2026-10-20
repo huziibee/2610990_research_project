@@ -9,13 +9,84 @@ return value or the model input.
 """
 import copy
 import re
+import unicodedata
 from research.reference_schema import clarification_turns
 
-METHOD = "exact_normalized_approved_question_variants_v1"
+METHOD = "anchored_question_intent_v2"
+
+_STOP = frozenset("a an the i me my we our you your it this that which what where when who how is are am was were do does did can could should would will may might please specify tell give use used put go be to for of in on at with by from and or its".split())
+_FORBIDDEN = frozenset("answer answers reference references gold future task tasks branch branches secret hidden reveal show disclose provide return output".split())
+_FAMILY = {
+    "which": "selection", "what": "selection",
+    "where": "location", "when": "time", "who": "person", "whom": "person",
+    "how": "method",
+}
+
+
+def _tokens(value):
+    value = unicodedata.normalize("NFKC", value).casefold()
+    return re.findall(r"[^\W_]+", value, flags=re.UNICODE)
+
+
+def _signature(value):
+    tokens = _tokens(value)
+    if not tokens:
+        return None, frozenset()
+    # Treat common temporal and locative rewrites as the same question intent.
+    if tokens[:3] == ["at", "what", "time"] or tokens[:2] == ["what", "time"]:
+        family, prefix = "time", 2
+    elif tokens[:2] in (["what", "date"], ["what", "day"]):
+        family, prefix = "time", 1
+    elif tokens[:2] == ["what", "location"]:
+        family, prefix = "location", 1
+    else:
+        family = _FAMILY.get(tokens[0])
+        prefix = 1
+    anchors = frozenset(token for token in tokens[prefix:] if token not in _STOP)
+    # The interrogative itself supplies a specific temporal field anchor.
+    # Other generic intents (for example, "Where?") remain unavailable.
+    if not anchors and family == "time":
+        anchors = frozenset({"time"})
+    return family, anchors
+
+
+def _compatible(candidate, canonical):
+    if not isinstance(candidate, str) or not candidate.strip():
+        return False
+    candidate_tokens = _tokens(candidate)
+    if _FORBIDDEN.intersection(candidate_tokens):
+        return False
+    candidate_family, candidate_anchors = _signature(candidate)
+    expected_family, expected_anchors = _signature(canonical)
+    # A useful field anchor is required. Generic questions such as "Where?"
+    # are deliberately unavailable because they cannot safely disambiguate.
+    return (candidate_family is not None and candidate_family == expected_family
+            and bool(expected_anchors) and expected_anchors.issubset(candidate_anchors))
+
+
+def matches_question(candidate, canonical_questions):
+    """Match conservative wording variants by intent and field anchors.
+
+    A candidate must preserve the canonical interrogative family and every
+    content anchor. It must identify exactly one turn in the approved branch;
+    ambiguity, meta-requests, or missing anchors fail closed.
+    """
+    if not isinstance(canonical_questions, (list, tuple)) or not canonical_questions:
+        return False
+    matches = [q for q in canonical_questions if _compatible(candidate, q)]
+    if len(matches) != 1:
+        return False
+    selected = matches[0]
+    candidate_tokens = set(_tokens(candidate))
+    selected_anchors = _signature(selected)[1]
+    # Extra anchors from another approved turn mean the request is compound or
+    # field-ambiguous, even when only one interrogative family matches.
+    return not any(candidate_tokens.intersection(_signature(q)[1] - selected_anchors)
+                   for q in canonical_questions if q != selected)
 
 
 def normalize_question(value):
-    """Frozen matching rule: collapse whitespace, then Unicode casefold only."""
+    """Canonicalize Unicode whitespace and casing for audit compatibility."""
     if not isinstance(value, str) or not value.strip():
         raise ValueError("Question must be a nonempty string")
     return " ".join(value.split()).casefold()
@@ -90,17 +161,11 @@ class FrozenClarificationOracle:
                 raise ValueError("Matching rules must cover every verified branch turn")
             path = []
             for number, (turn, rule) in enumerate(zip(turns, turn_rules), 1):
-                if (not isinstance(rule, dict) or set(rule) != {"turn", "field", "question", "question_variants"}
+                if (not isinstance(rule, dict) or set(rule) != {"turn", "field", "canonical_question"}
                         or type(rule["turn"]) is not int or rule["turn"] != number
-                        or rule["question"] != turn["question"] or rule["field"] != turn["field"]):
+                        or rule["canonical_question"] != turn["question"] or rule["field"] != turn["field"]):
                     raise ValueError("Matching rule changed verified question, field or turn order")
-                variants = rule["question_variants"]
-                if not isinstance(variants, list) or not variants:
-                    raise ValueError("Human-approved question variants required")
-                normalized = {normalize_question(value) for value in variants}
-                if normalize_question(turn["question"]) not in normalized:
-                    raise ValueError("Verified canonical question must be an accepted variant")
-                path.append({"answer": turn["answer"], "variants": normalized})
+                path.append({"answer": turn["answer"], "question": rule["canonical_question"]})
             paths[branch["branch_id"]] = path
         if branch_id not in paths:
             raise ValueError("Unknown simulated-answer branch")
@@ -127,7 +192,10 @@ class FrozenClarificationOracle:
             self._closed = True
             return None
         step = self._path[self._next - 1]
-        if normalized not in step["variants"]:
+        if not matches_question(question, [item["question"] for item in self._path]):
+            self._closed = True
+            return None
+        if not matches_question(question, [step["question"]]):
             self._closed = True
             return None
         self._next += 1

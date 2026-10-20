@@ -52,8 +52,11 @@ def predict_once(run_dir, manifest, request, *, send=None, quota=None, predictor
         raise ValueError("Mock mode requires explicit fake transport")
     if manifest["execution"] == "LIVE_SEED17_SMOKE" and not item["record_id"].startswith("SYNTHETIC-"):
         raise ValueError("Live smoke rejects protected IDs")
-    journal = RequestJournal(run_dir / "requests", content_hash(manifest), quota)
-    backend = GeminiBackend(settings=GenerationSettings(timeout_seconds=300))
+    from research.seed17_config import validate_config
+    settings = validate_config(read_json(Path(__file__).resolve().parents[1] / "protocol/gemma4_seed17_v1.json"))
+    journal = RequestJournal(run_dir / "requests", content_hash(manifest), quota,
+                             allow_reasoning_tokens=settings.profile == "seed17_gemini35_wire_v1")
+    backend = GeminiBackend(settings=settings)
     original = backend.generate
     def generate(prompt, visible, **kwargs):
         key = {"sequence": sequence, "branch_id": branch, "turn": turn, "stage": kwargs["stage"]}

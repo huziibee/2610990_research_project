@@ -5,7 +5,14 @@ missing evidence is reported, never inferred from filenames or green mocks.
 """
 from pathlib import Path
 import re
+from research.seed17_call_verification import decoded_call_output
 from research.integrity import digest, read_json, read_jsonl, verify_derived, loads_json
+
+
+def valid_reasoning_usage(usage):
+    """Absent reasoning counts are unknown; preserve real nonnegative integer usage."""
+    return ("thoughtsTokenCount" not in usage
+            or (type(usage["thoughtsTokenCount"]) is int and usage["thoughtsTokenCount"] >= 0))
 
 
 def synthetic_smoke_grounding_valid(rows, steps):
@@ -135,7 +142,7 @@ def _check_readiness(root, bundle=None):
     for name, reason in (
         ("author_reviewed_gold_100", "Exact selected author receipt, 100 complete-task references and 26 branches must validate; independent approval is not claimed"),
         ("source_ledger_binding", "Receipt, export, source pins, all revisions and author-adoption ledger history must agree"),
-        ("clarification_matching_rules", "Canonical-only matching must exactly project the approved questions; extra variants are not authorized"),
+        ("clarification_matching_rules", "Versioned field-anchored matching policy must exactly project approved canonical questions and fail closed on ambiguity"),
         ("branches_and_subgroups", "All 26 branches and 100 explicit eligibility labels must match the author-approved release")):
         check(name, author_release is not None, reason)
     for system in ("S0", "S1"):
@@ -170,26 +177,39 @@ def _check_readiness(root, bundle=None):
             settings = call.get("settings", {})
             generation = config.get("candidate_generation_config", {})
             gemma = config.get("model", {}).get("requested_id", "").startswith("gemma-")
-            expected_thinking = 0 if gemma else (2048 if system == "S0" else 1024)
+            approved_gemini = settings.get("profile") == "seed17_gemini35_wire_v1" and settings.get("model") == "gemini-3.5-flash-lite"
+            expected_thinking = 0 if gemma or approved_gemini else (2048 if system == "S0" else 1024)
             if gemma:
                 live = (live and system_config.get("thinking") is False
                         and generation.get("thinkingConfig") == {"thinkingLevel": "minimal", "includeThoughts": False}
                         and call.get("thinking_config") == generation["thinkingConfig"]
                         and usage.get("thoughtsTokenCount", 0) == 0)
+            if approved_gemini:
+                live = (live and generation.get("thinkingConfig") == {"thinkingLevel": "minimal", "includeThoughts": False}
+                        and call.get("thinking_config") == generation["thinkingConfig"]
+                        and generation.get("responseFormat") == {"text": {"mimeType": "APPLICATION_JSON"}}
+                        and valid_reasoning_usage(usage))
             live = (live and call.get("seed") == 17
                     and settings.get("temperature") == generation.get("temperature") == 0.7
                     and settings.get("top_p") == generation.get("topP") == 0.95
                     and settings.get("timeout_seconds") == config.get("runs", {}).get("request_timeout_seconds") == 300
                     and settings.get("max_output_tokens") == system_config.get("per_call_maxOutputTokens")
-                    == ((4096 if system == "S0" else 2048) if gemma else (8192 if system == "S0" else 4096))
-                    and settings.get("thinking_budget") == system_config.get("per_call_thinkingBudget") == expected_thinking
+                    == ((4096 if system == "S0" else 2048) if gemma or approved_gemini else (8192 if system == "S0" else 4096))
+                    and settings.get("thinking_budget") == expected_thinking
+                    and (approved_gemini or system_config.get("per_call_thinkingBudget") == expected_thinking)
                     and call.get("system_prompt") == expected_prompts[index]
                     and call.get("input") == calls[0].get("input")
                     and call.get("stage_context") == previous_output)
             try:
                 model_input = {"record_id": smoke["record_id"], **call["input"]}
-                live = live and call.get("response_json_schema") == response_schema(model_input, stages[index])
-                output = loads_json(call["output_text"])
+                from research.gemini_backend import build_request, GenerationSettings
+                from dataclasses import asdict
+                payload, effective, canonical = build_request(GenerationSettings(**settings), expected_prompts[index],
+                    model_input, seed=17, stage=stages[index], context=previous_output, direct=system == "S0")
+                live = (live and asdict(effective) == settings
+                        and call.get("validation_json_schema") == canonical == response_schema(model_input, stages[index])
+                        and call.get("response_json_schema") == payload["generationConfig"].get("responseJsonSchema"))
+                output = decoded_call_output(call)
                 if stages[index].endswith(".goal"):
                     live = live and isinstance(output, dict) and set(output) == {"intended_goal"} and bool(output["intended_goal"])
                 else:
@@ -259,7 +279,7 @@ def _check_readiness(root, bundle=None):
     fingerprints = snapshot.get("files", {})
     required_files = {str(p.relative_to(root)).replace("\\", "/") for directory in ("research", "tools", "tests")
                       for p in (root / directory).rglob("*.py")}
-    required_files |= {"protocol/gemma4_seed17_v1.json", "protocol/seed17/FREEZE.json", "protocol/seed17/AUTHOR_APPROVED_AGENT_ASSISTED_v1.json", "protocol/seed17/judge_v1.json", "protocol/seed17/judge_rubric_v1.json"}
+    required_files |= {"protocol/gemma4_seed17_v1.json", "protocol/seed17/FREEZE.json", "protocol/seed17/AUTHOR_APPROVED_AGENT_ASSISTED_v1.json", "protocol/seed17/judge_v1.json", "protocol/seed17/judge_rubric_v1.json", "protocol/seed17/output_validation_contract_v1.json"}
     required_files |= {"requirements.txt", ".github/workflows/research-tests.yml", ".github/workflows/literature-tests.yml"}
     required_files |= {"protocol/seed17/main_200.jsonl", "protocol/seed17/ablations_500.jsonl", "protocol/run_schedule_1000.jsonl"}
     if bundle.get("schema_version") == 5:
@@ -380,10 +400,11 @@ def check_readiness(root, bundle=None):
             call = read_json(path)
             usage = call.get("usage_metadata", {})
             multi_valid = (multi_valid and call.get("status") == "OK" and bool(call.get("response_id"))
-                           and call.get("model_version") == "gemma-4-26b-a4b-it"
+                           and call.get("model_version") == config["model"]["requested_id"]
                            and type(usage.get("promptTokenCount")) is int and usage["promptTokenCount"] > 0
                            and type(usage.get("candidatesTokenCount")) is int and usage["candidatesTokenCount"] > 0
-                           and usage.get("thoughtsTokenCount", 0) == 0)
+                           and (valid_reasoning_usage(usage) if config["model"]["requested_id"] == "gemini-3.5-flash-lite"
+                                else usage.get("thoughtsTokenCount", 0) == 0))
         if bundle.get("schema_version") == 5:
             from research.seed17_smoke_fixture import fixture
             from research.clarification_matching import normalize_question
@@ -459,7 +480,8 @@ def check_readiness(root, bundle=None):
                             for p in (root / folder).rglob("*.py")}
             if any(manifest.get("code_fingerprints") != current_code for manifest in (main_manifest, ablation_manifest)):
                 raise ValueError("Mock execution did not exercise the current complete implementation")
-            for name in ("protocol/seed17/ablation_contract_v1.json", "protocol/seed17/analysis_contract_v1.json"):
+            for name in ("protocol/seed17/ablation_contract_v1.json", "protocol/seed17/analysis_contract_v1.json",
+                         "protocol/seed17/output_validation_contract_v1.json"):
                 if snapshot["files"][name] != digest(root / name):
                     raise ValueError("Infrastructure contracts missing from tested snapshot")
             check("downstream_infrastructure", True, "")

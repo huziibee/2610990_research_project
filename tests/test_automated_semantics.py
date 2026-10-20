@@ -129,11 +129,16 @@ class AutomatedSemanticsTests(unittest.TestCase):
     def test_judge_can_record_native_reasoning_usage_without_changing_generator_default(self):
         from research.seed17_journal import RequestJournal
         from research.gemini_backend import GenerationSettings
-        response={'usageMetadata':{'thoughtsTokenCount':7},'candidates':[{'content':{'parts':[{'thought':True,'text':'PRIVATE_REASONING'},{'text':'public output'}]}}]}
+        response={'usageMetadata':{'thoughtsTokenCount':7},'candidates':[{'content':{'parts':[{'text':'public output'}]}}]}
         with tempfile.TemporaryDirectory() as tmp:
             result=RequestJournal(tmp,'synthetic-binding',allow_reasoning_tokens=True).transport('judge',lambda *args:copy.deepcopy(response))({},GenerationSettings())
             self.assertEqual(result['usageMetadata']['thoughtsTokenCount'],7)
             self.assertNotIn('PRIVATE_REASONING',json.dumps(result))
+        private_response=copy.deepcopy(response)
+        private_response['candidates'][0]['content']['parts'].insert(0,{'thought':True,'text':'PRIVATE_REASONING'})
+        with tempfile.TemporaryDirectory() as tmp:
+            with self.assertRaises(InferenceError):
+                RequestJournal(tmp,'synthetic-binding',allow_reasoning_tokens=True).transport('judge',lambda *args:copy.deepcopy(private_response))({},GenerationSettings())
         with tempfile.TemporaryDirectory() as tmp:
             with self.assertRaises(InferenceError):RequestJournal(tmp,'synthetic-binding').transport('generation',lambda *args:copy.deepcopy(response))({},GenerationSettings())
 

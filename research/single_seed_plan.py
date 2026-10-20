@@ -120,7 +120,7 @@ def prepare_plan(root, output):
     plan = {"schema_version": 1, "status": PHASE, "allow_held_out_predictions": False,
             "seed": SEED, "systems": SYSTEMS, "interventions": list(INTERVENTIONS),
             "case_count": 100, "main_rows": MAIN_COUNT, "ablation_rows": ABLATION_COUNT,
-            "model_candidate": "gemma-4-26b-a4b-it", "thinking_level": "minimal",
+            "model_candidate": "gemini-3.5-flash-lite", "profile": "seed17_gemini35_wire_v1", "thinking_level": "minimal",
             "numeric_thinking_budget": None, "max_output_s0": 4096,
             "max_output_s1_per_stage": 2048, "max_clarification_turns": 5,
             "resume_policy": "no_automatic_reroll_in_flight_attempts",

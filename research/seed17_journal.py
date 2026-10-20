@@ -87,8 +87,11 @@ class QuotaLedger:
                 raise ResourcePause()
         return values
 
+    def reservation_tokens(self, payload):
+        return len(json.dumps(payload, ensure_ascii=False).encode("utf-8")) + payload["generationConfig"]["maxOutputTokens"] + 1024
+
     def reserve(self, attempt_id, payload):
-        budget = len(json.dumps(payload, ensure_ascii=False).encode("utf-8")) + payload["generationConfig"]["maxOutputTokens"] + 1024
+        budget = self.reservation_tokens(payload)
         if budget > self.tpm:
             raise ResourcePause()
         waited = 0.0
@@ -191,7 +194,7 @@ class RequestJournal:
                         reasoning = usage.get("thoughtsTokenCount")
                         positive_reasoning = type(reasoning) in (int, float) and reasoning > 0
                         malformed_reasoning_count = ("thoughtsTokenCount" in usage and
-                                                     (type(reasoning) not in (int, float) or reasoning < 0))
+                                                     (type(reasoning) is not int or reasoning < 0))
                         done["thought_marker_diagnostic"] = {
                             "marked_parts": marked_parts,
                             "nonempty_or_extra_payload_parts": nonempty_marked_parts,
@@ -202,8 +205,8 @@ class RequestJournal:
                         # Missing thinking-token metadata is UNKNOWN, not evidence of zero tokens.
                         # Empty marker compatibility is deliberately limited to response parts;
                         # it does not alter requested thinkingLevel, includeThoughts or task schema.
-                        if not self.allow_reasoning_tokens and (
-                                nonempty_marked_parts or positive_reasoning or malformed_reasoning_count):
+                        if (nonempty_marked_parts or malformed_reasoning_count
+                                or (positive_reasoning and not self.allow_reasoning_tokens)):
                             done.update(status="ERROR", code="THINKING_POLICY_VIOLATION", http_status=None,
                                         retry_after_seconds=None)
                             self.new_transient_error = True  # Pause; never repair/retry under a changed policy.

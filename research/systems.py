@@ -29,17 +29,19 @@ COMMON = (
 # The provider already enforces the complete response JSON schema. Keep one
 # concise shared grounding prompt for both S0.direct and S1.ground; the
 # experimental distinction is the extra S1 goal context, not prompt verbosity.
-TASK_PROMPT = (
-    COMMON
-    + "Ground the instruction and any proposed intended_goal in the supplied scene, dialogue and capabilities. "
-    + "Return exactly one complete JSON task object matching the response schema. "
-    + "List each unresolved critical field at most once, and do not duplicate items or repeat text. "
-    + "If clarification is required, ask one question about exactly one missing field."
+EXPLICIT_GROUNDING_INSTRUCTION = (
+    "Ground the instruction and any proposed intended_goal in the supplied scene, dialogue and capabilities. "
 )
+TASK_FORMAT_INSTRUCTIONS = (
+    "Return exactly one complete JSON task object matching the response schema. "
+    "List each unresolved critical field at most once, and do not duplicate items or repeat text. "
+    "If clarification is required, ask one question about exactly one missing field."
+)
+TASK_PROMPT = COMMON + EXPLICIT_GROUNDING_INSTRUCTION + TASK_FORMAT_INSTRUCTIONS
 
 
 class ResearchSystem:
-    def __init__(self, backend, *, verified_capability_catalog=None):
+    def __init__(self, backend, *, verified_capability_catalog=None, require_capability_catalog=True):
         """Optional catalog is a human attestation bound to visible capabilities.
 
         The wrapper contains capabilities_sha256 (UTF-8 text digest), catalog,
@@ -47,13 +49,24 @@ class ResearchSystem:
         only. Literal source checks cannot establish semantic support; human
         verification is still required, and no gold-derived catalog is permitted.
         """
+        if type(require_capability_catalog) is not bool:
+            raise ValueError("Capability validation policy must be an explicit boolean")
+        self.require_capability_catalog = require_capability_catalog
         self.backend = backend
         self.verified_capability_catalog = copy.deepcopy(verified_capability_catalog)
 
     def _catalog(self, model_input):
         wrapper = self.verified_capability_catalog
-        if wrapper is None:
+        if wrapper is None and not self.require_capability_catalog:
+            # Approved ambiguity-study scope: capabilities remain visible
+            # semantic evidence, but missing executable contracts are not errors.
+            # No capability/argument facts are inferred from reference labels.
             return None
+        if wrapper is None:
+            # The visible input may itself follow the narrow, versioned typed
+            # declaration contract. Free prose is never mined heuristically.
+            from research.capability_contract import catalog_from_visible_declaration
+            return catalog_from_visible_declaration(model_input["capabilities"])
         if (not isinstance(wrapper, dict)
                 or set(wrapper) != {"capabilities_sha256", "catalog", "verified_by", "context_derived"}
                 or wrapper["context_derived"] is not True
@@ -62,11 +75,22 @@ class ResearchSystem:
                 or not isinstance(wrapper["catalog"], list)):
             raise ValidationError("Capability catalog must be human verified and bound to current visible capabilities")
         for entry in wrapper["catalog"]:
-            if (not isinstance(entry, dict) or set(entry) != {"capability_id", "required_arguments"}
+            if (not isinstance(entry, dict) or set(entry) not in (
+                    {"capability_id", "required_arguments"},
+                    {"capability_id", "required_arguments", "argument_types"})
                     or not isinstance(entry["capability_id"], str) or not entry["capability_id"].strip()
                     or not isinstance(entry["required_arguments"], list)):
                 raise ValidationError("Malformed verified capability catalog")
-            for literal in [entry["capability_id"], *entry["required_arguments"]]:
+            literals = [entry["capability_id"], *entry["required_arguments"]]
+            if "argument_types" in entry:
+                if (not isinstance(entry["argument_types"], dict)
+                        or any(not isinstance(name, str) or not name
+                               or kind not in ("object", "location", "time", "string", "number", "boolean")
+                               for name, kind in entry["argument_types"].items())):
+                    raise ValidationError("Malformed verified capability argument types")
+                literals.extend(entry["argument_types"].keys())
+                literals.extend(entry["argument_types"].values())
+            for literal in literals:
                 if (not isinstance(literal, str) or not literal.strip()
                         or not re.search(r"(?<!\w)" + re.escape(literal) + r"(?!\w)", model_input["capabilities"])):
                     raise ValidationError("Catalog identifiers must occur literally in visible capability descriptions")

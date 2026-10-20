@@ -50,7 +50,7 @@ class ReviewBundleTests(unittest.TestCase):
         self.assertFalse(result["coverage_candidate"]["cases"][0]["answer_branches_verified"])
         self.assertFalse(result["coverage_candidate"]["cases"][0]["question_matching_rules_verified"])
 
-    def test_multiturn_question_variants_are_canonical_only(self):
+    def test_multiturn_canonical_question_are_canonical_only(self):
         manifest, rows = fixture(True)
         rows[0]["reference"]["hypothetical_answer_branches"][0]["turns"] = [
             {"question": "Which shelf?", "field": "destination", "answer": "SECRET_SHELF", "simulated": True},
@@ -58,7 +58,7 @@ class ReviewBundleTests(unittest.TestCase):
         result = build_review_bundle(manifest, rows, reference_sha256=HASH)
         turns = result["matching_candidate"]["cases"][0]["branches"][0]["turns"]
         self.assertEqual([t["turn"] for t in turns], [1, 2])
-        self.assertEqual(turns[1]["question_variants"], ["When?"])
+        self.assertEqual(turns[1]["canonical_question"], "When?")
         self.assertNotIn("SECRET_TIME", json.dumps(result))
 
     def test_forged_status_digest_route_and_identity_fail_closed(self):
