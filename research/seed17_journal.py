@@ -212,7 +212,7 @@ class RequestJournal:
                                     retry_after_seconds=exc.retry_after_seconds)
                         if exc.provider_diagnostics is not None:
                             done["provider_diagnostics"] = exc.provider_diagnostics
-                        if exc.http_status in (429, 500, 503) or exc.code in ("TIMEOUT", "CONNECTION_FAILURE"):
+                        if exc.http_status in (429, 500, 502, 503, 504) or exc.code in ("TIMEOUT", "CONNECTION_FAILURE"):
                             self.new_transient_error = True
                             if self.quota:
                                 self.quota.cooldown(attempt_id, exc.retry_after_seconds or (61 if exc.http_status == 429 else 15))
