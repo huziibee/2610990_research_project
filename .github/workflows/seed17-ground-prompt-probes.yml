@@ -1,0 +1,24 @@
+name: Seed17 two synthetic S1 grounding prompt variants
+on:
+  push:
+    branches:
+      - research/seed17-grounding-prompt-probes-20261020
+    paths:
+      - .github/workflows/seed17-ground-prompt-probes.yml
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  two-nonrepeat-prompts:
+    runs-on: ubuntu-latest
+    timeout-minutes: 8
+    env:
+      PYTHONPATH: .
+      GEMINI_API_KEY: ${{ secrets.GEMINI_API_KEY }}
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+      - name: Two distinct invented S1 grounding prompts, once each
+        run: python tools/ci_probe_s1_ground_prompts.py
