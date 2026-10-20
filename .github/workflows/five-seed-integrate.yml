@@ -1,0 +1,132 @@
+name: Integrate and verify five-seed research implementation
+on:
+  push:
+    branches: [research/five-seed-finalization-20261020]
+    paths: [.github/workflows/five-seed-integrate.yml]
+  workflow_dispatch:
+permissions:
+  contents: write
+concurrency:
+  group: five-seed-public-integration
+  cancel-in-progress: false
+jobs:
+  integrate-and-test:
+    runs-on: ubuntu-latest
+    timeout-minutes: 45
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 2
+      - uses: actions/setup-python@v5
+        with: {python-version: '3.11'}
+      - run: python -m pip install -r requirements.txt
+      - name: Apply exact public source patch from four SHA-bound repository blobs
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          python - <<'PY'
+          import base64, hashlib, json, lzma, os, re, subprocess
+          from pathlib import Path
+          from urllib.request import Request, urlopen
+          repo = 'huziibee/2610990_research_project'
+          assert os.environ['GITHUB_REPOSITORY'] == repo
+          assert os.environ['GITHUB_REF_NAME'] == 'research/five-seed-finalization-20261020'
+          parts = ['37de5be1cc12c1aafb572f69a42f71b68fd2e07a',
+                   '1eb5f999c8350478f8340c5a5d5fccbc97776a44',
+                   'd074a3054a456a573ea4dc1432e5d26286c23e19',
+                   '06d192a3cb1e86d55fd0048cbb902e15d67c79c0']
+          raw = b''
+          for sha in parts:
+              request = Request(f'https://api.github.com/repos/{repo}/git/blobs/{sha}',
+                                headers={'Authorization': 'Bearer ' + os.environ['GH_TOKEN'],
+                                         'Accept': 'application/vnd.github+json'})
+              with urlopen(request, timeout=30) as stream:
+                  response = json.load(stream)
+              assert response['encoding'] == 'base64'
+              piece = base64.b64decode(response['content'])
+              assert hashlib.sha1(b'blob '+str(len(piece)).encode()+b'\0'+piece).hexdigest() == sha
+              raw += piece
+          assert len(raw) == 43472
+          assert hashlib.sha256(raw).hexdigest() == '1cc4b0c266f28dfa0757de688d31f33e4a76f0f860864877d5948745f3fc5c26'
+          patch = lzma.decompress(raw, memlimit=134217728)
+          assert len(patch) == 196555
+          assert hashlib.sha256(patch).hexdigest() == '6565ccfec7b7b79dce5d5ace747f8aad3186ef855518748ff178e455f18b164d'
+          allowed = '''AGENTS.md docs/FIVE_SEED_EXECUTION.md protocol/five_seed/session_delegation_v1.json protocol/five_seed/study_v1.json research/five_seed_analysis.py research/five_seed_audit.py research/five_seed_config.py research/five_seed_delivery.py research/five_seed_oracle.py research/five_seed_quota.py research/five_seed_release.py research/five_seed_runtime.py research/five_seed_scoring.py research/five_seed_token_count.py research/seed17_analysis.py research/seed17_engine.py research/seed17_journal.py research/seed17_judge.py research/seed17_processes.py research/systems.py tests/test_five_seed_analysis.py tests/test_five_seed_execution.py tests/test_five_seed_pipeline.py tests/test_five_seed_quota.py tests/test_five_seed_release.py tests/test_five_seed_scoring.py tests/test_five_seed_token_count.py tools/analyze_five_seed.py tools/check_five_seed_tokenizer.py tools/finish_five_seed.py tools/prepare_five_seed_release.py tools/run_five_seed.py tools/score_five_seed.py'''.split()
+          names = re.findall(r'^diff --git a/(\S+) b/(\S+)$', patch.decode('utf-8'), re.M)
+          assert len(names) == len(allowed) == 33
+          assert all(a == b and a in allowed for a,b in names)
+          assert {a for a,b in names} == set(allowed)
+          target = Path('/tmp/five-seed-public.patch'); target.write_bytes(patch)
+          subprocess.run(['git','apply','--check',str(target)],check=True)
+          subprocess.run(['git','apply',str(target)],check=True)
+          attrs = Path('.gitattributes')
+          with attrs.open('a',encoding='utf-8',newline='\n') as stream:
+              stream.write('\n# Five-seed protocol and scope records are exact-byte release members.\nprotocol/five_seed/** -text\n')
+          Path('/tmp/five-seed-code-paths.json').write_text(json.dumps(allowed + ['.gitattributes']))
+          print('VERIFIED_PUBLIC_PATCH_APPLIED: 33 explicit paths; no credentials or private reference files')
+          PY
+      - name: Verify original source package and new modules
+        run: |
+          python Data/verify_package.py
+          python -m compileall -q research tools tests
+      - name: Complete regression and full mock cohorts in parallel without model credentials
+        run: |
+          python - <<'PY'
+          import json, subprocess, sys
+          from pathlib import Path
+          logs = Path('runs/readiness/cloud_five_seed_validation'); logs.mkdir(parents=True)
+          jobs = {
+              'regression': [sys.executable,'-m','unittest','discover','-s','tests','-v'],
+              'main_1000': [sys.executable,'tools/run_five_seed.py','--mock','--phase','main','--output','runs/mock_five_seed/cloud_main_1000'],
+              'ablations_2500': [sys.executable,'tools/run_five_seed.py','--mock','--phase','ablations','--output','runs/mock_five_seed/cloud_ablations_2500']}
+          running = {}
+          for name,cmd in jobs.items():
+              handle = (logs/(name+'.log')).open('w',encoding='utf-8')
+              running[name] = (subprocess.Popen(cmd,stdout=handle,stderr=subprocess.STDOUT),handle)
+          statuses = {}
+          for name,(process,handle) in running.items():
+              statuses[name] = process.wait(); handle.close()
+              print(name, 'exit', statuses[name])
+              print('\n'.join((logs/(name+'.log')).read_text().splitlines()[-12:]))
+          (logs/'exit_codes.json').write_text(json.dumps(statuses,indent=2)+'\n')
+          if any(statuses.values()): raise SystemExit(2)
+          from research.five_seed_audit import audit
+          for path in ('runs/mock_five_seed/cloud_main_1000','runs/mock_five_seed/cloud_ablations_2500'):
+              print('FULL_MOCK_SEAL_VERIFIED',path)
+          print('PROTECTED_PREDICTIONS_EXECUTED=FALSE; SEMANTIC_CORRECTNESS=NOT_COMPUTED')
+          PY
+      - name: Publish only the already-tested code paths without force pushing
+        run: |
+          python - <<'PY'
+          import json, os, subprocess
+          from pathlib import Path
+          branch = 'research/five-seed-finalization-20261020'
+          current = subprocess.check_output(['git','rev-parse','HEAD'],text=True).strip()
+          assert current == os.environ['GITHUB_SHA']
+          remote = subprocess.check_output(['git','ls-remote','origin','refs/heads/'+branch],text=True).split()[0]
+          if remote != current: raise SystemExit('Branch advanced during validation; refusing overwrite')
+          paths = json.loads(Path('/tmp/five-seed-code-paths.json').read_text())
+          subprocess.run(['git','add','--',*paths],check=True)
+          staged = subprocess.check_output(['git','diff','--cached','--name-only'],text=True).splitlines()
+          assert set(staged) <= set(paths) and staged
+          assert not any(p.startswith('runs/') or 'aeskey' in p or p.endswith('.env') for p in staged)
+          subprocess.run(['git','-c','core.whitespace=cr-at-eol','diff','--cached','--check'],check=True)
+          subprocess.run(['git','config','user.name','github-actions[bot]'],check=True)
+          subprocess.run(['git','config','user.email','41898282+github-actions[bot]@users.noreply.github.com'],check=True)
+          subprocess.run(['git','commit','-m','Implement tested five-seed ambiguity execution, scoped delegated release and case-paired analysis'],check=True)
+          subprocess.run(['git','push','origin','HEAD:refs/heads/'+branch],check=True)
+          head = subprocess.check_output(['git','rev-parse','HEAD'],text=True).strip()
+          Path('runs/readiness/cloud_five_seed_validation/published_commit.txt').write_text(head+'\n')
+          print('TESTED_CODE_PUBLISHED',head)
+          PY
+      - name: Preserve synthetic verification evidence only
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: five-seed-integration-validation-${{ github.run_id }}
+          path: |
+            runs/readiness/cloud_five_seed_validation/
+            runs/mock_five_seed/cloud_main_1000/
+            runs/mock_five_seed/cloud_ablations_2500/
+          retention-days: 14
+          if-no-files-found: warn
