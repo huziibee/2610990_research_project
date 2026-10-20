@@ -11,7 +11,7 @@ def validate_config(config):
                 "thinkingConfig": {"thinkingLevel": "minimal", "includeThoughts": False}}
             or config["runs"] != {"seeds": [17], "concurrency": 1, "main_initial_predictions": 200,
                 "ablation_initial_predictions": 500, "max_clarification_turns": 5,
-                "max_transport_retries": 0, "retry_malformed_output": False, "request_timeout_seconds": 90}
+                "max_transport_retries": 0, "retry_malformed_output": False, "request_timeout_seconds": 300}
             or config["dataset"] != {"source_records": 100, "execute": 74, "clarify": 26}
             or config["execution_directory"] != "runs/evaluation/seed17/gemma4-seed17-v1"
             or config["quota"]["local_reservation_limits"] != {"rpm": 15, "tpm": 15000, "rpd": 14000}
