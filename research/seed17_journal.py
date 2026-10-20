@@ -169,14 +169,33 @@ class RequestJournal:
                     try:
                         response = send(payload, settings)
                         # Never persist private thought text, including on unexpected provider output.
-                        saw_thoughts = False
+                        # Accept only completely empty Gemma 4 thought markers; do not infer zero reasoning.
+                        marked_parts = 0
+                        nonempty_marked_parts = 0
                         for candidate in response.get("candidates", []):
                             parts = candidate.get("content", {}).get("parts", [])
-                            saw_thoughts = saw_thoughts or any(p.get("thought") for p in parts)
+                            marked = [p for p in parts if p.get("thought")]
+                            marked_parts += len(marked)
+                            nonempty_marked_parts += sum(
+                                p.get("thought") is not True
+                                or set(p) not in ({"thought"}, {"thought", "text"})
+                                or ("text" in p and p["text"] != "")
+                                for p in marked)
                             candidate.get("content", {})["parts"] = [p for p in parts if not p.get("thought")]
+                        usage = response.get("usageMetadata", {})
+                        reasoning = usage.get("thoughtsTokenCount")
+                        positive_reasoning = type(reasoning) in (int, float) and reasoning > 0
+                        malformed_reasoning_count = ("thoughtsTokenCount" in usage and
+                                                     (type(reasoning) not in (int, float) or reasoning < 0))
+                        done["thought_marker_diagnostic"] = {
+                            "marked_parts": marked_parts,
+                            "nonempty_or_extra_payload_parts": nonempty_marked_parts,
+                            "thought_token_count_reported": "thoughtsTokenCount" in usage,
+                            "positive_thought_token_count": positive_reasoning,
+                        }
                         done.update(status="RESPONSE", response=response)
-                        reasoning = response.get("usageMetadata", {}).get("thoughtsTokenCount")
-                        if not self.allow_reasoning_tokens and (saw_thoughts or (type(reasoning) in (int, float) and reasoning > 0)):
+                        if not self.allow_reasoning_tokens and (
+                                nonempty_marked_parts or positive_reasoning or malformed_reasoning_count):
                             done.update(status="ERROR", code="THINKING_POLICY_VIOLATION", http_status=None,
                                         retry_after_seconds=None)
                             self.new_transient_error = True  # Pause; never repair/retry under a changed policy.
