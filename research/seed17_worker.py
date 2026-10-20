@@ -53,7 +53,7 @@ def predict_once(run_dir, manifest, request, *, send=None, quota=None, predictor
     if manifest["execution"] == "LIVE_SEED17_SMOKE" and not item["record_id"].startswith("SYNTHETIC-"):
         raise ValueError("Live smoke rejects protected IDs")
     journal = RequestJournal(run_dir / "requests", content_hash(manifest), quota)
-    backend = GeminiBackend(settings=GenerationSettings())
+    backend = GeminiBackend(settings=GenerationSettings(timeout_seconds=300))
     original = backend.generate
     def generate(prompt, visible, **kwargs):
         key = {"sequence": sequence, "branch_id": branch, "turn": turn, "stage": kwargs["stage"]}
