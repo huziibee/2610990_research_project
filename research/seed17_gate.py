@@ -102,7 +102,7 @@ def _check_readiness(root, bundle=None):
         stages = ["S0.direct"] if system == "S0" else ["S1.goal", "S1.ground"]
         expected_prompts = ([TASK_PROMPT] if system == "S0" else [
             COMMON + 'Recover the intended goal. Return exactly {"intended_goal":"..."}; do not guess execution details.',
-            TASK_PROMPT + " Use the proposed goal as a hypothesis and ground each argument in input evidence."])
+            TASK_PROMPT])
         system_config = config.get("systems", {}).get(system, {})
         live = (live and [call.get("stage") for call in calls] == stages
                 and system_config.get("initial_interpretation_calls") == len(stages))
