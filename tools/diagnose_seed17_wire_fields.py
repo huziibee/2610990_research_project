@@ -27,6 +27,8 @@ VARIANTS=(
     "goal_registered_schema",
     "direct_registered_schema",
     "direct_schema_no_thinking_config",
+    "direct_schema_thinking_level_only",
+    "direct_schema_include_thoughts_only",
     "direct_schema_no_seed",
 )
 
@@ -63,6 +65,10 @@ def variant_payload(name):
         cfg.pop("responseJsonSchema")
     elif name=="direct_schema_no_thinking_config":
         cfg.pop("thinkingConfig")
+    elif name=="direct_schema_thinking_level_only":
+        cfg["thinkingConfig"].pop("includeThoughts")
+    elif name=="direct_schema_include_thoughts_only":
+        cfg["thinkingConfig"].pop("thinkingLevel")
     elif name=="direct_schema_no_seed":
         cfg.pop("seed")
     return wire
@@ -103,6 +109,7 @@ def run(output,*,live=False,sender=None,only=None):
                 entry["finish_reasons"]=[c.get("finishReason") for c in candidates]
                 usage=response.get("usageMetadata",{})
                 entry["output_token_count"]=usage.get("candidatesTokenCount")
+                entry["thinking_token_count"]=usage.get("thoughtsTokenCount")
                 text="".join(part.get("text","") for c in candidates
                     for part in c.get("content",{}).get("parts",[]) if not part.get("thought",False))
                 entry["nonempty_text"]=bool(text.strip())
@@ -111,6 +118,14 @@ def run(output,*,live=False,sender=None,only=None):
                     value=json.loads(text)
                     entry["valid_json"]=True
                     entry["json_shape"]="object" if isinstance(value,dict) else type(value).__name__
+                    if isinstance(value,dict) and name.startswith("direct_"):
+                        from research.task_schema import validate_task
+                        inp=next(iter(fixture()[0].values()))
+                        try:
+                            validate_task(value,inp)
+                            entry["passes_local_task_validation"]=True
+                        except (ValueError,TypeError,KeyError):
+                            entry["passes_local_task_validation"]=False
                 except (ValueError,TypeError):
                     entry["valid_json"]=False
             except InferenceError as exc:
