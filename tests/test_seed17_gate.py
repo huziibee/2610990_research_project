@@ -74,14 +74,18 @@ class Seed17GateTests(unittest.TestCase):
                     bundle["artifacts"][name] = {"path": path.name, "sha256": digest(path)}
 
                 def send(payload, settings):
+                    schema = payload["generationConfig"]["responseFormat"]["text"]["schema"]
                     value = ({"intended_goal": TASK["intended_goal"]}
-                             if payload["generationConfig"]["responseJsonSchema"]["required"] == ["intended_goal"] else TASK)
-                    return {"responseId": "invented-gate-fixture", "modelVersion": "gemma-4-26b-a4b-it",
+                             if schema["required"] == ["intended_goal"] else TASK)
+                    from research.seed17_wire_codec import encode_task
+                    if schema["required"] != ["intended_goal"]:
+                        value = encode_task(value)
+                    return {"responseId": "invented-gate-fixture", "modelVersion": "gemini-3.5-flash-lite",
                         "usageMetadata": {"promptTokenCount": 100, "candidatesTokenCount": 50, "thoughtsTokenCount": 0},
                         "candidates": [{"finishReason": "STOP", "content": {"parts": [{"text": json.dumps(value)}]}}]}
 
                 for system in ("S0", "S1"):
-                    backend = GeminiBackend(replace(GenerationSettings(timeout_seconds=300),
+                    backend = GeminiBackend(replace(validate_config(read_json(protocol)),
                         max_output_tokens=4096 if system == "S0" else 2048), transport=send)
                     task = ResearchSystem(backend).predict(CASE, system, 17)
                     calls = copy.deepcopy(backend.records)

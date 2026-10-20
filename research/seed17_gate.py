@@ -194,7 +194,8 @@ def _check_readiness(root, bundle=None):
                     and settings.get("timeout_seconds") == config.get("runs", {}).get("request_timeout_seconds") == 300
                     and settings.get("max_output_tokens") == system_config.get("per_call_maxOutputTokens")
                     == ((4096 if system == "S0" else 2048) if gemma or approved_gemini else (8192 if system == "S0" else 4096))
-                    and settings.get("thinking_budget") == system_config.get("per_call_thinkingBudget") == expected_thinking
+                    and settings.get("thinking_budget") == expected_thinking
+                    and (approved_gemini or system_config.get("per_call_thinkingBudget") == expected_thinking)
                     and call.get("system_prompt") == expected_prompts[index]
                     and call.get("input") == calls[0].get("input")
                     and call.get("stage_context") == previous_output)
