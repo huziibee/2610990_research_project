@@ -31,7 +31,7 @@
   "main_scope": "five_seed_main_with_approved_clarification_only",
   "max_clarification_answers": 5,
   "model_reasoning_policy": "MINIMAL_REPORTED_USAGE_NOT_ASSUMED_ZERO",
-  "oversize_input_policy": "DURABLE_SAME_MODEL_COUNTTOKENS_PLUS_1024_MARGIN_NO_AUTOMATIC_RETRY",
+  "oversize_input_policy": "GENERATION_EXACT_COUNTTOKENS;LIVE_EXCLUSIVE_UNMEASURED_FULL_WINDOW;NO_RETRIES",
   "protected_execution_requires_verified_freeze": true,
   "quota_accounting": "DECODED_INPUT_BYTES_OR_EXACT_TOKEN_COUNT_SETTLED_TO_DURABLE_REPORTED_TOTAL",
   "quota_local_limits": {

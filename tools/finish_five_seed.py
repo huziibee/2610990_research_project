@@ -136,7 +136,7 @@ def finish(*,key_file=None,checkpoint_requests=0):
             from research.five_seed_scoring import score
             results={}
             for phase,key in [('main','main_judge'),('ablations','ablation_judge')]:
-                results[phase]=score(ROOT,bundle,phase,paths[key],run_judge=True)
+                results[phase]=score(ROOT,bundle,phase,paths[key],run_judge=True,max_new_packets=checkpoint_requests)
             # Retain unknown judgements rather than retrying them or fabricating point estimates.
             if any(r['judge_coverage']['unattempted_packets'] for r in results.values()):
                 save_state(state_path,state)

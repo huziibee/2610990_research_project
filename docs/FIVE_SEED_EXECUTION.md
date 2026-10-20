@@ -46,8 +46,8 @@ mock cohorts, actual paired live two-answer qualification, actual five-fixture
 judge calibration, all regression tests, and creates a new exact unsigned freeze.
 It binds the recorded delegation to two distinct main/ablation scope records,
 then executes, seals, judges and analyzes both real archives. No manuscript is
-written. `--checkpoint-requests N` pauses cleanly before the N+1th new model
-request; resuming reuses recorded goals/replies/responses, never resends failed
+written. `--checkpoint-requests N` pauses cleanly before the N+1th new generation
+request or evaluator packet in each phase; resuming reuses recorded goals/replies/responses, never resends failed
 or unknown requests. The same command re-enters immutable known progress.
 A missing/ambiguous provider receipt, failed qualification, changed code/runtime
 or unmatched authorization stops execution; preserve its evidence, never delete
@@ -64,12 +64,20 @@ One generation owner and shared project reservation ledger. Existing local RPM,
 TPM and daily ceilings are retained. New reservations conservatively bound
 **decoded text input bytes**, all tool/schema text and role overhead, avoiding
 JSON transport double escaping and output allowances being counted as input.
-An overlarge byte bound requires a durable same-model `countTokens` response plus
-1024-token margin; an unsupported/missing/error response is not replaced by a
-made-up estimate. Tokenizer RPCs are recorded separately and conservatively count
-against local request ceilings; they do not generate predictions. Actual durable
-response usage settles reservations, while failures and unknown sends retain
-reservations. Missing token usage remains missing. Other clients in the same
+An overlarge **generation** byte bound requires a durable same-model `countTokens`
+response plus 1024-token margin; errors are never replaced by a guessed count.
+Live API models do not support `countTokens` (Google Firebase AI Logic, "Count
+tokens for Gemini models"). For an oversized text-only Live judge request, the
+controller reserves one **entire 61-second local quota window**, labels the
+allowance `LIVE_EXCLUSIVE_UNMEASURED_WINDOW`, and does not refund it early. This
+allowance is NOT an actual token count or a guarantee that a request fits the
+provider quota. The provider enforces actual limits; rejection/usage is retained
+in immutable receipts without automatic retry. Requests above 262144 estimated
+input bytes remain blocked. Local configured ceilings are unchanged. Tokenizer
+RPCs are recorded separately, conservatively count against request ceilings and
+do not generate predictions. Other durable observed responses can settle excess
+reservations; failures and unknown sends retain reservations. Missing usage
+remains missing. A pre-send quota pause is not fabricated into a failed judgment. Other clients in the same
 provider project are outside this ledger's visibility. Provider rate limits are
 not guaranteed by a local setting.
 

@@ -177,6 +177,11 @@ def judge_packet(root,directory,packet,*,send=None,synthetic=False):
                       usage=response.get('usageMetadata',{}),provenance_verified=True,
                       model_identity_source='requested stable model ID; provider revision if available')
     except (ValueError,InferenceError,AmbiguousAttempt) as exc:
+        if not journal.receipts:
+            # A quota pause before a claim is NOT a failed model judgment. A
+            # missing receipt after a claim is ambiguous, not an invented
+            # UNRESOLVED judgment. Preserve journal state and stop for replay.
+            raise
         record['error_type']=type(exc).__name__
         record['error_code']=getattr(exc,'code','INVALID_OR_UNAVAILABLE_JUDGE')
     record['request_receipts']=[r['attempt_id'] for r in journal.receipts]

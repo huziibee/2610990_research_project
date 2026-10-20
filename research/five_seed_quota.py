@@ -52,11 +52,36 @@ class SettledQuotaLedger(QuotaLedger):
     def __init__(self, directory, *, root, **kwargs):
         super().__init__(directory,**kwargs)
         self.root=Path(root).resolve()
+    def reserve(self,attempt_id,payload):
+        full_window = ('setup' in payload and input_byte_reservation(payload)>self.tpm)
+        waited=super().reserve(attempt_id,payload)
+        if full_window:
+            # Live models have no countTokens endpoint. Reserve a whole local
+            # window rather than reporting an invented tokenizer result. The
+            # provider remains authoritative for actual usage and quota errors.
+            reservation=read_json(self.directory/(attempt_id+'.reserved.json'))
+            event={'attempt_id':attempt_id,'kind':'LIVE_EXCLUSIVE_UNMEASURED_WINDOW',
+                   'input_byte_bound':input_byte_reservation(payload),
+                   'reserved_tokens':self.tpm,'measured_input_tokens':None,
+                   'reservation_sha256':reservation['sha256'],
+                   'payload_sha256':content_hash(payload),
+                   'count_tokens_supported':False}
+            event['sha256']=content_hash(event)
+            write_json(self.directory/(attempt_id+'.full_window.json'),event)
+        return waited
     def reservation_tokens(self,payload):
         # The fallback byte estimator for arbitrary legacy fixtures is unchanged.
         if 'setup' in payload or 'systemInstruction' in payload:
             bound=input_byte_reservation(payload)
             if bound>self.tpm:
+                if 'setup' in payload:
+                    model=payload['setup'].get('model','').removeprefix('models/')
+                    if model!='gemini-3.8-live' or bound>262144:raise ResourcePause()
+                    # This is an exclusive-window ALLOWANCE, not a token count
+                    # or proof that the request fits. Any provider rejection is
+                    # retained without automatic retry. Do not refund this
+                    # allowance early, even if actual usage is smaller.
+                    return self.tpm
                 from research.five_seed_token_count import exact_input_reservation
                 return exact_input_reservation(self,payload)
             return bound
@@ -66,6 +91,13 @@ class SettledQuotaLedger(QuotaLedger):
         if suffix!='reserved':return rows
         settled={r['attempt_id']:r for r in super()._events('settled')}
         reservations={r['attempt_id']:r for r in rows}
+        for event in super()._events('full_window'):
+            row=reservations.get(event['attempt_id'])
+            if (row is None or event['reservation_sha256']!=row['sha256']
+                    or event['kind']!='LIVE_EXCLUSIVE_UNMEASURED_WINDOW'
+                    or event['measured_input_tokens'] is not None
+                    or event['reserved_tokens']!=self.tpm or row['tokens']!=self.tpm):
+                raise ResourcePause()
         if not set(settled).issubset(reservations):raise ResourcePause()
         for row in rows:
             event=settled.get(row['attempt_id'])
@@ -92,6 +124,9 @@ class SettledQuotaLedger(QuotaLedger):
         if not reservation_path.is_file():raise ResourcePause()
         reservation=read_json(reservation_path)
         if reservation.get('sha256')!=content_hash({k:v for k,v in reservation.items() if k!='sha256'}):raise ResourcePause()
+        # A saturated reservation remains exclusive for the complete window.
+        # Raw observed usage is still present in the immutable provider receipt.
+        if reservation['tokens']==self.tpm:return False
         record={'attempt_id':aid,'receipt_path':path.relative_to(self.root).as_posix(),
                 'receipt_sha256':digest(path),'reservation_sha256':reservation['sha256'],
                 'charged_tokens':amount}

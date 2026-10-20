@@ -88,7 +88,20 @@ def efficiency(directory, predictions):
     return result
 
 
-def score(root, bundle_path, phase, judge_directory, *, run_judge=False):
+def process_pending_packets(packets, load_saved, call, *, max_new_packets=0):
+    """Checkpoint only before a new evaluator request; never repeat saved outcomes."""
+    if type(max_new_packets)is not int or max_new_packets<0:
+        raise ValueError('Invalid evaluator request budget')
+    sent=0
+    for key,packet in sorted(packets.items()):
+        if load_saved(packet) is not None:continue
+        if max_new_packets and sent>=max_new_packets:break
+        sent+=1
+        if call(packet).get('status')!='JUDGED':break
+    return sent
+
+
+def score(root, bundle_path, phase, judge_directory, *, run_judge=False,max_new_packets=0):
     root=Path(root).resolve();bp=Path(bundle_path).resolve();jd=Path(judge_directory).resolve()
     bundle=verify_bundle(root,bp,phase=phase)
     directory=root/DIRECTORIES[phase]
@@ -120,11 +133,10 @@ def score(root, bundle_path, phase, judge_directory, *, run_judge=False):
         from research.seed17_processes import ProcessClient
         client=ProcessClient(root,'research.seed17_judge',[jd],excluded_env=('AUTHOR_REVIEW_AES_KEY_BASE64',))
         try:
-            for key,packet in sorted(pending.items()):
-                # A failed/abstaining completed record is NEVER retried for a better decision.
-                if load_record(root,jd,packet) is not None:continue
-                result=client.call({'packet':packet,'synthetic':False})
-                if result.get('status')!='JUDGED':break
+            process_pending_packets(pending,
+                lambda packet:load_record(root,jd,packet),
+                lambda packet:client.call({'packet':packet,'synthetic':False}),
+                max_new_packets=max_new_packets)
         finally:client.close()
     decisions={key:value for key,packet in pending.items() if (value:=load_record(root,jd,packet)) is not None}
     if any(r.get('synthetic') is not False for r in decisions.values()):raise ValueError('Mock judge cannot score protected cases')

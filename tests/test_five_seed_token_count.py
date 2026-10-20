@@ -19,6 +19,11 @@ class FiveSeedTokenCountTests(unittest.TestCase):
         p['clientContent']['turns'][0]['parts'][0]['text']+=' synthetic'*3000
         return p
 
+    def generation_payload(self):
+        return {'systemInstruction':{'parts':[{'text':'Synthetic tokenizer check'}]},
+                'contents':[{'role':'user','parts':[{'text':'synthetic'*4000}]}],
+                'generationConfig':{'maxOutputTokens':2048,'seed':17}}
+
     def test_live_tokenizer_projection_keeps_every_text_and_schema(self):
         p=self.payload();original=copy.deepcopy(p)
         model,r=count_request(p);body=r['generateContentRequest']
@@ -46,8 +51,8 @@ class FiveSeedTokenCountTests(unittest.TestCase):
         with tempfile.TemporaryDirectory() as d:
             root=Path(d);quota=SettledQuotaLedger(root/'runs/quota',root=root)
             with patch('research.five_seed_token_count.live_count',return_value={'totalTokens':5000}) as sender:
-                self.assertEqual(exact_input_reservation(quota,self.payload()),6024)
-                self.assertEqual(exact_input_reservation(quota,self.payload()),6024)
+                self.assertEqual(exact_input_reservation(quota,self.generation_payload()),6024)
+                self.assertEqual(exact_input_reservation(quota,self.generation_payload()),6024)
                 self.assertEqual(sender.call_count,1)
             self.assertEqual(len(list((root/'runs/quota').glob('*.reserved.json'))),1)
 
@@ -56,22 +61,22 @@ class FiveSeedTokenCountTests(unittest.TestCase):
             root=Path(d);q=SettledQuotaLedger(root/'runs/quota',root=root)
             with patch('research.five_seed_token_count.live_count',side_effect=ResourcePause()) as sender:
                 for _ in range(2):
-                    with self.assertRaises(ResourcePause):exact_input_reservation(q,self.payload())
+                    with self.assertRaises(ResourcePause):exact_input_reservation(q,self.generation_payload())
                 self.assertEqual(sender.call_count,1)
 
     def test_tampered_count_never_invents_a_smaller_budget(self):
         with tempfile.TemporaryDirectory() as d:
             root=Path(d);q=SettledQuotaLedger(root/'runs/quota',root=root)
             with patch('research.five_seed_token_count.live_count',return_value={'totalTokens':5000}):
-                exact_input_reservation(q,self.payload())
+                exact_input_reservation(q,self.generation_payload())
             done=next((root/'runs/quota/token_counts').glob('*.done.json'));done.write_text('{}')
-            with self.assertRaises(ResourcePause):exact_input_reservation(q,self.payload())
+            with self.assertRaises(ResourcePause):exact_input_reservation(q,self.generation_payload())
 
     def test_actual_over_limit_and_nontext_inputs_fail_closed(self):
         with tempfile.TemporaryDirectory() as d:
             root=Path(d);q=SettledQuotaLedger(root/'runs/quota',root=root)
             with patch('research.five_seed_token_count.live_count',return_value={'totalTokens':16000}),self.assertRaises(ResourcePause):
-                exact_input_reservation(q,self.payload())
+                exact_input_reservation(q,self.generation_payload())
         p=self.payload();p['clientContent']['turns'][0]['parts'].append({'inlineData':{'data':'not supported'}})
         with self.assertRaises(ResourcePause):input_byte_reservation(p)
 

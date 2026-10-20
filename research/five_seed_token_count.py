@@ -42,7 +42,12 @@ def live_count(model,request):
 
 
 def exact_input_reservation(ledger,payload):
-    model,request=count_request(payload);identity={'kind':'TOKENIZER_ONLY','model':model,'request_sha256':content_hash(request)}
+    model,request=count_request(payload)
+    if model=='gemini-3.8-live':
+        # Official Live API documentation explicitly excludes countTokens.
+        # Never substitute a different model's tokenizer or repeat rejected RPCs.
+        raise ResourcePause()
+    identity={'kind':'TOKENIZER_ONLY','model':model,'request_sha256':content_hash(request)}
     key=content_hash(identity);directory=ledger.directory/'token_counts';directory.mkdir(exist_ok=True)
     claim=directory/(key+'.claim.json');done=directory/(key+'.done.json')
     if done.exists():

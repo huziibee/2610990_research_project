@@ -23,7 +23,7 @@ EXPECTED = {
                'S1':{'calls_per_prediction':2,'per_call_output_cap':2048}},
     'interventions':list(INTERVENTIONS), 'max_clarification_answers':5,
     'quota_accounting':'DECODED_INPUT_BYTES_OR_EXACT_TOKEN_COUNT_SETTLED_TO_DURABLE_REPORTED_TOTAL'
-        , 'oversize_input_policy':'DURABLE_SAME_MODEL_COUNTTOKENS_PLUS_1024_MARGIN_NO_AUTOMATIC_RETRY',
+        , 'oversize_input_policy':'GENERATION_EXACT_COUNTTOKENS;LIVE_EXCLUSIVE_UNMEASURED_FULL_WINDOW;NO_RETRIES',
     'quota_local_limits':{'rpm':15,'tpm':15000,'rpd':14000},
     'automatic_provider_retries':0, 'unknown_sends':'STOP_WITHOUT_REPLAY',
     'capability_policy':'VISIBLE_CONTEXT_SEMANTIC_ASSESSMENT_NO_REQUIRED_CATALOG',

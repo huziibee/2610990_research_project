@@ -40,6 +40,16 @@ def main():
     for role,payload in invented_payloads():
         model,request=count_request(payload);identity={'kind':'TOKENIZER_ONLY','model':model,'request_sha256':content_hash(request)}
         try:
+            if model=='gemini-3.8-live':
+                # Policy construction check, NOT a supported Live tokenizer RPC.
+                bound=input_byte_reservation(payload)
+                allowance=quota.reservation_tokens(payload)
+                if bound<=quota.tpm or allowance!=quota.tpm:raise ValueError('Wrong exclusive policy')
+                rows.append({'role':role,'requested_model':model,
+                    'status':'LIVE_EXCLUSIVE_POLICY_VERIFIED','count_tokens_supported':False,
+                    'measured_input_tokens':None,'reserved_window_allowance':allowance,
+                    'conservative_input_bytes':bound,'model_generation_calls':0})
+                continue
             with exclusive_lock(quota.directory/'quota.lock'):budget=exact_input_reservation(quota,payload)
             receipt=quota.directory/'token_counts'/(content_hash(identity)+'.done.json')
             rows.append({'role':role,'requested_model':model,'status':'COUNTED',
@@ -49,7 +59,7 @@ def main():
             rows.append({'role':role,'requested_model':model,'status':'UNAVAILABLE','error_type':type(exc).__name__})
             break
     result={'synthetic_only':True,'model_generation_calls':0,'protected_predictions_executed':False,
-            'all_passed':len(rows)==2 and all(r['status']=='COUNTED' for r in rows),'cases':rows}
+            'all_passed':[r['status'] for r in rows]==['COUNTED','LIVE_EXCLUSIVE_POLICY_VERIFIED'],'cases':rows}
     write_json(out/'tokenizer_check.json',result);print(json.dumps(result,indent=2))
     return 0 if result['all_passed'] else 2
 if __name__=='__main__':raise SystemExit(main())
