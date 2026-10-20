@@ -28,3 +28,13 @@
 ## Release boundary
 
 The repository Actions secret allows live synthetic development tests. Neither the restored plaintext author references nor the local archive decryption key exist in these cloud jobs. There is no authorized, hash-bound protected release on this branch. No scientifically valid 100-case or 500-ablation benchmark was executed.
+
+## Additional isolated S1 grounding comparisons (development only)
+
+- [JSON-only vs original schema 39407840079](https://github.com/huziibee/2610990_research_project/actions/runs/39407840079): JSON-only transport returned in 6.85 seconds but failed strict local task validation. The original provider schema reached the configured 90-second timeout. No readiness gate was passed.
+- [Intermediate schema 39408269986](https://github.com/huziibee/2610990_research_project/actions/runs/39408269986): simplifying deep argument schema still resulted in HTTP 500 in 0.31 seconds. This did not establish a working production schema alternative.
+- Consequently the original provider schema and strict local validation remain unchanged. Provider-side intermittency is a genuine unresolved prelaunch blocker; do not claim a complete live S0/S1 multi-turn success.
+
+## Newer local engineering handoff
+
+The user provided a later, unpushed 43-source-file code handoff that locally passed 376 regression tests after narrow compatibility changes. That code includes the ablation runner, offline statistical analysis and version-2 technical freeze. The handoff was reconstructed and SHA-256 packaged outside this repository. It is not represented by GitHub PR #14, whose cloud tests use the older checked-in implementation. The precise local reference ledger, decrypted author release and generated current-code validation logs are not available in cloud Actions.
