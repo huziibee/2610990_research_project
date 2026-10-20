@@ -1,0 +1,46 @@
+name: Five-seed exact source and prerequisite checks
+on:
+  push:
+    branches: [research/five-seed-finalization-20261020]
+    paths: [.github/workflows/five-seed-bootstrap.yml]
+  workflow_dispatch:
+permissions:
+  contents: read
+concurrency:
+  group: five-seed-bootstrap
+  cancel-in-progress: false
+jobs:
+  source:
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+      - name: Export tracked code only, never ignored private workspaces
+        run: |
+          mkdir -p /tmp/five-seed-source
+          git archive --format=zip HEAD > /tmp/five-seed-source/source.zip
+          git rev-parse HEAD > /tmp/five-seed-source/commit.txt
+          sha256sum /tmp/five-seed-source/source.zip > /tmp/five-seed-source/source.sha256
+      - uses: actions/upload-artifact@v4
+        with:
+          name: five-seed-source-${{ github.run_id }}
+          path: /tmp/five-seed-source/
+          retention-days: 7
+          if-no-files-found: error
+  private-prerequisite:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+      - uses: actions/setup-python@v5
+        with: {python-version: '3.11'}
+      - run: python -m pip install -r requirements.txt
+      - name: Validate original reference release using existing repository secret only
+        env:
+          AUTHOR_REVIEW_AES_KEY_BASE64: ${{ secrets.AUTHOR_REVIEW_AES_KEY_BASE64 }}
+        run: python tools/stage_seed17_private_release.py
+      # No private artifact upload and no model call in this job.
