@@ -17,3 +17,7 @@ protocol/amendments/GEMMA_SEED17_PRE_AUTHOR*.json -text
 protocol/seed17/AUTHOR_APPROVED_AGENT_ASSISTED_v1.json -text
 protocol/seed17/judge*.json -text
 protocol/amendments/AUTHOR_REVIEWED_GOLD_CANDIDATE*.json -text
+
+# Preserve pre-amendment configuration bytes for historical replay.
+protocol/amendments/pre_final_engineering_410fe44/** -text
+protocol/amendments/GEMMA_SEED17_PRELAUNCH_ENGINEERING_20261020.json -text

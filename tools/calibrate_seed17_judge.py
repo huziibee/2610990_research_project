@@ -20,6 +20,10 @@ def main(argv=None):
     if not output.is_relative_to(ROOT/'runs/judgments') or output==ROOT/'runs/judgments':raise ValueError('Ignored judge output required')
     output.mkdir(parents=True,exist_ok=False)
     config,rubric,csha,rsha=configuration(ROOT)
+    registration=output/'registration';registration.mkdir()
+    for name in ('protocol/seed17/judge_v1.json','protocol/seed17/judge_rubric_v1.json',
+                 'research/seed17_judge.py','research/seed17_judge_calibration.py','research/seed17_live_judge_transport.py'):
+        (registration/Path(name).name).write_bytes((ROOT/name).read_bytes())
     rows=[];versions=[]
     for fixture in fixtures():
         fake=None if args.live_synthetic else lambda payload,settings,f=fixture:mock_response(f)

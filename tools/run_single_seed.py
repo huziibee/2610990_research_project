@@ -29,7 +29,7 @@ def readiness(bundle=None):
     return result
 
 
-def export_smoke(directory, manifest):
+def export_smoke(directory, manifest, oracle_audit=None):
     """Create reviewable live development evidence, without manufacturing success."""
     from research.seed17_engine import load
     directory = Path(directory)
@@ -51,8 +51,11 @@ def export_smoke(directory, manifest):
             write_exclusive(evidence / "calls.jsonl", "".join(json.dumps({**c, "execution": "LIVE_DEVELOPMENT",
                 "original_execution": manifest["execution"]}) + "\n" for c in calls))
     if (directory / "seal.json").is_file() and not (exports / "live_multi_turn.json").exists():
-        write_json(exports / "live_multi_turn.json", {"directory": directory.relative_to(ROOT).as_posix(),
-            "seal_sha256": digest(directory / "seal.json"), "code_fingerprints": manifest["code_fingerprints"]})
+        detail={"directory":directory.relative_to(ROOT).as_posix(),"seal_sha256":digest(directory/"seal.json"),"code_fingerprints":manifest["code_fingerprints"]}
+        if oracle_audit is not None:
+            write_json(exports/"oracle_audit.json",oracle_audit)
+            detail["oracle_audit"]={"path":(exports/"oracle_audit.json").relative_to(ROOT).as_posix(),"sha256":digest(exports/"oracle_audit.json")}
+        write_json(exports/"live_multi_turn.json",detail)
 
 
 def main(argv=None):
@@ -95,8 +98,14 @@ def main(argv=None):
                 raise ValueError("Development does not consume protected bundles")
             from research.seed17_synthetic import cohort, SyntheticOracle
             from tools.run_experiment import planned_schedule
-            inputs, refs, rules, export_hash = cohort(1 if args.live_smoke else 100, multi_turn=args.live_smoke)
-            oracle = SyntheticOracle(refs, rules, export_hash)
+            if args.live_smoke:
+                from research.seed17_smoke_fixture import fixture
+                from research.seed17_processes import SmokeOracleProcess
+                inputs,_ = fixture()
+                oracle=SmokeOracleProcess(ROOT);clients.append(oracle)
+            else:
+                inputs, refs, rules, export_hash = cohort(100)
+                oracle = SyntheticOracle(refs, rules, export_hash)
             index = oracle.index()
             schedule = planned_schedule(list(inputs), [17])
             execution = "LIVE_SEED17_SMOKE" if args.live_smoke else "MOCK_SEED17"
@@ -128,7 +137,7 @@ def main(argv=None):
             clients.append(model)
         result = execute(output, manifest, inputs, model, oracle, resume=args.resume)
         if args.live_smoke:
-            export_smoke(output, manifest)
+            export_smoke(output, manifest, oracle.audit())
         if result["status"].startswith("COMPLETE"):
             from research.seed17_audit import audit
             result["audit"] = audit(output, synthetic=not args.execute)[0]

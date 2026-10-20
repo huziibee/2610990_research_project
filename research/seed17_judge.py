@@ -24,7 +24,9 @@ def decision_schema():
     field={'type':'object','additionalProperties':False,'required':['decision','explanation','confidence','prediction_paths','reference_paths','source_paths'],
         'properties':{'decision':{'type':'string','enum':['correct','incorrect','uncertain']},'explanation':{'type':'string'},
         'confidence':{'type':'string','enum':['low','medium','high']},
-        **{k:{'type':'array','items':{'type':'string'}} for k in ('prediction_paths','reference_paths','source_paths')}}}
+        **{k:{'type':'array','minItems':0 if k=='source_paths' else 1,'items':({'type':'string','enum':['/instruction','/scene','/dialogue','/capabilities']} if k=='source_paths' else {'type':'string'}),
+               'description':'Visible source fields only; [] if not applicable.' if k=='source_paths' else 'Nonempty pointers; cite arrays for absence.'}
+           for k in ('prediction_paths','reference_paths','source_paths')}}}
     return {'type':'object','additionalProperties':False,'required':['fields','unsupported_detail','abstain','uncertainty_reason'],
         'properties':{'fields':{'type':'object','additionalProperties':False,'required':list(FIELDS),'properties':{f:field for f in FIELDS}},
             'unsupported_detail':{'type':'string','enum':['present','absent','uncertain']},'abstain':{'type':'boolean'},'uncertainty_reason':{'type':'string'}}}
@@ -54,8 +56,8 @@ def validate_decision(value,packet):
                     _pointer(packet,path)
                 else:
                     _pointer(packet[source],path)
-        if item['decision']!='uncertain' and (not item['prediction_paths'] or not item['reference_paths']):
-            raise ValueError('Decisive judgment requires prediction and reference evidence paths')
+        if not item['prediction_paths'] or not item['reference_paths']:
+            raise ValueError('Every judgment requires prediction and reference evidence paths')
     if uncertain and not value['uncertainty_reason'].strip():raise ValueError('Explain uncertainty or abstention')
     return value
 
@@ -68,13 +70,13 @@ def configuration(root):
             or config.get('accept_reported_reasoning_usage') is not True
             or config['settings'] != {'temperature':0,'topP':1,'candidateCount':1,'maxOutputTokens':2048,'responseModalities':['AUDIO']}
             or config['automatic_retries']!=0 or config['malformed_output_retries']!=0
-            or digest(rubric_path)!=config['rubric']['sha256'] or rubric['rubric_id']!='seed17_semantic_judge_v1'):
+            or digest(rubric_path)!=config['rubric']['sha256'] or rubric['rubric_id']!='seed17_semantic_judge_v3'):
         raise ValueError('Unsupported or changed judge configuration')
     return config,rubric,digest(path),digest(rubric_path)
 
 
 def build_payload(packet,config,rubric):
-    system=rubric['system_prompt']+'\nRubric: '+json.dumps(rubric['fields'])+'\nCall submit_semantic_judgment exactly once with your structured decision; do not speak a verdict.'
+    system=rubric['system_prompt']+'\nFields: '+json.dumps(rubric['fields'],separators=(',',':'))+'\nEvidence paths: '+rubric['evidence_path_policy']+'\nCall submit_semantic_judgment exactly once with your structured decision; do not speak a verdict.'
     # Live does not support responseMimeType/responseJsonSchema or thinkingConfig.
     # A declared function schema and independent local validator are used instead.
     return {'generationConfig':config['settings'],
@@ -97,10 +99,11 @@ def judge_packet(root,directory,packet,*,send=None,synthetic=False):
             raise ValueError('Live synthetic evaluator accepts fixed invented calibration packets only')
     if send is not None and not synthetic:raise ValueError('Injected evaluator transport is synthetic only')
     if not synthetic:
-        if config['status']!='FROZEN':
-            raise ValueError('Protected judge is not frozen')
         # Only the scoring coordinator may stage a signed, sealed-run authorization.
-        authorization=read_json(directory/'protected_judge_authorization.json')
+        try:
+            authorization=read_json(directory/'protected_judge_authorization.json')
+        except OSError:
+            raise ValueError('Protected judge requires explicit sealed-run authorization') from None
         from research.seed17_gate import check_readiness
         bundle=read_json(root/authorization['bundle_path'])
         if (not check_readiness(root,bundle)['ready']
@@ -116,6 +119,10 @@ def judge_packet(root,directory,packet,*,send=None,synthetic=False):
         top_p=config['settings']['topP'],max_output_tokens=config['settings']['maxOutputTokens'],timeout_seconds=config['timeout_seconds'])
     payload=build_payload(packet,config,rubric)
     binding=content_hash({'judge_config':config_sha,'rubric':rubric_sha,'synthetic':synthetic})
+    if synthetic:
+        # Registered development sessions share quota but not request identities.
+        # Within a session, claims still prohibit retries after ambiguous sends.
+        binding=content_hash({'configuration_binding':binding,'synthetic_session':directory.relative_to(root).as_posix()})
     quota=None if send else QuotaLedger(root/'runs/resource_ledgers/gemma_developer_api')
     journal=RequestJournal(directory/'requests',binding,quota,allow_reasoning_tokens=True)
     out=directory/(packet_sha+'.json')
@@ -167,6 +174,11 @@ def _load_receipt(root,directory,packet,stored):
     expected_payload=build_payload(packet,config,rubric)
     if stored['payload']!=expected_payload or stored['settings']!=asdict(settings):raise ValueError('Judge packet/prompt/settings changed')
     binding=content_hash({'judge_config':config_sha,'rubric':rubric_sha,'synthetic':stored['synthetic']})
+    if stored['synthetic']:
+        binding=content_hash({'configuration_binding':binding,'synthetic_session':directory.resolve().relative_to(root.resolve()).as_posix()})
+    attempt=content_hash({'binding':binding,'key':{'packet':content_hash(packet)}})
+    if not all((directory/'requests'/(attempt+suffix)).is_file() for suffix in ('.claim.json','.done.json')):
+        raise ValueError('Missing immutable judge receipt; replay never creates an attempt')
     journal=RequestJournal(directory/'requests',binding,allow_reasoning_tokens=True)
     def no_send(*args):raise ValueError('Missing immutable judge receipt')
     try:

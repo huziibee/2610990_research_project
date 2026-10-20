@@ -44,13 +44,23 @@ def _check_readiness(root, bundle=None):
     if bundle is None:
         check("readiness_bundle", False, "No frozen readiness evidence bundle supplied")
         bundle = {}
-    check("bundle_version", bundle.get("schema_version") == 4, "Unknown readiness bundle schema")
+    check("bundle_version", bundle.get("schema_version") in (4, 5), "Unknown readiness bundle schema")
     expected_ids = {f"CA-{i:04d}" for i in range(1, 101)}
     config_path, lock_path = artifact("protocol"), artifact("freeze")
     config = read_json(config_path) if config_path else {}
     lock = read_json(lock_path) if lock_path else {}
-    check("frozen_protocol", config.get("status") == "FROZEN" and config.get("allow_held_out_predictions") is True,
-          "Protocol verification gates have not been frozen and explicitly released")
+    technical_frozen = False
+    if bundle.get("schema_version") == 5:
+        try:
+            from research.seed17_freeze import validate_technical_freeze
+            validate_technical_freeze(root, bundle)
+            technical_frozen = (config.get("allow_held_out_predictions") is False
+                and config.get("execution_release_policy") == "hash_bound_technical_freeze_plus_separate_explicit_authorization")
+        except (ValueError, OSError, KeyError, TypeError):
+            pass
+    check("frozen_protocol", technical_frozen if bundle.get("schema_version") == 5 else
+          config.get("status") == "FROZEN" and config.get("allow_held_out_predictions") is True,
+          "Current protocol requires a complete hash-bound technical freeze; launch remains separately disabled")
     check("design_binding", bool(config_path) and bool(lock_path)
           and config_path == (root / "protocol/gemma4_seed17_v1.json").resolve()
           and lock_path == (root / "protocol/seed17/FREEZE.json").resolve()
@@ -182,7 +192,7 @@ def _check_readiness(root, bundle=None):
             and config.get("evaluation",{}).get("judge_config_sha256") == judge_sha
             and config.get("evaluation",{}).get("judge_rubric_sha256") == rubric_sha)
         check("automated_evaluator_registered", registered, "Exact separate Gemini 3.8 Live judge, fixed rubric and strict function-call validation required")
-        check("automated_evaluator_frozen", registered and judge_config["status"] == "FROZEN",
+        check("automated_evaluator_frozen", registered and (technical_frozen if bundle.get("schema_version") == 5 else judge_config["status"] == "FROZEN"),
               "Judge model/configuration/rubric must be frozen before protected predictions")
     except (ValueError, OSError, KeyError, TypeError):
         check("automated_evaluator_registered", False, "Missing or invalid isolated evaluator configuration")
@@ -267,24 +277,32 @@ def check_readiness(root, bundle=None):
         check("single_seed_contract", schedule_valid, "Exact Gemma schema/thinking/caps, seed 17 and both pinned schedules required")
     except (KeyError, ValueError, TypeError, OSError):
         check("single_seed_contract", False, "Missing, altered or unsupported single-seed configuration")
-    try:
-        from datetime import datetime
-        freeze = read_json(artifact("freeze"))
-        auth_path = artifact("authorization_evidence")
-        auth = read_json(auth_path)
-        check("signed_off_release", freeze.get("status") == "SIGNED_OFF"
-              and freeze.get("authorization_granted") is True
-              and freeze.get("scope") == "seed17_main_with_approved_clarification_only"
-              and bool(freeze.get("authorized_by")) and not freeze["authorized_by"].startswith("[Waiting")
-              and bool(datetime.fromisoformat(freeze["signed_utc"]))
-              and auth.get("authorization_granted") is True
-              and auth.get("authorized_by") == freeze["authorized_by"]
-              and auth.get("study_id") == "gemma4-seed17-v1"
-              and auth.get("freeze_sha256") == digest(artifact("freeze"))
-              and auth.get("scope") == freeze["scope"] and bool(auth.get("verbatim_authorization")),
-              "Explicit authorization evidence and complete signed-off freeze required; current instruction prohibits evaluation")
-    except (KeyError, ValueError, TypeError, OSError):
-        check("signed_off_release", False, "No valid signed-off freeze and explicit launch authorization supplied")
+    if bundle.get("schema_version") == 5:
+        try:
+            from research.seed17_freeze import validate_launch_authorization
+            validate_launch_authorization(root,bundle)
+            check("signed_off_release", True, "")
+        except (KeyError,ValueError,TypeError,OSError):
+            check("signed_off_release", False, "Explicit launch authorization bound to the unsigned technical freeze is required")
+    else:
+        try:
+            from datetime import datetime
+            freeze = read_json(artifact("freeze"))
+            auth_path = artifact("authorization_evidence")
+            auth = read_json(auth_path)
+            check("signed_off_release", freeze.get("status") == "SIGNED_OFF"
+                  and freeze.get("authorization_granted") is True
+                  and freeze.get("scope") == "seed17_main_with_approved_clarification_only"
+                  and bool(freeze.get("authorized_by")) and not freeze["authorized_by"].startswith("[Waiting")
+                  and bool(datetime.fromisoformat(freeze["signed_utc"]))
+                  and auth.get("authorization_granted") is True
+                  and auth.get("authorized_by") == freeze["authorized_by"]
+                  and auth.get("study_id") == "gemma4-seed17-v1"
+                  and auth.get("freeze_sha256") == digest(artifact("freeze"))
+                  and auth.get("scope") == freeze["scope"] and bool(auth.get("verbatim_authorization")),
+                  "Explicit authorization evidence and complete signed-off freeze required; current instruction prohibits evaluation")
+        except (KeyError, ValueError, TypeError, OSError):
+            check("signed_off_release", False, "No valid signed-off freeze and explicit launch authorization supplied")
     try:
         from research.seed17_audit import audit
         detail = read_json(artifact("live_multi_turn"))
@@ -308,11 +326,48 @@ def check_readiness(root, bundle=None):
                            and type(usage.get("promptTokenCount")) is int and usage["promptTokenCount"] > 0
                            and type(usage.get("candidatesTokenCount")) is int and usage["candidatesTokenCount"] > 0
                            and usage.get("thoughtsTokenCount", 0) == 0)
+        if bundle.get("schema_version") == 5:
+            from research.seed17_smoke_fixture import fixture
+            from research.clarification_matching import normalize_question
+            oracle_detail = detail["oracle_audit"]
+            oracle_path = (root / oracle_detail["path"]).resolve()
+            if not oracle_path.is_relative_to(root) or digest(oracle_path) != oracle_detail["sha256"]:
+                raise ValueError("Oracle interaction evidence changed")
+            oracle_log = read_json(oracle_path)
+            fixture_inputs, release = fixture()
+            steps = release["rows"][0]["reference"]["hypothetical_answer_branches"][0]["turns"]
+            expected_events = []
+            for item in manifest["schedule"]:
+                rows = outputs[item["system"]]
+                multi_valid = (multi_valid and len(rows) == 3 and [r["turn"] for r in rows] == [0,1,2]
+                    and rows[0]["task"]["readiness"] == rows[1]["task"]["readiness"] == "CLARIFY"
+                    and rows[2]["task"]["readiness"] == "ACTION_READY")
+                terminal = rows[2]["task"]
+                actions = terminal["actions"]
+                multi_valid = (multi_valid and len(actions) == 1 and actions[0]["capability_id"] == "move"
+                    and set(actions[0]["arguments"]) == {"object","destination","time"}
+                    and not terminal["unresolved"] and not terminal["dependencies"]
+                    and not actions[0]["constraints"])
+                for key,value in {"object":"blue cup","destination":"shelf a","time":"09:00"}.items():
+                    argument = actions[0]["arguments"][key]
+                    multi_valid = (multi_valid and argument["type"] == "string"
+                        and isinstance(argument["value"],str) and argument["value"].strip().casefold() == value)
+                for turn,step in enumerate(steps,1):
+                    row = rows[turn]
+                    multi_valid = (multi_valid and normalize_question(row["question"]) == normalize_question(step["question"])
+                                   and row["answer"] == step["answer"])
+                    expected_events.append({"sequence":item["sequence"],"record_id":item["record_id"],
+                        "branch_id":"branch-a","turn":turn,"question":row["question"],"answer":step["answer"],
+                        "matched":True,"simulated":True})
+            multi_valid = (multi_valid and manifest["inputs"] == fixture_inputs
+                and oracle_log == {"events":expected_events,"fixture_only":True}
+                and "research/seed17_smoke_oracle.py" in detail["code_fingerprints"])
         check("live_multi_turn", multi_valid, "Successful current-code live synthetic S0/S1 two-answer trajectories and raw usage required")
     except (KeyError, ValueError, TypeError, OSError, RuntimeError):
         check("live_multi_turn", False, "Missing or invalid live multi-turn evidence; mocks do not qualify")
     result["ready"] = not result["failures"]
-    result["gate_version"] = "gemma_seed17_v4"
+    result["ready_for_authorization"] = {f["gate"] for f in result["failures"]} == {"signed_off_release"}
+    result["gate_version"] = "gemma_seed17_v5" if bundle.get("schema_version") == 5 else "gemma_seed17_v4"
     result["review_protocol"] = "gemma_seed17_author_approved_agent_assisted_v1"
     result["evaluation_method"] = "AUTHOR_APPROVED_AGENT_ASSISTED"
     result["additional_human_review_required"] = False

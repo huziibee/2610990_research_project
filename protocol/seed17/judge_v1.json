@@ -1,6 +1,6 @@
 {
   "schema_version": 1,
-  "judge_id": "seed17_isolated_judge_v1",
+  "judge_id": "seed17_isolated_judge_v3",
   "evaluation_method": "AUTHOR_APPROVED_AGENT_ASSISTED",
   "status": "CANDIDATE_NOT_RELEASED",
   "requested_model": "gemini-3.8-live",
@@ -8,7 +8,7 @@
   "separate_from_generator": true,
   "rubric": {
     "path": "protocol/seed17/judge_rubric_v1.json",
-    "sha256": "b1feb25f131404f92b6f527ee40235327013cb53a6dadb46ab3e7c086f41f69b"
+    "sha256": "4f1418c3515476d5f1adb865af122c54f0b84069db42be764639c8a2cc35be3f"
   },
   "settings": {
     "temperature": 0,

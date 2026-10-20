@@ -94,7 +94,8 @@
     "judge_rubric": "protocol/seed17/judge_rubric_v1.json",
     "additional_human_review_required": false,
     "missing_judgments": "UNRESOLVED",
-    "judge_config_sha256": "292b61569604fe59122da20816c604e0632ea6915a8d9ef280a0f1d638549946",
-    "judge_rubric_sha256": "b1feb25f131404f92b6f527ee40235327013cb53a6dadb46ab3e7c086f41f69b"
-  }
+    "judge_config_sha256": "7d1fb581bf8990c35cd08c8818c2d3c5fa6ab66d334cd1820eb42a184e7e7033",
+    "judge_rubric_sha256": "4f1418c3515476d5f1adb865af122c54f0b84069db42be764639c8a2cc35be3f"
+  },
+  "execution_release_policy": "hash_bound_technical_freeze_plus_separate_explicit_authorization"
 }

@@ -41,6 +41,9 @@ class ProcessClient:
             except subprocess.TimeoutExpired:
                 self.process.terminate()
                 self.process.wait(timeout=10)
+            finally:
+                self.process.stdout.close()
+                self.process = None
 
 
 class ModelProcess(ProcessClient):
@@ -60,3 +63,11 @@ class OracleProcess(ProcessClient):
 
     def answer(self, **query):
         return self.call({"op": "answer", **query})["answer"]
+
+
+class SmokeOracleProcess(ProcessClient):
+    def __init__(self, root):
+        super().__init__(root,"research.seed17_smoke_oracle",[])
+    def index(self):return self.call({"op":"index"})["index"]
+    def answer(self,**query):return self.call({"op":"answer",**query})["answer"]
+    def audit(self):return self.call({"op":"audit"})

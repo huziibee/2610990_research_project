@@ -50,6 +50,8 @@ def outcome(row, context, decision=None):
     from research.seed17_judge import validate_decision
     layer=structural_comparison(row,context)
     if layer['complete'] is False or (layer['complete'] is True and decision is None):return layer
+    if context['reference_task'] is None:
+        return {**layer,'complete':None,'evaluation_layer':'UNRESOLVED','reason':'no_approved_intermediate_task'}
     packet=packet_for(row,context)
     if not decision or decision.get('packet_sha256')!=content_hash(packet) or decision.get('provenance_verified') is not True:
         return {**layer,'complete':None,'evaluation_layer':'UNRESOLVED','reason':'semantic_evaluator_unavailable'}

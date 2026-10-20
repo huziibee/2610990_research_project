@@ -21,6 +21,8 @@ from tools.run_single_seed import fingerprints
 def main():
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("--output", type=Path, required=True)
+    parser.add_argument("--live-smoke-evidence",type=Path)
+    parser.add_argument("--judge-calibration",type=Path)
     args = parser.parse_args()
     output = args.output.resolve()
     parent = ROOT / "runs/readiness"
@@ -72,7 +74,7 @@ def main():
         "test_log": {"path": log.relative_to(ROOT).as_posix(), "sha256": digest(log)},
         "implementation_snapshot_sha256": digest(output / "implementation_snapshot.json")}
     write_json(output / "scoring_and_leakage_checks.json", evidence)
-    bundle = {"schema_version": 4, "status": "CANDIDATE_NOT_AUTHORIZED",
+    bundle = {"schema_version": 5, "status": "CANDIDATE_NOT_AUTHORIZED",
               "annotation_workspace": "runs/human_review_20261019", "artifacts": {}}
     def add(name, path):
         if path.is_file():
@@ -83,7 +85,7 @@ def main():
     add("judge_rubric", ROOT / "protocol/seed17/judge_rubric_v1.json")
     judge_mock=ROOT / "runs/judgments" / output.name
     run("judge_mock_calibration", ["tools/calibrate_seed17_judge.py", "--output", str(judge_mock)])
-    add("judge_calibration", judge_mock / "calibration.json")
+    add("judge_calibration", args.judge_calibration.resolve() if args.judge_calibration else judge_mock / "calibration.json")
     add("implementation_snapshot", output / "implementation_snapshot.json")
     add("scoring_and_leakage_checks", output / "scoring_and_leakage_checks.json")
     # Pin author approval accurately; it never becomes independent verification.
@@ -95,7 +97,7 @@ def main():
         add("clarification_matching_rules", output / "author_release/clarification_matching_rules.json")
         add("reviewed_coverage", output / "author_release/reviewed_coverage.json")
     # Retained successful initial smoke; never a current-code two-answer pass.
-    smoke = ROOT / "runs/development/gemma_seed17_live_20261019_01_evidence"
+    smoke = args.live_smoke_evidence.resolve() if args.live_smoke_evidence else ROOT / "runs/development/gemma_seed17_live_20261019_01_evidence"
     for system in ("S0", "S1"):
         add("live_prediction_" + system, smoke / ("evidence_" + system) / "prediction.json")
         add("live_calls_" + system, smoke / ("evidence_" + system) / "calls.jsonl")
