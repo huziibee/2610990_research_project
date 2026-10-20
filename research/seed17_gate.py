@@ -130,7 +130,7 @@ def _check_readiness(root, bundle=None):
             live = (live and call.get("seed") == 17
                     and settings.get("temperature") == generation.get("temperature") == 0.7
                     and settings.get("top_p") == generation.get("topP") == 0.95
-                    and settings.get("timeout_seconds") == config.get("runs", {}).get("request_timeout_seconds") == 90
+                    and settings.get("timeout_seconds") == config.get("runs", {}).get("request_timeout_seconds") == 300
                     and settings.get("max_output_tokens") == system_config.get("per_call_maxOutputTokens")
                     == ((4096 if system == "S0" else 2048) if gemma else (8192 if system == "S0" else 4096))
                     and settings.get("thinking_budget") == system_config.get("per_call_thinkingBudget") == expected_thinking
