@@ -45,6 +45,10 @@ class Gemini35AmendmentTests(unittest.TestCase):
         amendment = read_json(ROOT / 'protocol/seed17/GEMINI35_MODEL_CODEC_AMENDMENT_20261020_v1.json')
         for record in amendment['preserved_history'].values():
             self.assertEqual(digest(ROOT / record['path']), record['sha256'])
+        codec = amendment['changes']['codec_implementation']
+        from hashlib import sha256
+        self.assertEqual(sha256((ROOT / codec['path']).read_text(encoding='utf-8').encode('utf-8')).hexdigest(), codec['sha256_lf_normalized_utf8'])
+        self.assertIn('structured_grounding', amendment['changes']['shared_wire_instruction'])
         for path, expected in amendment['updated_artifacts'].items():
             self.assertEqual(digest(ROOT / path), expected)
         self.assertEqual(amendment['author_verbatim_approval'], 'Approve Gemini 3.5 Flash-Lite model/codec amendment')
