@@ -1,0 +1,51 @@
+name: Seed17 strict current-code five-fixture live judge calibration
+on:
+  push:
+    branches:
+      - research/seed17-current-judge-20261020
+    paths:
+      - .github/workflows/seed17-current-judge.yml
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  final-code-synthetic-judge:
+    runs-on: ubuntu-latest
+    timeout-minutes: 18
+    env:
+      PYTHONPATH: .
+      GEMINI_API_KEY: ${{ secrets.GEMINI_API_KEY }}
+      JUDGE_OUT: runs/judgments/current_code_${{ github.run_id }}
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+      - name: Install pinned runtime
+        run: python -m pip install -r requirements.txt
+      - name: Check repository secret
+        run: test -n "$GEMINI_API_KEY"
+      - name: Five invented live judge fixtures, including explicit conflict abstention
+        run: python tools/calibrate_seed17_judge.py --live-synthetic --output "$JUDGE_OUT"
+      - name: Independently replay strict calibration verifier on recorded receipts
+        run: |
+          python - <<'PY'
+          import json,os
+          from pathlib import Path
+          from research.seed17_judge_calibration import verify_calibration
+          root=Path(".").resolve()
+          path=root/os.environ["JUDGE_OUT"]/"calibration.json"
+          report=json.loads(path.read_text(encoding="utf-8"))
+          ok=verify_calibration(root,report,require_live=True)
+          print("STRICT_LIVE_JUDGE_CALIBRATION_VERIFIED",ok)
+          print("FIxtures",len(report["cases"]))
+          print("PROTECTED_PREDICTIONS_EXECUTED",False)
+          if not ok:raise SystemExit(2)
+          PY
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: seed17-current-judge-${{ github.run_id }}
+          path: ${{ env.JUDGE_OUT }}/
+          retention-days: 14
+          if-no-files-found: warn
