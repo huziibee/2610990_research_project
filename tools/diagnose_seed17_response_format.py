@@ -39,6 +39,15 @@ def current_response_format(payload):
     return wire
 
 
+def compatible_mock_response(payload, settings):
+    """Feed the existing synthetic mock the identical schema in its old wire slot."""
+    restored = copy.deepcopy(payload)
+    fmt = restored["generationConfig"].pop("responseFormat")["text"]
+    restored["generationConfig"]["responseMimeType"] = fmt["mimeType"]
+    restored["generationConfig"]["responseJsonSchema"] = fmt["schema"]
+    return mock_response(restored, settings)
+
+
 def run(name, directory, *, live=False, send=None):
     if name not in CASES:
         raise ValueError("Registered synthetic probe required")
@@ -70,7 +79,7 @@ def run(name, directory, *, live=False, send=None):
     quota = QuotaLedger(ROOT / "runs/resource_ledgers/gemma_developer_api") if live else None
     journal = RequestJournal(directory / "requests", content_hash(registration), quota)
     submit = journal.transport({"case": name, "responseFormat": "current"},
-                               send or (GeminiBackend._request if live else mock_response))
+                               send or (GeminiBackend._request if live else compatible_mock_response))
     observed = []
 
     def converted_transport(payload, settings):
