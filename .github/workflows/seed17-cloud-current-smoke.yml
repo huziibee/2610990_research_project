@@ -1,0 +1,133 @@
+name: Seed17 current-branch strict live invented smoke
+
+on:
+  push:
+    branches:
+      - research/seed17-cloud-current-smoke-20261020
+    paths:
+      - .github/workflows/seed17-cloud-current-smoke.yml
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: seed17-current-cloud-smoke
+  cancel-in-progress: false
+
+jobs:
+  real-provider-invented-only:
+    runs-on: ubuntu-latest
+    timeout-minutes: 75
+    env:
+      PYTHONPATH: .
+      GEMINI_API_KEY: ${{ secrets.GEMINI_API_KEY }}
+      SMOKE_DIR: runs/development/current_cloud_smoke_${{ github.run_id }}
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+      - run: python -m pip install -r requirements.txt
+      - name: Verify frozen public input bytes
+        run: python Data/verify_package.py
+      - name: Prove that secret is configured without showing it
+        run: test -n "$GEMINI_API_KEY"
+      - name: Official full S0 and S1 live invented clarification
+        id: smoke
+        shell: bash
+        run: |
+          set +e
+          python tools/run_single_seed.py --live-smoke --output "$SMOKE_DIR"
+          rc=$?
+          set -e
+          echo "status_code=$rc" >> "$GITHUB_OUTPUT"
+          echo "Full two-answer smoke exit=$rc"
+      - name: Inspect actual immutable stage receipts without leaking prompt text
+        if: always()
+        shell: bash
+        run: |
+          python - <<'PY'
+          import os, json
+          from pathlib import Path
+          root=Path(os.environ["SMOKE_DIR"])
+          print("QUALIFICATION_MODE=LIVE_SEED17_SMOKE (INVENTED ONLY)")
+          print("PROTECTED_PREDICTIONS_EXECUTED=False")
+          for path in sorted((root/"calls").glob("*.json")):
+              try:
+                  call=json.loads(path.read_text(encoding="utf-8"))
+                  fields=("stage","status","error_code","http_status","finish_reason","model_version")
+                  info={k:call.get(k) for k in fields}
+                  usage=call.get("usage_metadata") or {}
+                  info["output_tokens"]=usage.get("candidatesTokenCount")
+                  info["thinking_tokens"]=usage.get("thoughtsTokenCount")
+                  print("STAGE",json.dumps(info,sort_keys=True))
+              except (ValueError,OSError) as exc:
+                  print("CALL_RECORD_ERROR",type(exc).__name__)
+          PY
+      - name: Strict sealed two-answer smoke audit
+        id: audit
+        if: always()
+        shell: bash
+        run: |
+          set +e
+          python - <<'PY'
+          import os,json
+          from pathlib import Path
+          from research.seed17_audit import audit
+          from research.seed17_smoke_fixture import fixture
+          from research.seed17_gate import synthetic_smoke_grounding_valid
+          from research.clarification_matching import normalize_question
+          root=Path(os.environ["SMOKE_DIR"])
+          result={"passed":False,"protected_predictions_executed":False,"reason":"missing sealed archive"}
+          try:
+              audit_report,manifest,outputs=audit(root,synthetic=True)
+              assert manifest["execution"]=="LIVE_SEED17_SMOKE"
+              _,release=fixture()
+              steps=release["rows"][0]["reference"]["hypothetical_answer_branches"][0]["turns"]
+              assert {row["system"] for row in manifest["schedule"]}=={"S0","S1"}
+              assert set(outputs)>={"S0","S1"}
+              all_calls=[]
+              for p in (root/"calls").glob("*.json"):
+                  c=json.loads(p.read_text(encoding="utf-8"))
+                  all_calls.append(c)
+                  assert c["status"]=="OK"
+              assert all_calls
+              for system in ("S0","S1"):
+                  rows=outputs[system]
+                  assert [row["turn"] for row in rows]==[0,1,2]
+                  assert [row["status"] for row in rows]==["ok"]*3
+                  assert [row["task"]["readiness"] for row in rows]==["CLARIFY","CLARIFY","ACTION_READY"]
+                  assert synthetic_smoke_grounding_valid(rows,steps)
+                  for turn,step in enumerate(steps,1):
+                      assert normalize_question(rows[turn]["question"])==normalize_question(step["question"])
+                      assert rows[turn]["answer"]==step["answer"]
+              result={"passed":True,"protected_predictions_executed":False,
+                      "systems":["S0","S1"],"turns_per_system":[0,1,2],
+                      "provider_calls":len(all_calls)}
+          except (AssertionError,ValueError,TypeError,KeyError,OSError,RuntimeError,IndexError) as exc:
+              result={"passed":False,"protected_predictions_executed":False,"reason":type(exc).__name__}
+          print("STRICT_LIVE_SMOKE",json.dumps(result,sort_keys=True))
+          if not result["passed"]:
+              raise SystemExit(2)
+          PY
+          rc=$?
+          set -e
+          echo "status_code=$rc" >> "$GITHUB_OUTPUT"
+      - name: Keep complete invented-only diagnostics for review
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: seed17-current-invented-smoke-${{ github.run_id }}
+          path: |
+            ${{ env.SMOKE_DIR }}/
+            ${{ env.SMOKE_DIR }}_evidence/
+          if-no-files-found: warn
+          retention-days: 14
+      - name: Fail closed on any incomplete live stage or clarification
+        if: always()
+        shell: bash
+        run: |
+          test "${{ steps.smoke.outputs.status_code }}" = "0"
+          test "${{ steps.audit.outputs.status_code }}" = "0"
+          echo "Strict live invented S0/S1 smoke PASSED; protected case runs remain disabled."
