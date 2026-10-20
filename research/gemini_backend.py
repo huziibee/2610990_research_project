@@ -86,7 +86,7 @@ class GenerationSettings:
     top_p: float = 0.95
     max_output_tokens: int = 2048
     thinking_budget: int = 0
-    timeout_seconds: int = 90
+    timeout_seconds: int = 300
 
     def __post_init__(self):
         if not isinstance(self.model, str) or not self.model or "/" in self.model:
