@@ -5,7 +5,7 @@ import unittest
 
 from research.gemini_backend import GeminiBackend
 from research.seed17_smoke_fixture import fixture
-from tools.diagnose_seed17_fixed_smoke import invented_fixed_wire
+from tools.diagnose_seed17_fixed_smoke import invented_fixed_wire, PROBE_REQUIRED_ARGUMENT_ADDENDUM
 from tools.diagnose_seed17_wire_fields import captured_payload
 
 
@@ -49,6 +49,22 @@ class InventedFixedSmokeWireTests(unittest.TestCase):
         value=converted["generationConfig"]["responseFormat"]["text"]["schema"][
             "properties"]["actions"]["items"]["properties"]["arguments"]["properties"]["time"]
         self.assertIn("dialogue",value["properties"]["evidence"]["items"]["enum"])
+
+    def test_verified_fixture_catalog_blocks_premature_action_ready(self):
+        from research.task_schema import validate_task,ValidationError
+        row={"intended_goal":"Move the blue cup","actions":[{
+            "action_id":"a1","capability_id":"move",
+            "arguments":{"object":{"type":"string","value":"blue cup","evidence":["scene"]},
+                         "destination":{"type":"string","value":"Shelf A","evidence":["scene"]}},
+            "constraints":[]}],"unresolved":[],"dependencies":[],
+            "readiness":"ACTION_READY","clarification_question":None}
+        validate_task(row,self.item)
+        catalog=[{"capability_id":"move","required_arguments":["object","destination","time"]}]
+        with self.assertRaises(ValidationError):
+            validate_task(row,self.item,capability_catalog=catalog)
+        self.assertIn("EVERY argument",PROBE_REQUIRED_ARGUMENT_ADDENDUM)
+        self.assertNotIn("Shelf A",PROBE_REQUIRED_ARGUMENT_ADDENDUM)
+        self.assertNotIn("09:00",PROBE_REQUIRED_ARGUMENT_ADDENDUM)
 
     def test_unknown_source_rejected(self):
         item=copy.deepcopy(self.item)
