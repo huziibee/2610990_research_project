@@ -355,6 +355,8 @@ def check_readiness(root, bundle=None):
                     and rows[2]["task"]["readiness"] == "ACTION_READY")
                 terminal = rows[2]["task"]
                 actions = terminal["actions"]
+                if len(actions) != 1:
+                    raise ValueError("Live smoke terminal task must contain exactly one action")
                 multi_valid = (multi_valid and len(actions) == 1 and actions[0]["capability_id"] == "move"
                     and set(actions[0]["arguments"]) == {"object","destination","time"}
                     and not terminal["unresolved"] and not terminal["dependencies"]

@@ -101,10 +101,10 @@ class Seed17GateTests(unittest.TestCase):
              patch("research.seed17_processes.OracleProcess", side_effect=AssertionError("No oracle")):
             self.assertEqual(main(["--execute", "--bundle", "does-not-exist.json"]), 2)
 
-    def test_short_failed_smoke_returns_blocked_report_without_indexing_missing_turns(self):
+    def test_incomplete_smoke_returns_blocked_report_without_unsafe_indexing(self):
         from research.integrity import digest
         from research.seed17_smoke_fixture import fixture
-        for length in (0, 1, 2):
+        for length in (0, 1, 2, 3):
             with self.subTest(turns=length), tempfile.TemporaryDirectory() as folder:
                 root = Path(folder)
                 directory = root / "runs/development/synthetic_failed"
@@ -123,7 +123,9 @@ class Seed17GateTests(unittest.TestCase):
                      "oracle_audit": oracle})
                 manifest = {"execution": "LIVE_SEED17_SMOKE", "inputs": fixture()[0],
                             "schedule": [{"system": s} for s in ("S0", "S1")]}
-                rows = [{"turn": i, "status": "error", "task": None} for i in range(length)]
+                # Three rows may still end unresolved without a physical action.
+                rows = [{"turn": i, "status": "ok", "task": {
+                    "readiness": "CLARIFY", "actions": []}} for i in range(length)]
                 with patch("research.seed17_gate.check_readiness_base", return_value={
                         "ready": False, "checks": [], "failures": []}), \
                      patch("research.seed17_audit.audit", return_value=(
