@@ -36,13 +36,13 @@ def _canonical_sha(value):
                            separators=(",", ":"), allow_nan=False).encode("utf-8"))
 
 
-def validate_release(workspace):
+def validate_release(workspace, *, source_paths=None):
     """Read-only release/ledger verification using the project's own validators."""
     from research.integrity import digest, read_json, read_jsonl
     from tools.review_author_batch import preflight
 
     workspace = Path(workspace).resolve()
-    store, reviewed = preflight(workspace)
+    store, reviewed = preflight(workspace, source_paths=source_paths)
     receipt_file = workspace / REQUIRED[1]
     references_file = workspace / REQUIRED[2]
     receipt = read_json(receipt_file)

@@ -43,9 +43,9 @@ def _clean(reference):
     return {key: value for key, value in reference.items() if key not in EXTRA_METADATA}
 
 
-def preflight(workspace):
+def preflight(workspace, *, source_paths=None):
     """Read-only, fail-closed audit of every source-pinned local draft."""
-    store = AnnotationStore(workspace)
+    store = AnnotationStore(workspace, source_paths=source_paths)
     rows = store.list_cases()
     if [r["record_id"] for r in rows] != EXPECTED:
         raise ValueError("Expected the exact frozen cohort of 100 cases")
