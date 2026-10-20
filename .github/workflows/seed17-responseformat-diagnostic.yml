@@ -6,6 +6,8 @@ on:
       - research/seed17-responseformat-diagnostic-20261020
     paths:
       - .github/workflows/seed17-responseformat-diagnostic.yml
+      - tools/diagnose_seed17_response_format.py
+      - tests/test_seed17_response_format_diagnostic.py
   workflow_dispatch:
 
 permissions:
