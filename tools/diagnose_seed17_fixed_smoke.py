@@ -11,6 +11,7 @@ import copy
 import json
 from pathlib import Path
 import sys
+import time
 
 ROOT=Path(__file__).resolve().parents[1]
 sys.path.insert(0,str(ROOT))
@@ -51,6 +52,37 @@ def invented_fixed_wire(payload, model_input):
     return output
 
 
+
+def bounded_synthetic_http_retry(journal,payload,settings,identity,*,sender,
+                                 attempts=3,wait=time.sleep,events=None):
+    """New *invented* request identity for each explicit 5xx attempt.
+
+    NEVER reuse for protected execution, readiness qualification, or a signed
+    result. All attempts remain in the immutable request journal.
+    """
+    if type(attempts) is not int or not 1<=attempts<=4:
+        raise ValueError("Unsupported synthetic retry budget")
+    if events is None:
+        events=[]
+    for i in range(attempts):
+        attempt_identity={**identity,"synthetic_retry_attempt":i+1}
+        try:
+            response=journal.transport(attempt_identity,sender)(payload,settings)
+            events.append({"identity":attempt_identity,"status":"RESPONSE",
+                           "http_status":None})
+            return response
+        except InferenceError as exc:
+            events.append({"identity":attempt_identity,"status":"ERROR",
+                           "code":exc.code,"http_status":exc.http_status})
+            retryable=exc.code=="HTTP_FAILURE" and exc.http_status in (500,502,503,504)
+            if not retryable or i+1==attempts:
+                raise
+            delay=min(30.0,max(3.0*(2**i),float(exc.retry_after_seconds or 0)))
+            events[-1]["backoff_seconds"]=delay
+            wait(delay)
+    raise AssertionError("unreachable")
+
+
 def run(output):
     output=Path(output).resolve()
     parent=(ROOT/"runs/provider_diagnostics").resolve()
@@ -69,7 +101,9 @@ def run(output):
         "args":"fixed keys object destination time with value type string",
         "schema_after_each_reply":"derive evidence source enums from live visible dialogue",
         "oracle":"IN_PROCESS_INVENTED_ONLY",
-        "registered_study_protocol_changed":False})
+        "registered_study_protocol_changed":False,
+        "synthetic_http_5xx_max_attempts_per_stage":3,
+        "all_attempts_recorded":True})
     for system,seq in (("S0",1),("S1",2)):
         folder=output/system
         folder.mkdir()
@@ -78,13 +112,15 @@ def run(output):
         backend=None
         counter=[0]
         live_input=[copy.deepcopy(item)]
+        events=[]
         def send(payload,settings):
             counter[0]+=1
             visible=json.loads(payload["contents"][0]["parts"][0]["text"])["input"]
             current={**visible,"record_id":"SYNTHETIC-001"}
             wire=invented_fixed_wire(payload,current)
             identity={"system":system,"stage_request_index":counter[0]}
-            return request_journal.transport(identity,GeminiBackend._request)(wire,settings)
+            return bounded_synthetic_http_retry(request_journal,wire,settings,
+                identity,sender=GeminiBackend._request,events=events)
         backend=GeminiBackend(GenerationSettings(timeout_seconds=300),transport=send)
         try:
             loop=ResearchSystem(backend).clarify(item,
@@ -109,6 +145,7 @@ def run(output):
                 "error_code":exc.code if isinstance(exc,InferenceError) else "LOCAL_FAILURE",
                 "http_status":exc.http_status if isinstance(exc,InferenceError) else None,
                 "call_count":len(backend.records)}
+        result["systems"][system]["transport_attempts"]=events
         for record in backend.records:
             record["actual_wire_format"]="responseFormat/APPLICATION_JSON"
             record["actual_schema_strategy"]="fixed_invented_capability_fields"
