@@ -20,15 +20,19 @@ def main(argv=None):
     parser.add_argument("--judge-directory", type=Path)
     parser.add_argument("--pricing", type=Path)
     parser.add_argument("--synthetic", action="store_true")
+    parser.add_argument("--ablations", action="store_true", help="Audit/score the separately authorized seed17 ablation archive")
     parser.add_argument("--output", type=Path)
     args = parser.parse_args(argv)
     try:
         if args.automated or args.judgments or args.run_judge:
             if args.synthetic:
                 raise ValueError("Synthetic audit is not a semantic judgment release")
-            result = score(args.run, read_json(args.judgments) if args.judgments else None, bundle=read_json(args.bundle) if args.bundle else None, judge_directory=args.judge_directory, run_judge=args.run_judge, bundle_path=args.bundle, pricing=read_json(args.pricing) if args.pricing else None)
+            result = score(args.run, read_json(args.judgments) if args.judgments else None, bundle=read_json(args.bundle) if args.bundle else None, judge_directory=args.judge_directory, run_judge=args.run_judge, bundle_path=args.bundle, pricing=read_json(args.pricing) if args.pricing else None, ablations=args.ablations)
         else:
-            report, manifest, predictions = audit(args.run, synthetic=args.synthetic)
+            selected_audit = audit
+            if args.ablations:
+                from research.seed17_ablation_audit import audit as selected_audit
+            report, manifest, predictions = selected_audit(args.run, synthetic=args.synthetic)
             result = {"audit": report, "efficiency": efficiency(args.run, predictions,
                       read_json(args.pricing) if args.pricing else None)}
         if args.output:

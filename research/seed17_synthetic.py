@@ -62,6 +62,10 @@ class SyntheticOracle:
                 reference_export_sha256=self.export_hash, branch_id=branch_id)
         return self.oracles[key](question, turn)
 
+    def restore(self,queries):
+        from research.seed17_oracle_replay import restore_released
+        return restore_released(self,queries,"oracles")
+
 
 def mock_send(payload, settings):
     """The fake model uses visible text only, never the fixture reference object."""

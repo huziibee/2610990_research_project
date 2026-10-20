@@ -52,6 +52,12 @@ def export_smoke(directory, manifest, oracle_audit=None):
                 "original_execution": manifest["execution"]}) + "\n" for c in calls))
     if (directory / "seal.json").is_file() and not (exports / "live_multi_turn.json").exists():
         detail={"directory":directory.relative_to(ROOT).as_posix(),"seal_sha256":digest(directory/"seal.json"),"code_fingerprints":manifest["code_fingerprints"]}
+        if manifest.get("durability_contract") == "oracle_and_turn_receipts_v1":
+            # Original per-query receipts survive process restarts; a fresh
+            # process's in-memory audit is not the complete conversation.
+            events = [load(p) for p in sorted((directory/"oracle").rglob("*.result.json"))]
+            oracle_audit = {"events":events,"fixture_only":True}
+            detail["oracle_audit_source"] = "durable_per_query_receipts"
         if oracle_audit is not None:
             write_json(exports/"oracle_audit.json",oracle_audit)
             detail["oracle_audit"]={"path":(exports/"oracle_audit.json").relative_to(ROOT).as_posix(),"sha256":digest(exports/"oracle_audit.json")}
@@ -116,7 +122,8 @@ def main(argv=None):
             if not output.is_relative_to(parent) or output == parent:
                 raise ValueError("Development output outside designated directory")
             release = {"release_checked": False}
-        manifest = {"schema_version": 1, "execution": execution, "seed": 17, "schedule": schedule,
+        manifest = {"schema_version": 1, "execution": execution, "phase":"SEED17_MAIN",
+                    "durability_contract":"oracle_and_turn_receipts_v1", "seed": 17, "schedule": schedule,
                     "execution_id": output.resolve().relative_to(ROOT).as_posix(),
                     "cohort_order": list(inputs), "inputs": inputs, "input_sha256": content_hash(inputs),
                     "reference_index": index, "code_fingerprints": fingerprints(),

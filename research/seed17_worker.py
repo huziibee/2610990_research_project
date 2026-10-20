@@ -12,7 +12,17 @@ from research.seed17_journal import RequestJournal, QuotaLedger, write_json, Amb
 from research.systems import ResearchSystem
 
 
-def predict_once(run_dir, manifest, request, *, send=None, quota=None):
+def validate_code_inventory(root, manifest):
+    root = Path(root)
+    expected = {p.relative_to(root).as_posix() for folder in ("research","tools","tests")
+                for p in (root/folder).rglob("*.py")}
+    if set(manifest.get("code_fingerprints",{})) != expected:
+        raise ValueError("Code inventory changed since release")
+    if any(digest(root/name) != sha for name,sha in manifest["code_fingerprints"].items()):
+        raise ValueError("Code changed since release")
+
+
+def predict_once(run_dir, manifest, request, *, send=None, quota=None, predictor=None):
     run_dir = Path(run_dir)
     if set(request) != {"input", "system", "sequence", "turn", "branch_id"}:
         raise ValueError("Unexpected model RPC fields")
@@ -53,7 +63,8 @@ def predict_once(run_dir, manifest, request, *, send=None, quota=None):
     result = {"status": "error", "task": None, "calls": [], "error": None,
               "pause_after_result": False}
     try:
-        result["task"] = ResearchSystem(backend).predict(item, system=system, seed=17)
+        result["task"] = (ResearchSystem(backend).predict(item, system=system, seed=17)
+                          if predictor is None else predictor(backend, item, planned))
         result["status"] = "ok"
     except InferenceError as exc:
         result["error"] = {"code": exc.code, "http_status": exc.http_status}
@@ -99,6 +110,8 @@ def main():
         raise SystemExit("Private worker requires coordinator session")
     run_dir = Path(sys.argv[1]).resolve()
     manifest = read_json(run_dir / "run_manifest.json")
+    if manifest.get("phase", "SEED17_MAIN") != "SEED17_MAIN":
+        raise SystemExit("Main worker rejects other experimental phases")
     smoke = manifest["execution"] == "LIVE_SEED17_SMOKE" and all(
         r["record_id"].startswith("SYNTHETIC-") for r in manifest["schedule"])
     if not smoke and (manifest["execution"] != "LIVE_SEED17" or manifest.get("release_checked") is not True):
@@ -110,8 +123,8 @@ def main():
             request = json.loads(line)
             if request.pop("session", None) != session:
                 raise ValueError("Invalid session")
-            if (any(digest(root / name) != sha for name, sha in manifest["code_fingerprints"].items())
-                    or digest(root / "protocol/gemma4_seed17_v1.json") != manifest["protocol_sha256"]
+            validate_code_inventory(root, manifest)
+            if (digest(root / "protocol/gemma4_seed17_v1.json") != manifest["protocol_sha256"]
                     or any(digest(root / name) != sha for name,sha in manifest.get("evaluation_fingerprints",{}).items())):
                 raise ValueError("Code or protocol changed since release")
             response = predict_once(run_dir, manifest, request, quota=quota)

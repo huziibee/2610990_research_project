@@ -25,6 +25,10 @@ class SmokeOracle:
             'question':question,'answer':answer,'matched':answer is not None,'simulated':True})
         return answer
 
+    def restore(self,queries):
+        from research.seed17_oracle_replay import restore_released
+        return restore_released(self,queries)
+
 
 def main():
     oracle=SmokeOracle()
@@ -33,6 +37,7 @@ def main():
             request=json.loads(line);op=request.pop('op')
             if op=='index' and not request:result={'index':oracle.index()}
             elif op=='answer':result={'answer':oracle.answer(**request)}
+            elif op=='restore' and set(request)=={'queries'}:result={'restored':oracle.restore(request['queries'])}
             elif op=='audit' and not request:result={'events':oracle.events,'fixture_only':True}
             else:raise ValueError('Invalid smoke oracle RPC')
         except Exception:result={'rpc_error':True}

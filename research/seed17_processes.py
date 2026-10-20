@@ -64,6 +64,10 @@ class OracleProcess(ProcessClient):
     def answer(self, **query):
         return self.call({"op": "answer", **query})["answer"]
 
+    def restore(self, queries):
+        if self.call({"op":"restore","queries":queries}).get("restored") is not True:
+            raise RuntimeError("Oracle state reconstruction rejected")
+
 
 class SmokeOracleProcess(ProcessClient):
     def __init__(self, root):
@@ -71,3 +75,6 @@ class SmokeOracleProcess(ProcessClient):
     def index(self):return self.call({"op":"index"})["index"]
     def answer(self,**query):return self.call({"op":"answer",**query})["answer"]
     def audit(self):return self.call({"op":"audit"})
+    def restore(self,queries):
+        if self.call({"op":"restore","queries":queries}).get("restored") is not True:
+            raise RuntimeError("Synthetic oracle reconstruction rejected")

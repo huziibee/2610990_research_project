@@ -62,6 +62,7 @@ def outcome(row, context, decision=None):
     verdict=(None if j['abstain'] else False if False in fields.values() or j['unsupported_detail']=='present' else
              None if j['abstain'] or None in fields.values() or j['unsupported_detail']=='uncertain' else True)
     return {**layer,'complete':verdict,'fields':fields,'evaluation_layer':'B_automated_semantic_judge',
+            'judge_abstained':j['abstain'],
             'unsupported_detail':{'present':True,'absent':False,'uncertain':None}[j['unsupported_detail']],
             'judge_packet_sha256':decision['packet_sha256'],'judge_confidence':{f:j['fields'][f]['confidence'] for f in FIELDS}}
 

@@ -15,6 +15,14 @@ ROOT=Path(__file__).resolve().parents[1]
 
 
 class PrelaunchTests(unittest.TestCase):
+    def test_calibration_requires_explicit_abstention_not_merely_unknown_scores(self):
+        from research.seed17_judge_calibration import calibration_passes
+        f=fixtures()[-1];decision=expected_decision(f)
+        self.assertTrue(calibration_passes(f,decision))
+        decision['abstain']=False
+        self.assertFalse(calibration_passes(f,decision))
+        decision['abstain']=True;decision['fields']['goal']['confidence']='high'
+        self.assertFalse(calibration_passes(f,decision))
     def test_evidence_schema_requires_nonempty_prediction_and_reference_paths(self):
         schema=decision_schema()['properties']['fields']['properties']['goal']['properties']
         self.assertEqual(schema['prediction_paths']['minItems'],1)
@@ -89,7 +97,7 @@ class PrelaunchTests(unittest.TestCase):
                 p=root/name;p.parent.mkdir(parents=True,exist_ok=True);p.write_text('SYNTHETIC ONLY');files[name]=digest(p)
             snap=root/'snapshot.json';write_json(snap,{'files':files,'runtime':{'python':'synthetic'}})
             bundle={'schema_version':5,'artifacts':{'implementation_snapshot':{'path':'snapshot.json','sha256':digest(snap)},'freeze':{'path':'snapshot.json','sha256':digest(snap)}}}
-            record=technical_record(root,bundle);self.assertFalse(record['authorization_granted']);self.assertIsNone(record['signed_by'])
+            record=technical_record(root,bundle,schema_version=1);self.assertFalse(record['authorization_granted']);self.assertIsNone(record['signed_by'])
             f=root/'technical.json';write_json(f,record);bundle['artifacts']['technical_freeze']={'path':'technical.json','sha256':digest(f)}
             self.assertEqual(validate_technical_freeze(root,bundle),record)
             with self.assertRaises(KeyError):validate_launch_authorization(root,bundle)

@@ -1,0 +1,20 @@
+{
+  "contract_id": "seed17_case_paired_analysis_v1",
+  "evaluation_label": "automated semantic evaluation",
+  "seed": 17,
+  "primary_outcome": "terminal_complete_task_correctness",
+  "secondary_outcomes": ["initial_readiness", "goal", "actions", "order", "arguments", "constraints", "dependencies", "evidence_supported", "unsupported_detail", "completion_by_turn", "operational_failure_rate"],
+  "population_unit": "source case",
+  "branch_weighting": "equal approved branches within case, then equal source cases",
+  "paired_contrasts": ["S1 minus S0", "each registered ablation minus main S1"],
+  "bootstrap": {"method": "percentile paired case bootstrap", "iterations": 10000, "seed": 20261019, "confidence": 0.95},
+  "missing_semantics": "preserve full denominators; report bounds and unknown counts; no point estimate or confidence interval for any contrast with unresolved required judgments",
+  "failure_handling": "operational failures count as complete-task failures and readiness errors; unjudged semantic dimensions remain unresolved",
+  "failure_taxonomy": "nonexclusive counts of source cases; never sum categories to obtain total errors",
+  "metric_scopes": "explicit initial and terminal case-weighted semantic tables; diagnostic output-level scopes count unique shared initial predictions once and branch continuations once",
+  "confidence": "self-reported low/medium/high evaluator categories with unavailable counts and full prediction denominators; not calibrated correctness probabilities",
+  "clarification_curve": "cumulative complete-task correctness at turns zero through five; additionally show initially clarify-eligible subgroup",
+  "cost": "dated verified-tier estimates only, never inferred free-tier pricing or invoice claims",
+  "between_seed_variability": "NOT_ESTIMABLE",
+  "experimental_execution_authorized": false
+}

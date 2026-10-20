@@ -105,12 +105,29 @@ def judge_packet(root,directory,packet,*,send=None,synthetic=False):
         except OSError:
             raise ValueError('Protected judge requires explicit sealed-run authorization') from None
         from research.seed17_gate import check_readiness
-        bundle=read_json(root/authorization['bundle_path'])
+        bundle_path=(root/authorization['bundle_path']).resolve()
+        run_directory=(root/authorization['run_directory']).resolve()
+        if not bundle_path.is_relative_to(root) or not run_directory.is_relative_to(root/'runs/evaluation'):
+            raise ValueError('Protected judge authorization path escaped registered workspace')
+        bundle=read_json(bundle_path)
         if (not check_readiness(root,bundle)['ready']
-                or digest(root/authorization['bundle_path'])!=authorization['bundle_sha256']
-                or digest(root/authorization['run_directory']/'seal.json')!=authorization['seal_sha256']
+                or digest(bundle_path)!=authorization['bundle_sha256']
+                or digest(run_directory/'seal.json')!=authorization['seal_sha256']
                 or content_hash(packet) not in authorization['packet_sha256s']):
             raise ValueError('Protected judge requires authorized sealed experiment')
+        manifest=read_json(run_directory/'run_manifest.json')
+        if manifest.get('bundle_sha256')!=authorization['bundle_sha256']:
+            raise ValueError('Judging bundle differs from the sealed experiment launch bundle')
+        if manifest.get('phase','SEED17_MAIN')=='SEED17_ABLATIONS':
+            from research.seed17_ablation import validate_authorization
+            from research.seed17_ablation_audit import audit
+            validate_authorization(root,bundle,manifest['ablation_authorization'])
+            audit(run_directory)
+        elif manifest.get('phase','SEED17_MAIN')=='SEED17_MAIN':
+            from research.seed17_audit import audit
+            audit(run_directory)
+        else:
+            raise ValueError('Unregistered protected judging phase')
     if not directory.is_relative_to(root/'runs/judgments'):
         raise ValueError('Judge artifacts must stay in ignored evaluator-only directory')
     directory.mkdir(parents=True,exist_ok=True)

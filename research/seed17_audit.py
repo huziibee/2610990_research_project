@@ -8,7 +8,7 @@ from research.gemini_backend import GenerationSettings
 from research.generation_schema import response_schema
 from research.input_contract import validate_model_input, model_visible_context
 from research.integrity import read_json, digest, loads_json
-from research.seed17_engine import load, validate_requests
+from research.seed17_engine import load, validate_requests, validate_durable_layout, validate_durable_trajectory
 from research.seed17_journal import content_hash
 from research.single_seed_plan import schedules
 from research.task_schema import validate_task
@@ -36,6 +36,8 @@ def audit(directory, *, synthetic=False):
         raise ValueError("Added or missing archive members")
     validate_requests(directory)
     manifest = read_json(directory / "run_manifest.json")
+    if manifest.get('durability_contract') == 'oracle_and_turn_receipts_v1':
+        validate_durable_layout(directory,manifest)
     order = manifest["cohort_order"]
     if synthetic:
         if not all(cid.startswith("SYNTHETIC-") for cid in order) or manifest["execution"] not in ("MOCK_SEED17", "LIVE_SEED17_SMOKE"):
@@ -91,6 +93,8 @@ def audit(directory, *, synthetic=False):
                     or call["attempt_id"] != cid
                     or claim["request_hash"] != content_hash({"payload": payload, "settings": expected_settings})):
                 raise ValueError("Call does not match claimed request")
+            from research.seed17_call_verification import verify_call_record
+            verify_call_record(call,read_json(_member(directory,'requests/'+cid+'.done.json')),current,manifest['execution'])
             if call["status"] == "OK":
                 previous = loads_json(call["output_text"])
         if row["status"] == "ok" and previous != row["task"]:
@@ -109,6 +113,8 @@ def audit(directory, *, synthetic=False):
         for branch in branches:
             expected_trajectory_paths.add(f"{seq:06d}/{content_hash(branch)}.json")
             trajectory = load(_member(directory, f"trajectories/{seq:06d}/{content_hash(branch)}.json"))
+            if manifest.get('durability_contract') == 'oracle_and_turn_receipts_v1':
+                validate_durable_trajectory(directory,planned,trajectory)
             if any(trajectory[k] != v for k, v in {"sequence": seq, "record_id": cid, "system": system, "seed": 17, "branch_id": branch}.items()):
                 raise ValueError("Trajectory identity mismatch")
             rows = trajectory["trajectory"]
@@ -190,6 +196,8 @@ def efficiency(directory, predictions, pricing=None):
             "model_versions": sorted({call["model_version"] for call in calls.values() if call.get("model_version")}),
             "latency_scope": "provider elapsed plus pacing; excludes coordinator/oracle IPC, local validation and crash downtime",
             "latency_seconds_including_pacing_branch_mean_per_case": {"p50": percentile(case_latency, .5), "p95": percentile(case_latency, .95)},
+            "latency_distribution_seconds_including_pacing": {"branch_mean_per_case":case_latency,
+                "unique_provider_calls":[calls[cid]["latency_seconds"] for cid in sorted(calls)]},
             "estimated_api_cost_usd": estimate, "pricing": pricing,
             "cost_status": "DATED_ESTIMATE_NOT_INVOICE" if estimate is not None else "NOT_COMPUTED"}
     return result
@@ -226,19 +234,40 @@ def automated_contexts(root, manifest, predictions, release):
                         current["dialogue"].extend(["Assistant clarification: "+predicted["question"],"User answer (simulated): "+predicted["answer"]])
                     target=ref["reference_task"] if turn==0 else branch["reference_task"] if turn==len(steps) else None
                     turns[turn]={"reference_task":target,"alternatives":ref["acceptable_semantic_alternatives"] if not branch else [],
+                        "eligibility":{"dialogue_relevant":ref['dialogue_relevant'],
+                            "explicit_dependency":ref['explicit_linked_dependencies'],
+                            "attested_capability_catalog":ref['verified_capability_catalog'] is not None},
                         "catalog":ref["verified_capability_catalog"],"visible_input":copy.deepcopy(current)}
                 contexts[system][cid]["branches"][branch_id]=turns
     return contexts
 
 
-def score(directory, judgments=None, *, pricing=None, bundle=None, judge_directory=None, run_judge=False, bundle_path=None):
+def needs_semantic_judge(row,context):
+    """Missing approved intermediate tasks stay unresolved without provider calls."""
+    from research.automated_semantics import structural_comparison
+    return context.get('reference_task') is not None and structural_comparison(row,context)['complete'] is None
+
+
+def score(directory, judgments=None, *, pricing=None, bundle=None, judge_directory=None, run_judge=False, bundle_path=None, ablations=False):
     from research.semantic_metrics import score_automated_semantics, paired_semantic_bootstrap
     from research.seed17_author_review import load_author_release
     from research.automated_semantics import packet_for, structural_comparison
     from research.seed17_judge import load_record
-    report, manifest, predictions = audit(directory)
+    if ablations:
+        from research.seed17_ablation_audit import audit as ablation_audit
+        report, manifest, predictions = ablation_audit(directory)
+    else:
+        report, manifest, predictions = audit(directory)
     root=Path(__file__).resolve().parents[1]
     if bundle is None:raise ValueError("Exact author-approved release bundle required for automated scoring")
+    from research.seed17_gate import check_readiness
+    if not bundle_path:
+        raise ValueError('Exact authorized bundle file required for protected scoring')
+    selected_bundle=Path(bundle_path).resolve()
+    if (not selected_bundle.is_relative_to(root) or read_json(selected_bundle)!=bundle
+            or digest(selected_bundle)!=manifest.get('bundle_sha256')
+            or not check_readiness(root,bundle)['ready']):
+        raise ValueError('Protected scoring bundle is not the exact authorized run bundle')
     release=load_author_release(root,bundle)
     binding={"review_protocol":release["policy"]["protocol_id"],"author":release["policy"]["author"],
              "receipt_sha256":release["policy"]["release"]["receipt_sha256"]}
@@ -250,10 +279,9 @@ def score(directory, judgments=None, *, pricing=None, bundle=None, judge_directo
     for system,outputs in predictions.items():
         for row in outputs:
             ctx=contexts[system][row["record_id"]]["branches"][row["branch_id"]][row["turn"]]
-            if structural_comparison(row,ctx)["complete"] is None:
+            if needs_semantic_judge(row,ctx):
                 packet=packet_for(row,ctx);pending[content_hash(packet)]=packet
     if run_judge:
-        from research.seed17_gate import check_readiness
         from research.seed17_processes import ProcessClient
         from research.seed17_journal import write_json
         if (not check_readiness(root,bundle)["ready"] or not judge_directory or not bundle_path
@@ -277,19 +305,24 @@ def score(directory, judgments=None, *, pricing=None, bundle=None, judge_directo
                 if response.get("status")!="JUDGED":break
         finally:client.close()
     decisions={};summaries={};scores={}
-    for system in ("S0","S1"):
+    for system in predictions:
         for row in predictions[system]:
             ctx=contexts[system][row["record_id"]]["branches"][row["branch_id"]][row["turn"]]
-            if judge_directory and structural_comparison(row,ctx)["complete"] is None:
+            if judge_directory and needs_semantic_judge(row,ctx):
                 packet=packet_for(row,ctx);decision=load_record(root,judge_directory,packet)
                 if decision is not None:
                     if decision.get("synthetic") is not False:raise ValueError("Synthetic evaluator receipts cannot score protected predictions")
                     decisions[content_hash(packet)]=decision
         summaries[system],scores[system]=score_automated_semantics(predictions[system],decisions,contexts[system],[17])
     resolved=all(v is not None for system in scores.values() for v in system.values())
-    paired=paired_semantic_bootstrap(scores["S1"],scores["S0"]) if resolved else None
+    paired=paired_semantic_bootstrap(scores["S1"],scores["S0"]) if resolved and not ablations else None
+    from research.seed17_analysis import analysis_records
     return {"audit":report,"systems":summaries,"review_protocol":binding,
+            "analysis_contract":"seed17_case_paired_analysis_v1",
+            "run_binding":{"seal_sha256":digest(Path(directory)/"seal.json"),
+                "manifest_sha256":digest(Path(directory)/"run_manifest.json")},
+            "analysis_records":analysis_records(predictions,contexts,summaries),
             "evaluation_method":"AUTHOR_APPROVED_AGENT_ASSISTED","label":"automated semantic evaluation",
             "independent_human_verification":False,"semantic_truth_guaranteed":False,
-            "S1_minus_S0":paired,"paired_interval_status":"COMPUTED" if resolved else "UNRESOLVED_JUDGMENTS",
+            "S1_minus_S0":paired,"paired_interval_status":"PAIRED_MAIN_S1_REQUIRED" if ablations else "COMPUTED" if resolved else "UNRESOLVED_JUDGMENTS",
             "efficiency":efficiency(directory,predictions,pricing),"between_seed_variability":"NOT_ESTIMABLE"}

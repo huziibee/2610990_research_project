@@ -213,6 +213,8 @@ def _check_readiness(root, bundle=None):
     required_files |= {"protocol/gemma4_seed17_v1.json", "protocol/seed17/FREEZE.json", "protocol/seed17/AUTHOR_APPROVED_AGENT_ASSISTED_v1.json", "protocol/seed17/judge_v1.json", "protocol/seed17/judge_rubric_v1.json"}
     required_files |= {"requirements.txt", ".github/workflows/research-tests.yml", ".github/workflows/literature-tests.yml"}
     required_files |= {"protocol/seed17/main_200.jsonl", "protocol/seed17/ablations_500.jsonl", "protocol/run_schedule_1000.jsonl"}
+    if bundle.get("schema_version") == 5:
+        required_files |= {p.relative_to(root).as_posix() for p in (root / "protocol/seed17").rglob("*.json")}
     snapshot_valid = bool(required_files) and required_files.issubset(fingerprints)
     try:
         snapshot_valid = snapshot_valid and all(digest(member(p)) == sha for p, sha in fingerprints.items())
@@ -228,9 +230,12 @@ def _check_readiness(root, bundle=None):
     from research.systems import COMMON, TASK_PROMPT
     from research.task_schema import TASK_FORMAT
     from research.semantic_metrics import content_hash
-    check("runtime_recorded", bool(snapshot.get("runtime"))
+    from research.seed17_freeze import current_runtime
+    runtime_valid = (snapshot.get("runtime") == current_runtime() if bundle.get("schema_version") == 5
+                     else bool(snapshot.get("runtime")))
+    check("runtime_recorded", runtime_valid
           and snapshot.get("prompts_sha256") == content_hash({"common": COMMON, "task_prompt": TASK_PROMPT, "task_schema": TASK_FORMAT}),
-          "Runtime and reproducible prompt fingerprints required")
+          "Current runtime/dependency versions and reproducible prompt fingerprints must match the validated snapshot")
     return {"ready": not failures, "benchmark_executed": False, "checks": checks, "failures": failures,
             "reference_provenance_counts": {"human_only": sum(r.get("model_assisted") is False for r in rows),
                                             "model_assisted": sum(r.get("model_assisted") is True for r in rows)}}
@@ -254,7 +259,8 @@ def check_readiness(root, bundle=None):
     is not represented as identity authentication or proof of semantic truth.
     """
     result = check_readiness_base(root, bundle)
-    root, bundle = Path(root).resolve(), bundle or {}
+    root = Path(root).resolve()
+    bundle = bundle if isinstance(bundle, dict) else {}
     def check(name, passed, reason):
         result.setdefault("checks", []).append({"name": name, "passed": bool(passed)})
         if not passed:
@@ -316,6 +322,9 @@ def check_readiness(root, bundle=None):
                     "research/seed17_engine.py", "research/clarification_matching.py", "research/generation_schema.py"}
         multi_valid = (manifest["execution"] == "LIVE_SEED17_SMOKE" and code_matches
                        and required.issubset(detail["code_fingerprints"])
+                       and (bundle.get("schema_version") != 5 or set(detail["code_fingerprints"]) == {
+                           p.relative_to(root).as_posix() for folder in ("research", "tools", "tests")
+                           for p in (root/folder).rglob("*.py")})
                        and all(any(row["turn"] >= 2 and row["status"] == "ok"
                                    and row["task"]["readiness"] == "ACTION_READY" for row in outputs[s]) for s in ("S0", "S1")))
         for path in (directory / "calls").glob("*.json"):
@@ -365,6 +374,43 @@ def check_readiness(root, bundle=None):
         check("live_multi_turn", multi_valid, "Successful current-code live synthetic S0/S1 two-answer trajectories and raw usage required")
     except (KeyError, ValueError, TypeError, OSError, RuntimeError):
         check("live_multi_turn", False, "Missing or invalid live multi-turn evidence; mocks do not qualify")
+    if bundle.get("schema_version") == 5:
+        try:
+            for name, relative in (("ablation_contract", "protocol/seed17/ablation_contract_v1.json"),
+                                   ("analysis_contract", "protocol/seed17/analysis_contract_v1.json")):
+                if artifact(name) != root / relative:
+                    raise ValueError("Contract must be the registered current artifact")
+            # Contract and actual complete mock archives, not success booleans.
+            mock = read_json(artifact("mock_execution_evidence"))
+            if mock.get("synthetic_only") is not True:
+                raise ValueError("Mock evidence must be explicitly synthetic")
+            directories = {}
+            for name in ("main", "ablations"):
+                entry = mock[name]
+                directory = (root / entry["directory"]).resolve()
+                if (not directory.is_relative_to(root / ("runs/mock_seed17" if name == "main" else "runs/mock_seed17_ablations"))
+                        or digest(directory / "seal.json") != entry["seal_sha256"]):
+                    raise ValueError("Mock run path or seal differs")
+                directories[name] = directory
+            from research.seed17_audit import audit
+            main_report, main_manifest, _ = audit(directories["main"], synthetic=True)
+            if main_report["initial_predictions"] != 200 or main_report["cases"] != 100:
+                raise ValueError("Incomplete paired synthetic main schedule")
+            from research.seed17_ablation_audit import audit as audit_ablation
+            ablation_report, ablation_manifest, _ = audit_ablation(directories["ablations"], synthetic=True)
+            if ablation_report["initial_predictions"] != 500 or ablation_report["cases"] != 100:
+                raise ValueError("Incomplete matched synthetic ablation schedule")
+            snapshot = read_json(artifact("implementation_snapshot"))
+            current_code = {p.relative_to(root).as_posix(): digest(p) for folder in ("research", "tools", "tests")
+                            for p in (root / folder).rglob("*.py")}
+            if any(manifest.get("code_fingerprints") != current_code for manifest in (main_manifest, ablation_manifest)):
+                raise ValueError("Mock execution did not exercise the current complete implementation")
+            for name in ("protocol/seed17/ablation_contract_v1.json", "protocol/seed17/analysis_contract_v1.json"):
+                if snapshot["files"][name] != digest(root / name):
+                    raise ValueError("Infrastructure contracts missing from tested snapshot")
+            check("downstream_infrastructure", True, "")
+        except (KeyError, ValueError, TypeError, OSError, RuntimeError, ImportError):
+            check("downstream_infrastructure", False, "Registered analysis/ablation contracts and sealed full 200/500-prediction synthetic mock audits required")
     result["ready"] = not result["failures"]
     result["ready_for_authorization"] = {f["gate"] for f in result["failures"]} == {"signed_off_release"}
     result["gate_version"] = "gemma_seed17_v5" if bundle.get("schema_version") == 5 else "gemma_seed17_v4"

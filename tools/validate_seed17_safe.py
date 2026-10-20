@@ -13,6 +13,7 @@ ROOT = Path(__file__).resolve().parents[1]
 sys.path.insert(0, str(ROOT))
 from research.integrity import digest, read_json
 from research.seed17_journal import write_json, content_hash
+from research.seed17_freeze import current_runtime
 from research.systems import COMMON, TASK_PROMPT
 from research.task_schema import TASK_FORMAT
 from tools.run_single_seed import fingerprints
@@ -35,7 +36,11 @@ def main():
                  "protocol/run_schedule_1000.jsonl", "protocol/DATA_FREEZE_20261019.json",
                  "requirements.txt", ".github/workflows/research-tests.yml", ".github/workflows/literature-tests.yml"):
         files[name] = digest(ROOT / name)
-    snapshot = {"files": files, "runtime": {"python": platform.python_version(), "platform": platform.platform(), "dependencies":{name:version(name) for name in ("cryptography","websockets")}},
+    for name in ("protocol/seed17/ablation_contract_v1.json", "protocol/seed17/analysis_contract_v1.json"):
+        files[name] = digest(ROOT / name)
+    for path in (ROOT / "protocol/seed17").rglob("*.json"):
+        files[path.relative_to(ROOT).as_posix()] = digest(path)
+    snapshot = {"files": files, "runtime": current_runtime(),
                 "prompts_sha256": content_hash({"common": COMMON, "task_prompt": TASK_PROMPT, "task_schema": TASK_FORMAT}),
                 "status": "IMPLEMENTATION_SNAPSHOT_ONLY_NOT_SCIENTIFIC_FREEZE"}
     write_json(output / "implementation_snapshot.json", snapshot)
@@ -64,6 +69,13 @@ def main():
     mock_audit = json.loads(audit_log.read_text(encoding="utf-8"))["audit"]
     if mock_audit["initial_predictions"] != 200 or mock_audit["cases"] != 100:
         raise RuntimeError("Complete mock cohort audit failed")
+    ablation_mock = ROOT / "runs/mock_seed17_ablations" / output.name
+    run("complete_ablation_mock", ["tools/run_seed17_ablations.py", "--mock", "--output", str(ablation_mock)])
+    run("synthetic_analysis", ["tools/analyze_single_seed.py", "--synthetic-fixture", "--output", str(output/"synthetic_analysis")])
+    mock_execution = {"synthetic_only": True,
+        "main": {"directory": mock.relative_to(ROOT).as_posix(), "seal_sha256": digest(mock/"seal.json")},
+        "ablations": {"directory": ablation_mock.relative_to(ROOT).as_posix(), "seal_sha256": digest(ablation_mock/"seal.json")}}
+    write_json(output / "mock_execution_evidence.json", mock_execution)
     run("schedules", ["tools/plan_single_seed.py", "--prepare", "--output", str(ROOT / "runs/plans" / output.name)])
     if any(digest(ROOT / name) != sha for name, sha in files.items()):
         raise RuntimeError("Code/protocol changed while validating; evidence not bound")
@@ -79,6 +91,9 @@ def main():
     def add(name, path):
         if path.is_file():
             bundle["artifacts"][name] = {"path": path.relative_to(ROOT).as_posix(), "sha256": digest(path)}
+    add("mock_execution_evidence", output / "mock_execution_evidence.json")
+    add("ablation_contract", ROOT / "protocol/seed17/ablation_contract_v1.json")
+    add("analysis_contract", ROOT / "protocol/seed17/analysis_contract_v1.json")
     add("protocol", ROOT / "protocol/gemma4_seed17_v1.json")
     add("freeze", ROOT / "protocol/seed17/FREEZE.json")
     add("judge_configuration", ROOT / "protocol/seed17/judge_v1.json")

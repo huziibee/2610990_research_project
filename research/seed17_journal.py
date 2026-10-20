@@ -169,20 +169,49 @@ class RequestJournal:
                     try:
                         response = send(payload, settings)
                         # Never persist private thought text, including on unexpected provider output.
-                        saw_thoughts = False
+                        # A thought:true part may be an empty Gemma 4 ghost marker.
+                        # Record structural metadata only; never persist thought text.
+                        marked_parts = 0
+                        nonempty_marked_parts = 0
                         for candidate in response.get("candidates", []):
                             parts = candidate.get("content", {}).get("parts", [])
-                            saw_thoughts = saw_thoughts or any(p.get("thought") for p in parts)
+                            marked = [p for p in parts if p.get("thought")]
+                            marked_parts += len(marked)
+                            # Accept only exactly {"thought": true} or {"thought": true, "text": ""}.
+                            # Whitespace, null text, non-boolean flags, signatures, and any other
+                            # fields are NOT demonstrably empty and therefore remain forbidden.
+                            nonempty_marked_parts += sum(
+                                p.get("thought") is not True
+                                or set(p) not in ({"thought"}, {"thought", "text"})
+                                or ("text" in p and p["text"] != "")
+                                for p in marked)
+                            # Strip ALL thought-marked parts before writing any receipt.
                             candidate.get("content", {})["parts"] = [p for p in parts if not p.get("thought")]
+                        usage = response.get("usageMetadata", {})
+                        reasoning = usage.get("thoughtsTokenCount")
+                        positive_reasoning = type(reasoning) in (int, float) and reasoning > 0
+                        malformed_reasoning_count = ("thoughtsTokenCount" in usage and
+                                                     (type(reasoning) not in (int, float) or reasoning < 0))
+                        done["thought_marker_diagnostic"] = {
+                            "marked_parts": marked_parts,
+                            "nonempty_or_extra_payload_parts": nonempty_marked_parts,
+                            "thought_token_count_reported": "thoughtsTokenCount" in usage,
+                            "positive_thought_token_count": positive_reasoning,
+                        }
                         done.update(status="RESPONSE", response=response)
-                        reasoning = response.get("usageMetadata", {}).get("thoughtsTokenCount")
-                        if not self.allow_reasoning_tokens and (saw_thoughts or (type(reasoning) in (int, float) and reasoning > 0)):
+                        # Missing thinking-token metadata is UNKNOWN, not evidence of zero tokens.
+                        # Empty marker compatibility is deliberately limited to response parts;
+                        # it does not alter requested thinkingLevel, includeThoughts or task schema.
+                        if not self.allow_reasoning_tokens and (
+                                nonempty_marked_parts or positive_reasoning or malformed_reasoning_count):
                             done.update(status="ERROR", code="THINKING_POLICY_VIOLATION", http_status=None,
                                         retry_after_seconds=None)
                             self.new_transient_error = True  # Pause; never repair/retry under a changed policy.
                     except InferenceError as exc:
                         done.update(status="ERROR", code=exc.code, http_status=exc.http_status,
                                     retry_after_seconds=exc.retry_after_seconds)
+                        if exc.provider_diagnostics is not None:
+                            done["provider_diagnostics"] = exc.provider_diagnostics
                         if exc.http_status in (429, 500, 503) or exc.code in ("TIMEOUT", "CONNECTION_FAILURE"):
                             self.new_transient_error = True
                             if self.quota:
@@ -194,6 +223,7 @@ class RequestJournal:
             self.receipts.append(done)
             if done["status"] == "ERROR":
                 raise InferenceError("Recorded provider failure; no retry", code=done["code"],
-                                     http_status=done["http_status"], retry_after_seconds=done.get("retry_after_seconds"))
+                                     http_status=done["http_status"], retry_after_seconds=done.get("retry_after_seconds"),
+                                     provider_diagnostics=done.get("provider_diagnostics"))
             return done["response"]
         return request

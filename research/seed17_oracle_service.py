@@ -39,6 +39,10 @@ class VerifiedOracle:
             self.active[key] = author_approved_oracle(self.release, record_id=record_id, branch_id=branch_id)
         return self.active[key](question, turn)
 
+    def restore(self, queries):
+        from research.seed17_oracle_replay import restore_released
+        return restore_released(self,queries)
+
 
 def main():
     root = Path(__file__).resolve().parents[1]
@@ -52,6 +56,8 @@ def main():
                 result = {"index": oracle.index()}
             elif op == "answer" and set(query) == {"sequence", "record_id", "branch_id", "question", "turn"}:
                 result = {"answer": oracle.answer(**query)}
+            elif op == "restore" and set(query) == {"queries"}:
+                result = {"restored": oracle.restore(query["queries"])}
             else:
                 raise ValueError("Unsupported reference RPC")
         except Exception:

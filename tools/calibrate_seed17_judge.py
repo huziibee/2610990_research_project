@@ -6,7 +6,7 @@ import sys
 ROOT=Path(__file__).resolve().parents[1]
 sys.path.insert(0,str(ROOT))
 from research.seed17_judge import judge_packet, configuration
-from research.seed17_judge_calibration import fixtures, mock_response, verdict
+from research.seed17_judge_calibration import fixtures, mock_response, verdict, calibration_passes
 from research.seed17_journal import write_json, content_hash
 from research.integrity import digest
 
@@ -30,7 +30,8 @@ def main(argv=None):
         result=judge_packet(ROOT,output,fixture['packet'],send=fake,synthetic=True)
         observed=verdict(result['judgment']) if result['status']=='JUDGED' else 'UNAVAILABLE'
         rows.append({'fixture_id':fixture['fixture_id'],'packet_sha256':content_hash(fixture['packet']),
-            'expected':fixture['expected'],'observed':observed,'passed':observed==fixture['expected'],
+            'expected':fixture['expected'],'observed':observed,
+            'passed':result['status']=='JUDGED' and calibration_passes(fixture,result['judgment']),
             'record_sha256':digest(output/(content_hash(fixture['packet'])+'.json'))})
         if result.get('model_version'):versions.append(result['model_version'])
         if result['status']!='JUDGED':break  # No retry or further calls after evaluator failure.

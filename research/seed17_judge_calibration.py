@@ -49,6 +49,17 @@ def verdict(judgment):
     return True
 
 
+def calibration_passes(fixture, judgment):
+    if verdict(judgment) is not fixture['expected']:
+        return False
+    if fixture['expected'] is None:
+        # Unresolved field scores alone do not establish the required explicit
+        # source/reference-conflict abstention contract.
+        return (judgment['abstain'] is True and judgment['unsupported_detail']=='uncertain'
+            and all(v['decision']=='uncertain' and v['confidence']=='low' for v in judgment['fields'].values()))
+    return judgment['abstain'] is False
+
+
 def verify_calibration(root,report,*,require_live):
     from pathlib import Path
     from research.integrity import digest
@@ -69,7 +80,7 @@ def verify_calibration(root,report,*,require_live):
         path=directory/(item['packet_sha256']+'.json')
         if digest(path)!=item['record_sha256']:return False
         record=load_record(root,directory,fixture['packet'])
-        if not record or record['status']!='JUDGED' or verdict(record['judgment'])!=fixture['expected']:return False
+        if not record or record['status']!='JUDGED' or not calibration_passes(fixture,record['judgment']):return False
         if require_live and (str(record.get('model_version','')).startswith('SYNTHETIC')
                 or record['judge_model']!='gemini-3.8-live'
                 or not record.get('provider_tool_call_id')

@@ -4,6 +4,7 @@ from __future__ import annotations
 import json
 import os
 import time
+import hashlib
 from dataclasses import asdict, dataclass, replace
 from pathlib import Path
 from urllib.error import HTTPError, URLError
@@ -15,12 +16,67 @@ from research.generation_schema import response_schema
 
 
 class InferenceError(RuntimeError):
-    def __init__(self, message, *, code="INFERENCE_FAILURE", http_status=None, retry_after_seconds=None):
+    def __init__(self, message, *, code="INFERENCE_FAILURE", http_status=None, retry_after_seconds=None,
+                 provider_diagnostics=None):
         super().__init__(message)
         allowed = {"INFERENCE_FAILURE", "MISSING_API_KEY", "CONNECTION_FAILURE", "TIMEOUT", "HTTP_FAILURE", "RESPONSE_DECODING_FAILURE", "RESOURCE_PAUSE", "THINKING_POLICY_VIOLATION"}
         self.code = code if code in allowed else "INFERENCE_FAILURE"
         self.http_status = http_status if type(http_status) is int and 100 <= http_status <= 599 else None
         self.retry_after_seconds = retry_after_seconds if type(retry_after_seconds) in (int, float) and 0 <= retry_after_seconds <= 86400 else None
+        self.provider_diagnostics = safe_provider_diagnostics(provider_diagnostics)
+
+
+def safe_provider_diagnostics(value):
+    """Keep bounded error metadata, never provider text, request data or headers."""
+    if not isinstance(value,dict):
+        return None
+    result = {}
+    for key in ("body_prefix_sha256", "request_id_sha256"):
+        item = value.get(key)
+        if isinstance(item,str) and len(item) == 64 and all(c in "0123456789abcdef" for c in item):
+            result[key] = item
+    if type(value.get("body_bytes_observed")) is int and 0 <= value["body_bytes_observed"] <= 65537:
+        result["body_bytes_observed"] = value["body_bytes_observed"]
+    if type(value.get("body_truncated")) is bool:
+        result["body_truncated"] = value["body_truncated"]
+    if type(value.get("google_code")) is int and 100 <= value["google_code"] <= 599:
+        result["google_code"] = value["google_code"]
+    if isinstance(value.get("google_status"),str) and value["google_status"] in {"INVALID_ARGUMENT","FAILED_PRECONDITION","NOT_FOUND","PERMISSION_DENIED",
+            "RESOURCE_EXHAUSTED","INTERNAL","UNAVAILABLE","DEADLINE_EXCEEDED","UNAUTHENTICATED","UNKNOWN",
+            "CANCELLED","OUT_OF_RANGE","ALREADY_EXISTS","DATA_LOSS","UNIMPLEMENTED"}:
+        result["google_status"] = value["google_status"]
+    if isinstance(value.get("message_category"),str) and value["message_category"] in {"internal_error","quota_or_rate_limit","invalid_argument","unclassified"}:
+        result["message_category"] = value["message_category"]
+    return result or None
+
+
+def http_error_diagnostics(error):
+    try:
+        raw = error.read(65537)
+    except (OSError,ValueError,AttributeError,TypeError):
+        return None
+    if not isinstance(raw,bytes):
+        return None
+    result = {"body_prefix_sha256":hashlib.sha256(raw[:65536]).hexdigest(),
+              "body_bytes_observed":len(raw),"body_truncated":len(raw)>65536}
+    try:
+        detail = json.loads(raw.decode("utf-8"))["error"]
+        if isinstance(detail,dict):
+            result.update(google_code=detail.get("code"),google_status=detail.get("status"))
+            message = detail.get("message","")
+            message = message.casefold() if isinstance(message,str) else ""
+            result["message_category"] = ("internal_error" if "internal error" in message else
+                "quota_or_rate_limit" if "quota" in message or "rate limit" in message else
+                "invalid_argument" if detail.get("status") == "INVALID_ARGUMENT" else "unclassified")
+    except (ValueError,KeyError,TypeError,UnicodeError):
+        pass
+    try:
+        request_id = error.headers.get("x-request-id") or error.headers.get("x-goog-request-id")
+        if isinstance(request_id,str):
+            result["request_id_sha256"] = hashlib.sha256(request_id.encode("utf-8")).hexdigest()
+    except AttributeError:
+        pass
+    return safe_provider_diagnostics(result)
 
 
 @dataclass(frozen=True)
@@ -123,7 +179,8 @@ class GeminiBackend:
                 except (ValueError, TypeError, AttributeError, OverflowError):
                     retry_after = None
             raise InferenceError(f"Gemini HTTP {exc.code}", code="HTTP_FAILURE", http_status=exc.code,
-                                 retry_after_seconds=retry_after) from None
+                                 retry_after_seconds=retry_after,
+                                 provider_diagnostics=http_error_diagnostics(exc)) from None
         except TimeoutError:
             raise InferenceError("Gemini request timed out", code="TIMEOUT") from None
         except (URLError, OSError):
@@ -196,6 +253,8 @@ class GeminiBackend:
             record["error_code"] = exc.code if isinstance(exc, InferenceError) else "INFERENCE_FAILURE"
             record["http_status"] = exc.http_status if isinstance(exc, InferenceError) else None
             record["retry_after_seconds"] = exc.retry_after_seconds if isinstance(exc, InferenceError) else None
+            if isinstance(exc,InferenceError) and exc.provider_diagnostics is not None:
+                record["provider_diagnostics"] = exc.provider_diagnostics
             if isinstance(exc, InferenceError):
                 raise
             raise InferenceError("Unexpected response or transport failure") from None

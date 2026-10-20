@@ -3,6 +3,27 @@ from pathlib import Path
 from research.integrity import digest, read_json
 from research.seed17_journal import content_hash
 
+
+def current_runtime():
+    """Measured process/runtime, not a nonempty documentary placeholder."""
+    from importlib.metadata import version, PackageNotFoundError
+    import platform
+    try:
+        dependencies = {name: version(name) for name in ("cryptography", "websockets")}
+    except PackageNotFoundError as exc:
+        raise ValueError("Required runtime dependency is unavailable") from exc
+    return {"python": platform.python_version(), "platform": platform.platform(),
+            "dependencies": dependencies}
+
+
+REQUIRED_ARTIFACTS = frozenset({
+    "protocol", "freeze", "judge_configuration", "judge_rubric", "judge_calibration",
+    "implementation_snapshot", "scoring_and_leakage_checks", "semantic_export",
+    "semantic_references", "clarification_matching_rules", "reviewed_coverage",
+    "live_prediction_S0", "live_calls_S0", "live_prediction_S1", "live_calls_S1",
+    "live_multi_turn", "ablation_contract", "analysis_contract", "mock_execution_evidence",
+})
+
 SCOPE = 'seed17_main_with_approved_clarification_only'
 
 
@@ -18,26 +39,34 @@ def member(root, entry):
     return path
 
 
-def technical_record(root, bundle):
+def technical_record(root, bundle, *, schema_version=2):
     root = Path(root).resolve()
     artifacts = base_artifacts(bundle)
+    if schema_version not in (1, 2):
+        raise ValueError("Unsupported technical freeze version")
+    if schema_version == 2 and not REQUIRED_ARTIFACTS.issubset(artifacts):
+        raise ValueError("Incomplete technical freeze evidence set")
     for entry in artifacts.values():
         member(root, entry)
     snapshot = read_json(member(root, artifacts['implementation_snapshot']))
     files = dict(snapshot['files'])
-    # Manuscript and historical source anchors are part of the technical release.
-    for name in ('Report/Cooccurring_Ambiguity_Paper_Gemma_Seed17_Working.tex',
-                 'protocol/DATA_FREEZE_20261019.json', 'protocol/gemini_protocol_v1.json'):
+    # Schema 1 remains replayable; new engineering releases exclude paper/PDF work.
+    anchors = ['protocol/DATA_FREEZE_20261019.json', 'protocol/gemini_protocol_v1.json']
+    if schema_version == 1:
+        anchors.insert(0, 'Report/Cooccurring_Ambiguity_Paper_Gemma_Seed17_Working.tex')
+    if schema_version == 2 and snapshot.get('runtime') != current_runtime():
+        raise ValueError('Runtime differs from the validated implementation snapshot')
+    for name in anchors:
         files[name] = digest(root / name)
     for directory in ('protocol/amendments',):
         for path in (root / directory).rglob('*.json'):
             files[path.relative_to(root).as_posix()] = digest(path)
     pdf = root / 'output/pdf/Cooccurring_Ambiguity_Paper_Gemma_Seed17_Working.pdf'
-    if pdf.is_file():
+    if schema_version == 1 and pdf.is_file():
         files[pdf.relative_to(root).as_posix()] = digest(pdf)
     for name, sha in files.items():
         member(root, {'path':name, 'sha256':sha})
-    return {'schema_version':1, 'study_id':'gemma4-seed17-v1', 'scope':SCOPE,
+    return {'schema_version':schema_version, 'study_id':'gemma4-seed17-v1', 'scope':SCOPE,
             'status':'PREPARED_UNSIGNED', 'technical_content_frozen':True,
             'authorization_granted':False, 'signed_by':None, 'signed_utc':None,
             'base_artifacts_sha256':content_hash(artifacts), 'artifacts':artifacts,
@@ -49,7 +78,7 @@ def technical_record(root, bundle):
 def validate_technical_freeze(root, bundle):
     root = Path(root).resolve()
     record = read_json(member(root, bundle['artifacts']['technical_freeze']))
-    if record != technical_record(root, bundle):
+    if record != technical_record(root, bundle, schema_version=record.get("schema_version")):
         raise ValueError('Technical freeze does not bind the complete current release')
     return record
 
