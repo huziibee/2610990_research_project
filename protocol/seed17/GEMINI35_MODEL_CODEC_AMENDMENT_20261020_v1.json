@@ -1,0 +1,52 @@
+{
+  "schema_version": 1,
+  "amendment_id": "seed17_gemini35_model_codec_20261020_v1",
+  "status": "AUTHOR_APPROVED_DESIGN_AMENDMENT_NOT_EXECUTION_AUTHORIZATION",
+  "reason": "Original Gemma setup lacks complete paired qualification; successful synthetic Gemini 3.5 Flash-Lite control motivates approved model and codec amendment. Fresh current-code qualification remains required.",
+  "author_verbatim_approval": "Approve Gemini 3.5 Flash-Lite model/codec amendment",
+  "approval_source": "Actual user answer in this session; identity and signed timestamp not supplied",
+  "signed_utc": null,
+  "protected_main_authorized": false,
+  "protected_ablations_authorized": false,
+  "preserved_history": {
+    "protocol/gemma4_seed17_v1.json": {
+      "path": "protocol/seed17/history/pre_gemini35_amendment_20261020_v1/gemma4_seed17_v1.json",
+      "sha256": "db2ca7473d38c0b8e45f516bac395afeda3766e16503c6f6d371f1f16c399c67"
+    },
+    "protocol/seed17/ablation_contract_v1.json": {
+      "path": "protocol/seed17/history/pre_gemini35_amendment_20261020_v1/ablation_contract_v1.json",
+      "sha256": "8b9ebd1824ea0c102403e006bbe6e9bdb76a10ef581fb65d0c913fc24ddd9cb6"
+    },
+    "protocol/seed17/FREEZE.json": {
+      "path": "protocol/seed17/history/pre_gemini35_amendment_20261020_v1/FREEZE.json",
+      "sha256": "9804e5a35fb1236f69079cbe203ead0df07e89570d820c981937e678ae0dcffc"
+    }
+  },
+  "updated_artifacts": {
+    "protocol/gemma4_seed17_v1.json": "7ec1def251e84e191f4fd7537348e786630b6d0d201789d1b491ca577f5345b2",
+    "protocol/seed17/ablation_contract_v1.json": "5ee68099dc65f112e26f652f86a99b1ab715ae9ed68c6db6362f4e1d67f8142c",
+    "protocol/seed17/FREEZE.json": "4ecce8e54db55df1b69d00cf1c86554a8281971aabb4330faefc4c88c0841001"
+  },
+  "changes": {
+    "model": "gemini-3.5-flash-lite",
+    "profile": "seed17_gemini35_wire_v1",
+    "codec": "lossless named arguments, preserving local typed-task validation",
+    "responseFormat": {
+      "text": {
+        "mimeType": "APPLICATION_JSON"
+      }
+    },
+    "thinkingConfig": {
+      "thinkingLevel": "minimal",
+      "includeThoughts": false
+    },
+    "reasoning_usage_policy": "Provider-reported reasoning tokens are permitted and recorded; minimal thinking is not a zero-reasoning guarantee."
+  },
+  "unchanged_invariants": [
+    "100 cases: 74 execute and 26 clarify; 26 approved branches",
+    "seed 17; main 200 initial predictions; five ablations 500 initial predictions",
+    "S0 cap4096; S1 goal2048 and ground2048; timeout300 seconds",
+    "zero automatic retries; original references and matching unchanged",
+    "separate exact hash-bound main and ablation authorizations required"
+  ]
+}

@@ -26,3 +26,8 @@ protocol/amendments/GEMMA_SEED17_UNSIGNED_DESIGN_LOCK_REBIND_20261020_v1.json -t
 
 # Original ciphertext and approved sidecar bytes must survive every checkout.
 protected_reference_archive/** -text
+
+# Preserve the approved model amendment and exact prior design history.
+protocol/seed17/ablation_contract_v1.json -text
+protocol/seed17/GEMINI35_MODEL_CODEC_AMENDMENT_20261020_v1.json -text
+protocol/seed17/history/** -text

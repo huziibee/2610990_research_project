@@ -16,14 +16,16 @@ ROOT = Path(__file__).resolve().parents[1]
 class Seed17GateTests(unittest.TestCase):
     def test_exact_config_and_no_single_seed_redefinition_of_historical_gate(self):
         config = read_json(ROOT / "protocol/gemma4_seed17_v1.json")
-        self.assertEqual(validate_config(config).model, "gemma-4-26b-a4b-it")
+        self.assertEqual(validate_config(config).model, "gemini-3.5-flash-lite")
         historical = (ROOT / "research/evaluation_gate.py").read_text(encoding="utf-8")
         self.assertIn('[17, 29, 43, 71, 101]', historical)
         self.assertNotIn('gemma', historical.lower())
 
     def test_changed_seed_budget_thinking_schema_or_retry_policy_refused(self):
         base = read_json(ROOT / "protocol/gemma4_seed17_v1.json")
-        mutations = [lambda c: c["runs"].update(seeds=[17, 29]),
+        mutations = [lambda c: c["model"].update(profile="canonical"),
+                     lambda c: c.update(reasoning_usage_policy="zero reasoning guaranteed"),
+                     lambda c: c["runs"].update(seeds=[17, 29]),
                      lambda c: c["runs"].update(max_transport_retries=1),
                      lambda c: c["candidate_generation_config"].update(responseMimeType="text/plain"),
                      lambda c: c["candidate_generation_config"].update(thinkingConfig={"thinkingLevel": "high"}),
