@@ -41,7 +41,7 @@ TASK_PROMPT = COMMON + EXPLICIT_GROUNDING_INSTRUCTION + TASK_FORMAT_INSTRUCTIONS
 
 
 class ResearchSystem:
-    def __init__(self, backend, *, verified_capability_catalog=None):
+    def __init__(self, backend, *, verified_capability_catalog=None, require_capability_catalog=True):
         """Optional catalog is a human attestation bound to visible capabilities.
 
         The wrapper contains capabilities_sha256 (UTF-8 text digest), catalog,
@@ -49,11 +49,19 @@ class ResearchSystem:
         only. Literal source checks cannot establish semantic support; human
         verification is still required, and no gold-derived catalog is permitted.
         """
+        if type(require_capability_catalog) is not bool:
+            raise ValueError("Capability validation policy must be an explicit boolean")
+        self.require_capability_catalog = require_capability_catalog
         self.backend = backend
         self.verified_capability_catalog = copy.deepcopy(verified_capability_catalog)
 
     def _catalog(self, model_input):
         wrapper = self.verified_capability_catalog
+        if wrapper is None and not self.require_capability_catalog:
+            # Approved ambiguity-study scope: capabilities remain visible
+            # semantic evidence, but missing executable contracts are not errors.
+            # No capability/argument facts are inferred from reference labels.
+            return None
         if wrapper is None:
             # The visible input may itself follow the narrow, versioned typed
             # declaration contract. Free prose is never mined heuristically.

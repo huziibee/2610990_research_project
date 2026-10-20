@@ -1,0 +1,74 @@
+{
+  "ablation_initial_predictions": 2500,
+  "ablation_scope": "five_seed_five_ablations_with_approved_clarification_only",
+  "automatic_provider_retries": 0,
+  "capability_policy": "VISIBLE_CONTEXT_SEMANTIC_ASSESSMENT_NO_REQUIRED_CATALOG",
+  "clarification_policy": "anchored_question_intent_v2",
+  "dataset_mutations_permitted": false,
+  "dependency_policy": "STRICT_EXCEPT_REGISTERED_DEPENDENCY_ABLATION",
+  "execution_directories": {
+    "ablations": "runs/evaluation/five_seed/ambiguity-gemini35-five-seed-v1/ablations",
+    "main": "runs/evaluation/five_seed/ambiguity-gemini35-five-seed-v1/main"
+  },
+  "generation": {
+    "max_output_tokens": 2048,
+    "model": "gemini-3.5-flash-lite",
+    "profile": "seed17_gemini35_wire_v1",
+    "temperature": 0.7,
+    "thinking_budget": 0,
+    "timeout_seconds": 300,
+    "top_p": 0.95
+  },
+  "interventions": [
+    "goal_first",
+    "structured_grounding",
+    "scene",
+    "dependency_checking",
+    "dialogue"
+  ],
+  "judge_context_policy": "FULL_ORIGINAL_CONTEXT_WITH_ONLY_ACTUALLY_RELEASED_REPLIES",
+  "main_initial_predictions": 1000,
+  "main_scope": "five_seed_main_with_approved_clarification_only",
+  "max_clarification_answers": 5,
+  "model_reasoning_policy": "MINIMAL_REPORTED_USAGE_NOT_ASSUMED_ZERO",
+  "oversize_input_policy": "DURABLE_SAME_MODEL_COUNTTOKENS_PLUS_1024_MARGIN_NO_AUTOMATIC_RETRY",
+  "protected_execution_requires_verified_freeze": true,
+  "quota_accounting": "DECODED_INPUT_BYTES_OR_EXACT_TOKEN_COUNT_SETTLED_TO_DURABLE_REPORTED_TOTAL",
+  "quota_local_limits": {
+    "rpd": 14000,
+    "rpm": 15,
+    "tpm": 15000
+  },
+  "runtime_provider_concurrency": 1,
+  "schema_version": 1,
+  "scope_authority": "RECORDED_USER_DELEGATION_BOUND_TO_FINAL_TECHNICAL_FREEZE",
+  "seeds": [
+    17,
+    29,
+    43,
+    71,
+    101
+  ],
+  "source_cases": 100,
+  "statistics": {
+    "bootstrap_iterations": 10000,
+    "bootstrap_seed": 20261019,
+    "confidence": 0.95,
+    "missing_outcomes": "FULL_DENOMINATOR_BOUNDS_NO_FABRICATED_POINT_ESTIMATE",
+    "pairing": "same_source_case_same_seed",
+    "unit": "source_case_mean_over_branches_then_five_seeds"
+  },
+  "study_id": "ambiguity-gemini35-five-seed-v1",
+  "systems": {
+    "S0": {
+      "calls_per_prediction": 1,
+      "per_call_output_cap": 4096
+    },
+    "S1": {
+      "calls_per_prediction": 2,
+      "per_call_output_cap": 2048
+    }
+  },
+  "unknown_sends": "STOP_WITHOUT_REPLAY",
+  "unsupported_questions": "ANSWER_UNAVAILABLE_RETAINED_IN_DENOMINATOR_AND_REVIEW_INVENTORY"
+}

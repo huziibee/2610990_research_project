@@ -35,3 +35,6 @@ protocol/seed17/history/** -text
 
 # Preserve the author-approved validation-contract bytes.
 protocol/seed17/output_validation_contract_v1.json -text
+
+# Five-seed protocol and scope records are exact-byte release members.
+protocol/five_seed/** -text

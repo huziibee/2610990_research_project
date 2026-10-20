@@ -8,14 +8,15 @@ import sys
 
 
 class ProcessClient:
-    def __init__(self, root, module, args, *, session=False):
+    def __init__(self, root, module, args, *, session=False, excluded_env=()):
         self.root, self.module, self.args, self.use_session = Path(root), module, args, session
+        self.excluded_env = tuple(excluded_env)
         self.process = None
         self.token = secrets.token_hex(32)
 
     def call(self, message):
         if self.process is None:
-            env = os.environ.copy()
+            env = {k:v for k,v in os.environ.items() if k not in self.excluded_env}
             if self.use_session:
                 env["SEED17_WORKER_SESSION"] = self.token
             self.process = subprocess.Popen([sys.executable, "-u", "-m", self.module, *map(str, self.args)],

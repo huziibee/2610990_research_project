@@ -1,0 +1,25 @@
+{
+  "authorization_verbatim": "you have my approval for anything pls debug and return to me the results we can put into our paper when done you have full scope-specific authorization from me",
+  "authorizer": "user_in_current_conversation",
+  "failures_and_unresolved_in_denominator": true,
+  "kind": "RECORDED_USER_DELEGATION",
+  "manuscript_writing_authorized": false,
+  "meaning": "The user delegates final hash binding after successful technical verification; this record is not a forged signature or a claim that protected runs have executed.",
+  "model": "gemini-3.5-flash-lite",
+  "original_references_must_remain_unchanged": true,
+  "policy_verbatim": "its fine the unsupported wording and ambigious cases should ideally be marked off so we can handle them after separately in case and as for the capability ones i think we will be fine i dont think we really need caability this is just ambigiouty handling not saftey u have my approval freeze things and run all things and return the results to me please",
+  "recorded_by": "ChatGPT",
+  "schema_version": 1,
+  "scopes": [
+    "five_seed_main_with_approved_clarification_only",
+    "five_seed_five_ablations_with_approved_clarification_only"
+  ],
+  "seeds": [
+    17,
+    29,
+    43,
+    71,
+    101
+  ],
+  "signature": null
+}

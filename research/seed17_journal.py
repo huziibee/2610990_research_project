@@ -87,8 +87,11 @@ class QuotaLedger:
                 raise ResourcePause()
         return values
 
+    def reservation_tokens(self, payload):
+        return len(json.dumps(payload, ensure_ascii=False).encode("utf-8")) + payload["generationConfig"]["maxOutputTokens"] + 1024
+
     def reserve(self, attempt_id, payload):
-        budget = len(json.dumps(payload, ensure_ascii=False).encode("utf-8")) + payload["generationConfig"]["maxOutputTokens"] + 1024
+        budget = self.reservation_tokens(payload)
         if budget > self.tpm:
             raise ResourcePause()
         waited = 0.0

@@ -110,7 +110,12 @@ def judge_packet(root,directory,packet,*,send=None,synthetic=False):
         if not bundle_path.is_relative_to(root) or not run_directory.is_relative_to(root/'runs/evaluation'):
             raise ValueError('Protected judge authorization path escaped registered workspace')
         bundle=read_json(bundle_path)
-        if (not check_readiness(root,bundle)['ready']
+        if authorization.get('study_id') == 'ambiguity-gemini35-five-seed-v1':
+            from research.five_seed_scoring import verify_judge_authorization
+            ready = verify_judge_authorization(root,directory,packet)
+        else:
+            ready = check_readiness(root,bundle)['ready']
+        if (not ready
                 or digest(bundle_path)!=authorization['bundle_sha256']
                 or digest(run_directory/'seal.json')!=authorization['seal_sha256']
                 or content_hash(packet) not in authorization['packet_sha256s']):
@@ -118,7 +123,12 @@ def judge_packet(root,directory,packet,*,send=None,synthetic=False):
         manifest=read_json(run_directory/'run_manifest.json')
         if manifest.get('bundle_sha256')!=authorization['bundle_sha256']:
             raise ValueError('Judging bundle differs from the sealed experiment launch bundle')
-        if manifest.get('phase','SEED17_MAIN')=='SEED17_ABLATIONS':
+        if authorization.get('study_id') == 'ambiguity-gemini35-five-seed-v1':
+            # Full source, raw archive, private context and packet-set audits
+            # have already run in verify_judge_authorization above.
+            if manifest.get('phase') != authorization['phase']:
+                raise ValueError('Wrong five-seed scoring scope')
+        elif manifest.get('phase','SEED17_MAIN')=='SEED17_ABLATIONS':
             from research.seed17_ablation import validate_authorization
             from research.seed17_ablation_audit import audit
             validate_authorization(root,bundle,manifest['ablation_authorization'])
@@ -140,7 +150,11 @@ def judge_packet(root,directory,packet,*,send=None,synthetic=False):
         # Registered development sessions share quota but not request identities.
         # Within a session, claims still prohibit retries after ambiguous sends.
         binding=content_hash({'configuration_binding':binding,'synthetic_session':directory.relative_to(root).as_posix()})
-    quota=None if send else QuotaLedger(root/'runs/resource_ledgers/gemma_developer_api')
+    if not synthetic and authorization.get('study_id') == 'ambiguity-gemini35-five-seed-v1':
+        from research.five_seed_quota import SettledQuotaLedger
+        quota=SettledQuotaLedger(root/'runs/resource_ledgers/gemma_developer_api',root=root)
+    else:
+        quota=None if send else QuotaLedger(root/'runs/resource_ledgers/gemma_developer_api')
     journal=RequestJournal(directory/'requests',binding,quota,allow_reasoning_tokens=True)
     out=directory/(packet_sha+'.json')
     record={'packet_sha256':packet_sha,'judge_config_sha256':config_sha,'rubric_sha256':rubric_sha,
@@ -170,6 +184,9 @@ def judge_packet(root,directory,packet,*,send=None,synthetic=False):
     if out.exists():
         if read_json(out)!=record:raise ValueError('Immutable judge record changed')
     else:write_json(out,record)
+    if quota is not None and hasattr(quota,'settle'):
+        for receipt in journal.receipts:
+            quota.settle(directory/'requests'/(receipt['attempt_id']+'.done.json'))
     return record
 
 
