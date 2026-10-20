@@ -26,6 +26,15 @@ class SchemaFeatureDiagnosticTests(unittest.TestCase):
         self.assertEqual(self.original_schema["properties"]["actions"]["items"]["properties"]["arguments"],a)
         self.assertNotEqual(selected_schema("fixed_string"),self.original_schema)
 
+    def test_legacy_fixed_schema_only_changes_schema(self):
+        wire=outgoing_wire(self.baseline,"fixed_string","legacy")
+        cfg=wire["generationConfig"]
+        self.assertNotIn("responseFormat",cfg)
+        self.assertEqual(cfg["responseMimeType"],"application/json")
+        self.assertEqual(cfg["responseJsonSchema"],selected_schema("fixed_string"))
+        self.assertEqual(cfg["seed"],17)
+        self.assertEqual(cfg["thinkingConfig"],self.baseline["generationConfig"]["thinkingConfig"])
+
     def test_all_wire_variants_use_rest_mime_enum_and_no_legacy(self):
         for case in CASES:
             with self.subTest(case=case):
