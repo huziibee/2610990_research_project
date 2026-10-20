@@ -6,6 +6,8 @@ on:
       - research/seed17-schema-isolation-20261020
     paths:
       - .github/workflows/seed17-fixed-schema-smoke.yml
+      - tools/diagnose_seed17_fixed_smoke.py
+      - tests/test_seed17_fixed_smoke_retry.py
   workflow_dispatch:
 
 permissions:
@@ -30,7 +32,7 @@ jobs:
           python-version: '3.11'
       - run: python -m pip install -r requirements.txt
       - name: Offline schema and evidence-path regression
-        run: python -m unittest tests.test_seed17_schema_features tests.test_seed17_fixed_smoke_diag -v
+        run: python -m unittest tests.test_seed17_schema_features tests.test_seed17_fixed_smoke_diag tests.test_seed17_fixed_smoke_retry -v
       - name: API secret configured
         run: test -n "$GEMINI_API_KEY"
       - name: Full invented two-answer S0/S1 diagnostics (NOT technical release evidence)
