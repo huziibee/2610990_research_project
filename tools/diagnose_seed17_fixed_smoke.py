@@ -8,10 +8,12 @@ production candidate, not final technical-freeze evidence.
 from __future__ import annotations
 import argparse
 import copy
+import hashlib
 import json
 from pathlib import Path
 import sys
 import time
+from unittest.mock import patch
 
 ROOT=Path(__file__).resolve().parents[1]
 sys.path.insert(0,str(ROOT))
@@ -21,6 +23,15 @@ from research.seed17_smoke_fixture import fixture
 from research.seed17_smoke_oracle import SmokeOracle
 from research.systems import ResearchSystem
 
+
+PROBE_REQUIRED_ARGUMENT_ADDENDUM=(
+    " Before declaring ACTION_READY, explicitly check EVERY argument described "
+    "as required by the chosen capability, not just the field most recently "
+    "answered. Every required argument must have a supplied and grounded value. "
+    "If even one required argument remains unknown, return CLARIFY with only "
+    "that still-unanswered field as critical and ask exactly one question. "
+    "Never assume unspecified required values from defaults or conventions."
+)
 
 def invented_fixed_wire(payload, model_input):
     output=copy.deepcopy(payload)
@@ -104,7 +115,9 @@ def run(output):
         "registered_study_protocol_changed":False,
         "synthetic_http_5xx_max_attempts_per_stage":3,
         "diagnostic_timeout_seconds":120,
-        "all_attempts_recorded":True})
+        "all_attempts_recorded":True,
+        "required_argument_prompt_addendum":"generic_required_fields_rechecked_each_turn",
+        "verified_catalog_scope":"INVENTED_SYNTHETIC_ONLY"})
     for system,seq in (("S0",1),("S1",2)):
         folder=output/system
         folder.mkdir()
@@ -124,9 +137,18 @@ def run(output):
                 identity,sender=GeminiBackend._request,events=events)
         backend=GeminiBackend(GenerationSettings(timeout_seconds=120),transport=send)
         try:
-            loop=ResearchSystem(backend).clarify(item,
-                lambda question,turn: oracle.answer(seq,item["record_id"],"branch-a",question,turn),
-                system=system,seed=17,max_turns=5)
+            from research import systems as systems_module
+            verified_catalog={"capabilities_sha256":hashlib.sha256(
+                item["capabilities"].encode("utf-8")).hexdigest(),
+                "catalog":[{"capability_id":"move",
+                    "required_arguments":["object","destination","time"]}],
+                "verified_by":"invented_fixture_author","context_derived":True}
+            with patch.object(systems_module,"TASK_PROMPT",
+                    systems_module.TASK_PROMPT+PROBE_REQUIRED_ARGUMENT_ADDENDUM):
+                loop=ResearchSystem(backend,
+                    verified_capability_catalog=verified_catalog).clarify(item,
+                    lambda question,turn: oracle.answer(seq,item["record_id"],"branch-a",question,turn),
+                    system=system,seed=17,max_turns=5)
             from research.clarification_matching import normalize_question
             rows=loop["trajectory"]
             good=(len(rows)==3 and [r["task"]["readiness"] for r in rows]==
@@ -140,7 +162,12 @@ def run(output):
             result["systems"][system]={"complete":good,"turns":[r["turn"] for r in rows],
                 "readiness":[r["task"]["readiness"] for r in rows],
                 "stop":loop["termination"],"call_count":len(backend.records),
-                "failed_call_count":sum(r["status"]!="OK" for r in backend.records)}
+                "failed_call_count":sum(r["status"]!="OK" for r in backend.records),
+                "turn_trace":[{"turn":r["turn"],"readiness":r["task"]["readiness"],
+                    "argument_names":sorted({n for a in r["task"]["actions"]
+                        for n in a["arguments"]}),
+                    "unresolved_fields":[x["field"] for x in r["task"]["unresolved"]]}
+                    for r in rows]}
         except (InferenceError,ValueError,KeyError,RuntimeError,TypeError) as exc:
             result["systems"][system]={"complete":False,"error_type":type(exc).__name__,
                 "error_code":exc.code if isinstance(exc,InferenceError) else "LOCAL_FAILURE",
