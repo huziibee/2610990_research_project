@@ -4,7 +4,7 @@
   "status": "REGISTERED_VALIDATION_CONTRACT",
   "capabilities": {
     "source": "The visible capabilities field only, or a separately human-attested catalog bound to its exact UTF-8 SHA-256.",
-    "visible_declaration_contract": "One explicit capability declaration id(arg: type, ...) followed by an explicit statement that both/all listed arguments are required. Every declared argument is required for ACTION_READY; argument types are enforced.",
+    "visible_declaration_contract": "One explicit typed capability signature followed by an explicit statement that both/all listed arguments are required, or an empty signature followed by an explicit statement that no arguments are required. Every declared argument is required for ACTION_READY; argument types are enforced.",
     "unsupported_or_ambiguous_input": "Fail closed. Do not infer identifiers or required fields from free prose, task outputs, or semantic references.",
     "semantic_evidence_entailment": "Not established by structural validation; score separately with the frozen semantic evaluator."
   },

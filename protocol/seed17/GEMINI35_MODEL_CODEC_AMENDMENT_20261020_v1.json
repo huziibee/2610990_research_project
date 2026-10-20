@@ -23,9 +23,10 @@
     }
   },
   "updated_artifacts": {
-    "protocol/gemma4_seed17_v1.json": "7ec1def251e84e191f4fd7537348e786630b6d0d201789d1b491ca577f5345b2",
-    "protocol/seed17/ablation_contract_v1.json": "f61222acfa5411ac7d8ccf081ca033b64206ef644141717b85ed5cbee3ca58c3",
-    "protocol/seed17/FREEZE.json": "4ecce8e54db55df1b69d00cf1c86554a8281971aabb4330faefc4c88c0841001"
+    "protocol/gemma4_seed17_v1.json": "339dc2dc7f4c56239e4518c609ce417fe64a74d46a1f430f95330f1cd14a0f63",
+    "protocol/seed17/ablation_contract_v1.json": "aec869cfd9abf61dccfd6a37ebe1302285a50e63fd97cef11b2e42a328434bd9",
+    "protocol/seed17/FREEZE.json": "6af3a1d8a4b94b60d39f282eea6972bfe7b9e5d2b9683fc61480eda4e08ac2bc",
+    "protocol/seed17/output_validation_contract_v1.json": "b388129369802f8c3b53210c3f2f09ef052a7e8749c5f1183863a42a59ad226e"
   },
   "changes": {
     "model": "gemini-3.5-flash-lite",

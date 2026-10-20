@@ -199,6 +199,14 @@ class PipelineTests(unittest.TestCase):
         with self.assertRaises(ValidationError):
             ResearchSystem(None)._catalog(prose)
 
+    def test_visible_no_argument_capability_requires_explicit_empty_contract(self):
+        no_arguments = {**CASE, "capabilities": "wait(). No arguments are required."}
+        self.assertEqual(ResearchSystem(None)._catalog(no_arguments), [{
+            "capability_id": "wait", "required_arguments": [], "argument_types": {}}])
+        ambiguous = {**CASE, "capabilities": "wait() is permitted."}
+        with self.assertRaises(ValidationError):
+            ResearchSystem(None)._catalog(ambiguous)
+
     def test_simulated_answer_only_after_question(self):
         clarify = copy.deepcopy(TASK)
         clarify.update(readiness="CLARIFY", clarification_question="Which shelf?",

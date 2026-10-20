@@ -85,6 +85,15 @@ class SemanticReferenceTests(unittest.TestCase):
         ref, context, route = example()
         self.assertIs(validate_reference(ref, context, route), ref)
 
+    def test_reference_dependency_contradictions_remain_available_to_judging(self):
+        ref, context, route = example()
+        ref["reference_task"]["dependencies"] = [
+            {"source": "/actions/0", "target": "/actions/0", "relation": "depends_on"}]
+        ref["evidence_claims"].append(
+            {"target": "/dependencies/0", "source": "instruction", "quote": "Move"})
+        ref["explicit_linked_dependencies"] = True
+        self.assertIs(validate_reference(ref, context, route), ref)
+
     def test_blank_worksheet_cannot_become_reference(self):
         _, context, route = example()
         with self.assertRaises(ValidationError):

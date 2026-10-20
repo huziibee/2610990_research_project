@@ -126,7 +126,11 @@ def validate_reference(reference, model_input, approved_route):
         raise ValidationError("Unsupported approved terminal route")
     task = reference["reference_task"]
     catalog = reference["verified_capability_catalog"]
-    validate_task(task, context, capability_catalog=catalog)
+    # Human references may contain relationship edges that the semantic judge
+    # must score, including contradictions. Validate their task shape here and
+    # leave consistency classification to the judge/graph diagnostics.
+    validate_task(task, context, capability_catalog=catalog,
+                  check_dependency_consistency=False)
     expected = "CLARIFY" if route == "clarify" else "ACTION_READY"
     if task["readiness"] != expected:
         raise ValidationError("Reference readiness must preserve approved terminal route")
@@ -163,7 +167,8 @@ def validate_reference(reference, model_input, approved_route):
     if not isinstance(alternative_claims, list) or len(alternative_claims) != len(alternatives):
         raise ValidationError("Each semantic alternative requires its own evidence claims")
     for alternative, claims in zip(alternatives, alternative_claims):
-        validate_task(alternative, context, capability_catalog=catalog)
+        validate_task(alternative, context, capability_catalog=catalog,
+                      check_dependency_consistency=False)
         if alternative["readiness"] != expected:
             raise ValidationError("Semantic alternative changes approved route")
         if {u["field"] for u in alternative["unresolved"] if u["critical"]} != set(unknowns):
@@ -186,7 +191,8 @@ def validate_reference(reference, model_input, approved_route):
             raise ValidationError("Each clarification turn must target an initially critical unknown")
         answers = [turn["answer"] for turn in turns]
         augmented = {**context, "dialogue": [*context["dialogue"], *answers]}
-        validate_task(branch["reference_task"], augmented, capability_catalog=catalog)
+        validate_task(branch["reference_task"], augmented, capability_catalog=catalog,
+                      check_dependency_consistency=False)
         if branch["reference_task"]["readiness"] != "ACTION_READY":
             raise ValidationError("Each answer branch requires a complete action-ready expected task")
         _claims(branch["evidence_claims"], branch["reference_task"], augmented, answers=answers)

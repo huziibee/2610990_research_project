@@ -15,7 +15,7 @@ from tools.run_experiment import main
 
 CASE = {"record_id": "SYNTHETIC-922", "instruction": "Move the blue cup to shelf A.",
         "scene": "A blue cup is on the desk. Shelf A is empty.", "dialogue": ["User: use shelf A."],
-        "capabilities": "move(object: object, destination: location) moves an object to a destination."}
+        "capabilities": "move(object: object, destination: location) moves an object to a destination. Both listed arguments are required."}
 TASK = {"intended_goal": "Move the blue cup to shelf A", "actions": [{
         "action_id": "a1", "capability_id": "move",
         "arguments": {

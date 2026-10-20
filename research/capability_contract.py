@@ -25,6 +25,8 @@ _REQUIRED = re.compile(
     r")\b",
     re.IGNORECASE,
 )
+_NO_ARGUMENTS = re.compile(r"\b(?:no arguments are required|requires no arguments|takes no arguments)\b",
+                           re.IGNORECASE)
 
 
 def catalog_from_visible_declaration(capabilities: str) -> list[dict]:
@@ -40,14 +42,18 @@ def catalog_from_visible_declaration(capabilities: str) -> list[dict]:
     if len(declarations) != 1:
         raise ValidationError("Capabilities need one explicit typed declaration or an attested catalog")
     match = declarations[0]
-    parts = match.group(2).split(",")
+    raw_arguments = match.group(2).strip()
+    parts = raw_arguments.split(",") if raw_arguments else []
     parsed = [_ARGUMENT.fullmatch(part) for part in parts]
-    if not parts or any(part is None for part in parsed):
+    if any(part is None for part in parsed):
         raise ValidationError("Capability arguments must use name: type declarations")
     names = [part.group(1) for part in parsed]
     if len(names) != len(set(names)):
         raise ValidationError("Capability declaration repeats an argument")
-    if not _REQUIRED.search(capabilities[match.end():]):
+    requirement_text = capabilities[match.end():]
+    if names and not _REQUIRED.search(requirement_text):
         raise ValidationError("Capability declaration must state that all listed arguments are required")
+    if not names and not _NO_ARGUMENTS.search(requirement_text):
+        raise ValidationError("An empty capability signature must explicitly state that no arguments are required")
     return [{"capability_id": match.group(1), "required_arguments": names,
              "argument_types": {part.group(1): part.group(2) for part in parsed}}]

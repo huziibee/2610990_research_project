@@ -3,7 +3,7 @@
   "study_id": "gemma4-seed17-v1",
   "status": "UNSIGNED",
   "config_path": "protocol/gemma4_seed17_v1.json",
-  "config_sha256": "7ec1def251e84e191f4fd7537348e786630b6d0d201789d1b491ca577f5345b2",
+  "config_sha256": "339dc2dc7f4c56239e4518c609ce417fe64a74d46a1f430f95330f1cd14a0f63",
   "authorized_by": "[Waiting for explicit authorization]",
   "signed_utc": null,
   "scope": "seed17_main_with_approved_clarification_only",
