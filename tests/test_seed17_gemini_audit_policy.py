@@ -35,3 +35,16 @@ class GeminiAuditPolicyTests(unittest.TestCase):
                     journal.transport({"stage": "test"}, lambda p, s: response)({}, GenerationSettings())
                 self.assertEqual(journal.receipts[0]["code"], "THINKING_POLICY_VIOLATION")
                 self.assertNotIn("private", str(journal.receipts))
+
+    def test_wire_canonical_observation_cannot_be_substituted(self):
+        import copy
+        import json
+        from tests.test_systems import TASK
+        from research.seed17_wire_codec import encode_task
+        from research.seed17_call_verification import decoded_call_output
+        call = {"settings": {"profile": "seed17_gemini35_wire_v1"}, "stage": "S0.direct",
+                "output_text": json.dumps(encode_task(TASK)), "canonical_decoded_output": copy.deepcopy(TASK)}
+        self.assertEqual(decoded_call_output(call), TASK)
+        call["canonical_decoded_output"]["intended_goal"] = "substituted"
+        with self.assertRaises(ValueError):
+            decoded_call_output(call)
