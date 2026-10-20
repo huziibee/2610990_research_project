@@ -49,12 +49,20 @@ def validate_author_release(root, workspace):
         if path.is_symlink() or digest(path) != expected:
             raise ValueError('Selected author release bytes changed')
     manifest = read_json(workspace/'manifest.json')
+    # The exact manifest digest above already binds its historical path strings.
+    # Replay the SAME public source bytes at registered repository-relative
+    # locations; never edit the original receipt, manifest or event history.
+    if set(manifest['pins']) != set(selected['source_bindings']):
+        raise ValueError('Author release source roles changed')
+    source_paths = {}
     for name, entry in selected['source_bindings'].items():
         original = manifest['pins'][name]
-        if (Path(original['path']).resolve() != (root/entry['path']).resolve()
-                or original['sha256'] != entry['sha256'] or digest(root/entry['path']) != entry['sha256']):
+        source = (root/entry['path']).resolve()
+        if (not source.is_relative_to(root) or original['sha256'] != entry['sha256']
+                or digest(source) != entry['sha256']):
             raise ValueError('Author release source binding changed')
-    evidence = validate_release(workspace)
+        source_paths[name] = source
+    evidence = validate_release(workspace, source_paths=source_paths)
     receipt, rows = read_json(receipt_path), read_jsonl(refs_path)
     if (receipt['actor'] != selected['author'] or not receipt['notes'].strip()
             or receipt['review_protocol'] != 'ONE_HUMAN_AUTHOR_APPROVAL_WITH_MODEL_ASSISTED_CANDIDATES'
@@ -63,7 +71,7 @@ def validate_author_release(root, workspace):
             or receipt['two_model_review_logs_authenticated'] is not False
             or evidence['clarification_branches'] != 26):
         raise ValueError('Incorrect author approval provenance or branch count')
-    store = AnnotationStore(workspace)
+    store = AnnotationStore(workspace, source_paths=source_paths)
     source_bindings = {}
     for row in rows:
         state = store.show(row['record_id'])

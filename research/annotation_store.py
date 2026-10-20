@@ -40,9 +40,12 @@ def _identity(actor):
 
 
 class AnnotationStore:
-    def __init__(self, root, validator=None):
+    def __init__(self, root, validator=None, *, source_paths=None):
         self.root = Path(root).resolve()
         self.validator = validator
+        if source_paths is not None and not isinstance(source_paths, dict):
+            raise ValueError("Explicit source path mapping must be a dictionary")
+        self.source_paths = None if source_paths is None else dict(source_paths)
 
     def initialize(self, source_path, routes_path, worksheet_path):
         """Pin exact input files; no semantic references are manufactured."""
@@ -97,11 +100,15 @@ class AnnotationStore:
         if (self.root / "manifest.json").is_symlink():
             raise ValueError("Unsafe annotation manifest")
         manifest = read_json(self.root / "manifest.json")
-        for pin in manifest["pins"].values():
-            if digest(pin["path"]) != pin["sha256"]:
+        if self.source_paths is not None and set(self.source_paths) != set(manifest["pins"]):
+            raise ValueError("Source location mapping must cover exactly the pinned roles")
+        paths = {name: Path(pin["path"] if self.source_paths is None else self.source_paths[name])
+                 for name, pin in manifest["pins"].items()}
+        for name, pin in manifest["pins"].items():
+            if digest(paths[name]) != pin["sha256"]:
                 raise ValueError("Pinned source changed; explicit new workspace required")
         for name, pin in manifest["pins"].items():
-            original = {row["record_id"]: row for row in read_jsonl(pin["path"])}
+            original = {row["record_id"]: row for row in read_jsonl(paths[name])}
             if original != manifest["records"][name]:
                 raise ValueError("Manifest source snapshot differs from pinned original")
         return manifest
