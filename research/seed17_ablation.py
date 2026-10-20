@@ -48,7 +48,7 @@ def prompt(ablation, stage):
         return CONTEXT_STAGE_PROMPT if stage == "S1.context" else CONTEXT_GROUND_PROMPT
     if stage == "S1.goal":
         return COMMON + 'Recover the intended goal. Return exactly {"intended_goal":"..."}; do not guess execution details.'
-    return NO_EXPLICIT_GROUNDING_PROMPT if ablation == "structured_grounding" else TASK_PROMPT + " Use the proposed goal as a hypothesis and ground each argument in input evidence."
+    return NO_EXPLICIT_GROUNDING_PROMPT if ablation == "structured_grounding" else TASK_PROMPT
 
 
 def intervention_record(root, ablation):
