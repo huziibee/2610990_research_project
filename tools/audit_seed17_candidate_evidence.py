@@ -91,8 +91,11 @@ def audit(directory, expected_model, *, require_live=True):
             body=json.loads(wire['payload']['contents'][0]['parts'][0]['text'])
             visible={k:v for k,v in original.items() if k!='record_id'}
             visible['dialogue']=list(visible['dialogue'])
-            for step in steps[:turn]:
-                visible['dialogue'] += ['Assistant clarification: '+step['question'],'User answer (simulated): '+step['answer']]
+            # qualify() already checks normalized eligibility and exact answers.
+            # Preserve the model's actual approved spelling/whitespace in dialogue.
+            for previous_turn in rows[1:turn+1]:
+                visible['dialogue'] += ['Assistant clarification: '+previous_turn['question'],
+                                       'User answer (simulated): '+previous_turn['answer']]
             check(call['input']==body['input']==visible, 'DIALOGUE_OR_SOURCE_CHANGED')
             expected_context = parse_document(calls[index-2]['output_text'])[0] if call['stage']=='S1.ground' else None
             check(body['stage_context']==call['stage_context']==expected_context, 'GOAL_CONTEXT_MISMATCH')
