@@ -1,0 +1,210 @@
+name: Final five-seed Live compatibility and verified qualification
+on:
+  push:
+    branches: [research/five-seed-finalization-20261020]
+    paths: [.github/workflows/five-seed-live-policy-fix.yml]
+  workflow_dispatch:
+permissions:
+  contents: write
+concurrency:
+  group: five-seed-final-integration-and-live
+  cancel-in-progress: false
+jobs:
+  integrate-and-qualify:
+    runs-on: ubuntu-latest
+    timeout-minutes: 45
+    env:
+      PYTHONPATH: .
+      VERIFY: runs/readiness/five_seed_final_${{ github.run_id }}
+      MAIN_MOCK: runs/mock_five_seed/final_main_${{ github.run_id }}
+      ABLATION_MOCK: runs/mock_five_seed/final_ablations_${{ github.run_id }}
+      SMOKE: runs/development/five_seed_final_${{ github.run_id }}
+      JUDGE: runs/judgments/five_seed_final_${{ github.run_id }}
+      TOKENIZER: runs/readiness/five_seed_final_tokenizer_${{ github.run_id }}
+    steps:
+      - uses: actions/checkout@v4
+        with: {fetch-depth: 2}
+      - uses: actions/setup-python@v5
+        with: {python-version: '3.11'}
+      - run: python -m pip install -r requirements.txt
+      - name: Apply exact public compatibility patch; no private data or credentials in patch
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          python - <<'PY'
+          import base64,hashlib,json,lzma,os,re,subprocess
+          from pathlib import Path
+          from urllib.request import Request,urlopen
+          repo='huziibee/2610990_research_project'
+          blob='441cb99fc7aa7d6a82f08b4ad87a1a23652e7355'
+          assert os.environ['GITHUB_REPOSITORY']==repo
+          assert os.environ['GITHUB_REF_NAME']=='research/five-seed-finalization-20261020'
+          req=Request(f'https://api.github.com/repos/{repo}/git/blobs/{blob}',
+              headers={'Authorization':'Bearer '+os.environ['GH_TOKEN'],'Accept':'application/vnd.github+json'})
+          with urlopen(req,timeout=30) as response:document=json.load(response)
+          assert document['encoding']=='base64'
+          raw=base64.b64decode(document['content'])
+          assert hashlib.sha1(b'blob '+str(len(raw)).encode()+b'\0'+raw).hexdigest()==blob
+          assert len(raw)==7312
+          assert hashlib.sha256(raw).hexdigest()=='148405f46777b6958fb1a19445c067dda04165db8f4f9ba5dee565faad2d0669'
+          patch=lzma.decompress(raw,memlimit=134217728)
+          assert len(patch)==25795
+          assert hashlib.sha256(patch).hexdigest()=='6222d203ec46d42022c4c178abb7a60200b7855d98134119fc90bca9f997f5e5'
+          allowed='''docs/FIVE_SEED_EXECUTION.md protocol/five_seed/study_v1.json research/five_seed_config.py research/five_seed_quota.py research/five_seed_scoring.py research/five_seed_token_count.py research/seed17_judge.py tests/test_five_seed_token_count.py tools/check_five_seed_tokenizer.py tools/finish_five_seed.py tests/test_five_seed_live_quota_policy.py tests/test_five_seed_judge_checkpoints.py'''.split()
+          names=re.findall(r'^diff --git a/(\S+) b/(\S+)$',patch.decode(),re.M)
+          assert len(names)==12 and {a for a,b in names}==set(allowed)
+          assert all(a==b for a,b in names)
+          p=Path('/tmp/five-seed-live-policy.patch');p.write_bytes(patch)
+          subprocess.run(['git','apply','--check',str(p)],check=True)
+          subprocess.run(['git','apply',str(p)],check=True)
+          Path('/tmp/five-seed-live-policy-paths.json').write_text(json.dumps(allowed))
+          print('VERIFIED_PUBLIC_PATCH_APPLIED; no protected predictions')
+          PY
+      - name: Full tests and complete 1000-main and 2500-ablation mock cohorts in parallel
+        id: offline
+        run: |
+          python - <<'PY'
+          import json,os,re,subprocess,sys
+          from pathlib import Path
+          logs=Path(os.environ['VERIFY']);logs.mkdir(parents=True)
+          subprocess.run([sys.executable,'Data/verify_package.py'],check=True)
+          subprocess.run([sys.executable,'-m','compileall','-q','research','tools','tests'],check=True)
+          commands={'regression':[sys.executable,'-m','unittest','discover','-s','tests','-v'],
+              'main_1000':[sys.executable,'tools/run_five_seed.py','--mock','--phase','main','--output',os.environ['MAIN_MOCK']],
+              'ablations_2500':[sys.executable,'tools/run_five_seed.py','--mock','--phase','ablations','--output',os.environ['ABLATION_MOCK']]}
+          running={}
+          for name,cmd in commands.items():
+              f=(logs/(name+'.log')).open('w',encoding='utf-8')
+              running[name]=(subprocess.Popen(cmd,stdout=f,stderr=subprocess.STDOUT),f)
+          status={}
+          for name,(proc,f) in running.items():
+              status[name]=proc.wait();f.close()
+              text=(logs/(name+'.log')).read_text()
+              print(name,'exit',status[name])
+              for line in text.splitlines():
+                  if re.match(r'Ran \d+ tests|FAILED|OK$',line):print(line)
+              print('\n'.join(text.splitlines()[-8:]))
+          (logs/'exit_codes.json').write_text(json.dumps(status,indent=2)+'\n')
+          if any(status.values()):raise SystemExit(2)
+          print('FULL_OFFLINE_AND_MOCKS_PASS; PROTECTED_PREDICTIONS=0')
+          PY
+      - name: Publish exactly tested code without force or concurrent overwrite
+        id: publish
+        run: |
+          python - <<'PY'
+          import json,os,subprocess
+          from pathlib import Path
+          branch='research/five-seed-finalization-20261020'
+          head=subprocess.check_output(['git','rev-parse','HEAD'],text=True).strip()
+          assert head==os.environ['GITHUB_SHA']
+          remote=subprocess.check_output(['git','ls-remote','origin','refs/heads/'+branch],text=True).split()[0]
+          if remote!=head:raise SystemExit('Branch advanced during validation; no overwrite')
+          paths=json.loads(Path('/tmp/five-seed-live-policy-paths.json').read_text())
+          subprocess.run(['git','add','--',*paths],check=True)
+          names=subprocess.check_output(['git','diff','--cached','--name-only'],text=True).splitlines()
+          assert names and set(names)<=set(paths)
+          subprocess.run(['git','-c','core.whitespace=cr-at-eol','diff','--cached','--check'],check=True)
+          subprocess.run(['git','config','user.name','github-actions[bot]'],check=True)
+          subprocess.run(['git','config','user.email','41898282+github-actions[bot]@users.noreply.github.com'],check=True)
+          subprocess.run(['git','commit','-m','Fix unsupported Live tokenizer preflight and preserve judge no-reroll checkpoint integrity'],check=True)
+          subprocess.run(['git','push','origin','HEAD:refs/heads/'+branch],check=True)
+          final=subprocess.check_output(['git','rev-parse','HEAD'],text=True).strip()
+          (Path(os.environ['VERIFY'])/'published_commit.txt').write_text(final+'\n')
+          with open(os.environ['GITHUB_OUTPUT'],'a') as f:f.write('commit='+final+'\n')
+          print('PUBLISHED_TESTED_CODE',final)
+          PY
+      - name: Official current-code real S0/S1 two-answer smoke
+        id: smoke
+        continue-on-error: true
+        env:
+          GEMINI_API_KEY: ${{ secrets.GEMINI_API_KEY }}
+        run: python tools/run_five_seed.py --live-smoke --output "$SMOKE"
+      - name: Independently verify nine first-attempt calls and paired trajectories
+        id: smoke_audit
+        if: ${{ always() && steps.publish.outcome == 'success' }}
+        continue-on-error: true
+        run: |
+          python - <<'PY'
+          import json,os
+          from pathlib import Path
+          from research.five_seed_release import verify_smoke
+          result=verify_smoke(Path.cwd(),Path(os.environ['SMOKE']))
+          print('ACTUAL_LIVE_SMOKE_VERIFIED',json.dumps(result,sort_keys=True))
+          PY
+      - name: Fresh five-fixture Live semantic calibration
+        id: judge
+        continue-on-error: true
+        env:
+          GEMINI_API_KEY: ${{ secrets.GEMINI_API_KEY }}
+        run: python tools/calibrate_seed17_judge.py --live-synthetic --output "$JUDGE"
+      - name: Verify actual calibration receipts and exact current judge code
+        id: judge_audit
+        if: ${{ always() && steps.publish.outcome == 'success' }}
+        continue-on-error: true
+        run: |
+          python - <<'PY'
+          import json,os
+          from pathlib import Path
+          from research.integrity import read_json,digest
+          from research.seed17_judge_calibration import verify_calibration
+          p=Path(os.environ['JUDGE'])/'calibration.json'
+          valid=verify_calibration(Path.cwd(),read_json(p),require_live=True)
+          print('ACTUAL_LIVE_CALIBRATION',json.dumps({'verified':valid,'sha256':digest(p)}))
+          if not valid:raise SystemExit(2)
+          PY
+      - name: Verify supported tokenizer and honest exclusive-window Live allowance
+        id: tokenizer
+        continue-on-error: true
+        env:
+          GEMINI_API_KEY: ${{ secrets.GEMINI_API_KEY }}
+        run: python tools/check_five_seed_tokenizer.py --live-synthetic --output "$TOKENIZER"
+      - name: Export actual executed source and qualification step outcomes
+        if: always()
+        env:
+          PUBLISHED: ${{ steps.publish.outputs.commit }}
+          OFFLINE_OUTCOME: ${{ steps.offline.outcome }}
+          SMOKE_OUTCOME: ${{ steps.smoke.outcome }}
+          SMOKE_AUDIT_OUTCOME: ${{ steps.smoke_audit.outcome }}
+          JUDGE_OUTCOME: ${{ steps.judge.outcome }}
+          JUDGE_AUDIT_OUTCOME: ${{ steps.judge_audit.outcome }}
+          TOKENIZER_OUTCOME: ${{ steps.tokenizer.outcome }}
+        run: |
+          python - <<'PY'
+          import json,os,subprocess
+          from pathlib import Path
+          p=Path(os.environ['VERIFY']);p.mkdir(parents=True,exist_ok=True)
+          with (p/'source.zip').open('wb') as stream:
+              subprocess.run(['git','archive','--format=zip','HEAD'],stdout=stream,check=True)
+          summary={'executing_commit':subprocess.check_output(['git','rev-parse','HEAD'],text=True).strip(),
+              'published_commit':os.environ['PUBLISHED'],'workflow_trigger_commit':os.environ['GITHUB_SHA'],
+              'protected_predictions_executed':False,
+              'outcomes':{k:os.environ[k] for k in ('OFFLINE_OUTCOME','SMOKE_OUTCOME','SMOKE_AUDIT_OUTCOME','JUDGE_OUTCOME','JUDGE_AUDIT_OUTCOME','TOKENIZER_OUTCOME')}}
+          (p/'qualification_summary.json').write_text(json.dumps(summary,indent=2)+'\n')
+          print(json.dumps(summary,sort_keys=True))
+          PY
+      - name: Preserve complete invented-only evidence, not private references
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: five-seed-final-qualification-${{ github.run_id }}
+          path: |
+            ${{ env.VERIFY }}/
+            ${{ env.MAIN_MOCK }}/
+            ${{ env.ABLATION_MOCK }}/
+            ${{ env.SMOKE }}/
+            ${{ env.JUDGE }}/
+            ${{ env.TOKENIZER }}/
+            runs/resource_ledgers/gemma_developer_api/
+          retention-days: 14
+          if-no-files-found: error
+      - name: Fail closed if any final qualification did not succeed
+        if: always()
+        run: |
+          test '${{ steps.offline.outcome }}' = success
+          test '${{ steps.publish.outcome }}' = success
+          test '${{ steps.smoke.outcome }}' = success
+          test '${{ steps.smoke_audit.outcome }}' = success
+          test '${{ steps.judge.outcome }}' = success
+          test '${{ steps.judge_audit.outcome }}' = success
+          test '${{ steps.tokenizer.outcome }}' = success
+          echo 'ALL_FINAL_QUALIFICATION_CHECKS_PASSED; PROTECTED_PREDICTIONS_EXECUTED=FALSE'
