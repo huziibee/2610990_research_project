@@ -44,7 +44,7 @@
     "max_clarification_turns": 5,
     "max_transport_retries": 0,
     "retry_malformed_output": false,
-    "request_timeout_seconds": 90
+    "request_timeout_seconds": 300
   },
   "schedules": {
     "main": "protocol/seed17/main_200.jsonl",
