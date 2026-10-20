@@ -198,8 +198,12 @@ def execute(directory, manifest, inputs, model, oracle, *, resume=False,
                     if previous["status"] == "error":
                         reason = "ERROR"
                         break
-                    task = (validate_task(previous["task"], current) if validate_prediction is None
-                            else validate_prediction(previous["task"], current, planned))
+                    if validate_prediction is None:
+                        from research.systems import ResearchSystem
+                        catalog = ResearchSystem(None)._catalog(current)
+                        task = validate_task(previous["task"], current, capability_catalog=catalog)
+                    else:
+                        task = validate_prediction(previous["task"], current, planned)
                     if task["readiness"] == "ACTION_READY":
                         reason = "ACTION_READY"
                         break

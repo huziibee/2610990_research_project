@@ -39,6 +39,7 @@
   "denominators": "100 source cases per intervention; retain failures and unresolved judgments; case-level pairing against S1; no between-seed variability estimate",
   "profile": "seed17_gemini35_wire_v1",
   "structured_output": "lossless_named_arguments_codec_and_strict_local_validation",
+  "output_validation_contract": "protocol/seed17/output_validation_contract_v1.json",
   "responseFormat": {
     "text": {
       "mimeType": "APPLICATION_JSON"

@@ -57,6 +57,32 @@ class DependencyConsistencyTests(unittest.TestCase):
         bad["dependencies"][0]["source"] = "/actions/999"
         with self.assertRaises(ValidationError):
             validate_task(bad, CASE, check_dependency_consistency=False)
+
+    def test_self_and_cycle_edges_are_rejected_by_baseline_and_exposed_by_ablation(self):
+        self_edge = copy.deepcopy(TASK)
+        argument = next(iter(self_edge["actions"][0]["arguments"]))
+        self_edge["dependencies"] = [{
+            "source": f"/actions/0/arguments/{argument}",
+            "target": f"/actions/0/arguments/{argument}", "relation": "depends_on"}]
+        with self.assertRaises(ValidationError):
+            validate_task(self_edge, CASE)
+        self.assertIs(validate_task(self_edge, CASE, check_dependency_consistency=False), self_edge)
+
+        cycle = copy.deepcopy(TASK)
+        second = copy.deepcopy(cycle["actions"][0])
+        second["action_id"] = "a2"
+        cycle["actions"].append(second)
+        first_argument = next(iter(cycle["actions"][0]["arguments"]))
+        second_argument = next(iter(cycle["actions"][1]["arguments"]))
+        cycle["dependencies"] = [
+            {"source": f"/actions/0/arguments/{first_argument}",
+             "target": f"/actions/1/arguments/{second_argument}", "relation": "depends_on"},
+            {"source": f"/actions/1/arguments/{second_argument}",
+             "target": f"/actions/0/arguments/{first_argument}", "relation": "depends_on"},
+        ]
+        with self.assertRaises(ValidationError):
+            validate_task(cycle, CASE)
+        self.assertIs(validate_task(cycle, CASE, check_dependency_consistency=False), cycle)
         bad = contradictory_task()
         bad["dependencies"][0]["relation"] = "unsupported"
         with self.assertRaises(ValidationError):

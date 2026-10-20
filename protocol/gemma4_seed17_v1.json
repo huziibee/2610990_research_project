@@ -108,5 +108,6 @@
   },
   "execution_release_policy": "hash_bound_technical_freeze_plus_separate_explicit_authorization",
   "reasoning_usage_policy": "Provider-reported reasoning tokens are permitted and recorded; minimal thinking is not a zero-reasoning guarantee.",
-  "design_amendment": "protocol/seed17/GEMINI35_MODEL_CODEC_AMENDMENT_20261020_v1.json"
+  "design_amendment": "protocol/seed17/GEMINI35_MODEL_CODEC_AMENDMENT_20261020_v1.json",
+  "output_validation_contract": "protocol/seed17/output_validation_contract_v1.json"
 }

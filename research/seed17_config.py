@@ -9,6 +9,7 @@ def validate_config(config):
             or config["model"]["structured_output"] != "lossless_named_arguments_codec_and_strict_local_validation"
             or config.get("reasoning_usage_policy") != "Provider-reported reasoning tokens are permitted and recorded; minimal thinking is not a zero-reasoning guarantee."
             or config.get("design_amendment") != "protocol/seed17/GEMINI35_MODEL_CODEC_AMENDMENT_20261020_v1.json"
+            or config.get("output_validation_contract") != "protocol/seed17/output_validation_contract_v1.json"
             or config["candidate_generation_config"] != {"temperature": .7, "topP": .95, "candidateCount": 1,
                 "maxOutputTokens": 4096, "responseFormat": {"text": {"mimeType": "APPLICATION_JSON"}},
                 "thinkingConfig": {"thinkingLevel": "minimal", "includeThoughts": False}}

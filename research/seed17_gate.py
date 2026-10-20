@@ -279,7 +279,7 @@ def _check_readiness(root, bundle=None):
     fingerprints = snapshot.get("files", {})
     required_files = {str(p.relative_to(root)).replace("\\", "/") for directory in ("research", "tools", "tests")
                       for p in (root / directory).rglob("*.py")}
-    required_files |= {"protocol/gemma4_seed17_v1.json", "protocol/seed17/FREEZE.json", "protocol/seed17/AUTHOR_APPROVED_AGENT_ASSISTED_v1.json", "protocol/seed17/judge_v1.json", "protocol/seed17/judge_rubric_v1.json"}
+    required_files |= {"protocol/gemma4_seed17_v1.json", "protocol/seed17/FREEZE.json", "protocol/seed17/AUTHOR_APPROVED_AGENT_ASSISTED_v1.json", "protocol/seed17/judge_v1.json", "protocol/seed17/judge_rubric_v1.json", "protocol/seed17/output_validation_contract_v1.json"}
     required_files |= {"requirements.txt", ".github/workflows/research-tests.yml", ".github/workflows/literature-tests.yml"}
     required_files |= {"protocol/seed17/main_200.jsonl", "protocol/seed17/ablations_500.jsonl", "protocol/run_schedule_1000.jsonl"}
     if bundle.get("schema_version") == 5:
@@ -480,7 +480,8 @@ def check_readiness(root, bundle=None):
                             for p in (root / folder).rglob("*.py")}
             if any(manifest.get("code_fingerprints") != current_code for manifest in (main_manifest, ablation_manifest)):
                 raise ValueError("Mock execution did not exercise the current complete implementation")
-            for name in ("protocol/seed17/ablation_contract_v1.json", "protocol/seed17/analysis_contract_v1.json"):
+            for name in ("protocol/seed17/ablation_contract_v1.json", "protocol/seed17/analysis_contract_v1.json",
+                         "protocol/seed17/output_validation_contract_v1.json"):
                 if snapshot["files"][name] != digest(root / name):
                     raise ValueError("Infrastructure contracts missing from tested snapshot")
             check("downstream_infrastructure", True, "")

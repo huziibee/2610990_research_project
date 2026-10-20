@@ -141,7 +141,9 @@ def audit(directory, *, synthetic=False):
                 elif row["answer"] is not None or row["question"] is not None:
                     raise ValueError("Turn zero contains an answer")
                 if row["status"] == "ok":
-                    validate_task(row["task"], current)
+                    from research.systems import ResearchSystem
+                    catalog = ResearchSystem(None)._catalog(current)
+                    validate_task(row["task"], current, capability_catalog=catalog)
                 elif row["status"] != "error" or row["task"] is not None:
                     raise ValueError("Malformed failed prediction")
                 check_calls(row, current, system, seq)

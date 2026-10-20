@@ -53,7 +53,10 @@ class ResearchSystem:
     def _catalog(self, model_input):
         wrapper = self.verified_capability_catalog
         if wrapper is None:
-            return None
+            # The visible input may itself follow the narrow, versioned typed
+            # declaration contract. Free prose is never mined heuristically.
+            from research.capability_contract import catalog_from_visible_declaration
+            return catalog_from_visible_declaration(model_input["capabilities"])
         if (not isinstance(wrapper, dict)
                 or set(wrapper) != {"capabilities_sha256", "catalog", "verified_by", "context_derived"}
                 or wrapper["context_derived"] is not True
@@ -62,11 +65,22 @@ class ResearchSystem:
                 or not isinstance(wrapper["catalog"], list)):
             raise ValidationError("Capability catalog must be human verified and bound to current visible capabilities")
         for entry in wrapper["catalog"]:
-            if (not isinstance(entry, dict) or set(entry) != {"capability_id", "required_arguments"}
+            if (not isinstance(entry, dict) or set(entry) not in (
+                    {"capability_id", "required_arguments"},
+                    {"capability_id", "required_arguments", "argument_types"})
                     or not isinstance(entry["capability_id"], str) or not entry["capability_id"].strip()
                     or not isinstance(entry["required_arguments"], list)):
                 raise ValidationError("Malformed verified capability catalog")
-            for literal in [entry["capability_id"], *entry["required_arguments"]]:
+            literals = [entry["capability_id"], *entry["required_arguments"]]
+            if "argument_types" in entry:
+                if (not isinstance(entry["argument_types"], dict)
+                        or any(not isinstance(name, str) or not name
+                               or kind not in ("object", "location", "time", "string", "number", "boolean")
+                               for name, kind in entry["argument_types"].items())):
+                    raise ValidationError("Malformed verified capability argument types")
+                literals.extend(entry["argument_types"].keys())
+                literals.extend(entry["argument_types"].values())
+            for literal in literals:
                 if (not isinstance(literal, str) or not literal.strip()
                         or not re.search(r"(?<!\w)" + re.escape(literal) + r"(?!\w)", model_input["capabilities"])):
                     raise ValidationError("Catalog identifiers must occur literally in visible capability descriptions")
