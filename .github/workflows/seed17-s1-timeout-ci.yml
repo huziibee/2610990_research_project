@@ -1,8 +1,5 @@
 name: Seed17 invented S1 grounding timeout diagnostic
 on:
-  push:
-    branches:
-      - research/seed17-provider-ci-20261020
   workflow_dispatch:
 permissions:
   contents: read
