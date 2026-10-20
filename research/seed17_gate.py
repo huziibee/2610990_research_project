@@ -142,7 +142,7 @@ def _check_readiness(root, bundle=None):
     for name, reason in (
         ("author_reviewed_gold_100", "Exact selected author receipt, 100 complete-task references and 26 branches must validate; independent approval is not claimed"),
         ("source_ledger_binding", "Receipt, export, source pins, all revisions and author-adoption ledger history must agree"),
-        ("clarification_matching_rules", "Canonical-only matching must exactly project the approved questions; extra variants are not authorized"),
+        ("clarification_matching_rules", "Versioned field-anchored matching policy must exactly project approved canonical questions and fail closed on ambiguity"),
         ("branches_and_subgroups", "All 26 branches and 100 explicit eligibility labels must match the author-approved release")):
         check(name, author_release is not None, reason)
     for system in ("S0", "S1"):

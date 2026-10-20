@@ -31,8 +31,8 @@ def cohort(count=100, *, multi_turn=False):
             "final_approval": {"actor": "SYNTHETIC_FIXTURE_APPROVER", "notes": "Invented test fixture"},
             "reference": reference}
         rule_cases.append({"record_id": cid, "reference_revision": 1, "branches": [
-            {"branch_id": "branch-a", "turns": [{"turn": i, "field": t["field"], "question": t["question"],
-                                                   "question_variants": [t["question"]]} for i, t in enumerate(turns, 1)]}
+            {"branch_id": "branch-a", "turns": [{"turn": i, "field": t["field"],
+                                                   "canonical_question": t["question"]} for i, t in enumerate(turns, 1)]}
         ] if depth else []})
     export_hash = content_hash(list(references.values()))
     rules = {"reference_sha256": export_hash, "method": METHOD, "independently_verified": True,

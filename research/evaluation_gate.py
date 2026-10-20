@@ -110,7 +110,7 @@ def _check_readiness(root, bundle=None):
     matching_by_id = {item["record_id"]: item for item in matching_rows}
     matching_review = matching.get("independent_review", {})
     matching_bound = (bool(references_path) and matching.get("reference_sha256") == digest(references_path)
-                      and matching.get("method") == "exact_normalized_approved_question_variants_v1"
+                      and matching.get("method") == "anchored_question_intent_v2"
                       and matching.get("independently_verified") is True
                       and len(matching_rows) == 100 and set(matching_by_id) == expected_ids
                       and bool(matching_review.get("preparer_id")) and bool(matching_review.get("verifier_id"))
@@ -144,15 +144,13 @@ def _check_readiness(root, bundle=None):
             rule_turns = rule.get("turns", [])
             matching_bound = matching_bound and len(rule_turns) == len(branch_turns)
             for number, (branch_turn, rule_turn) in enumerate(zip(branch_turns, rule_turns), 1):
-                variants = rule_turn.get("question_variants", [])
-                matching_bound = (matching_bound and rule_turn.get("question") == branch_turn.get("question")
+                canonical_question = rule_turn.get("canonical_question")
+                matching_bound = (matching_bound and canonical_question == branch_turn.get("question")
                                   and rule_turn.get("field") == branch_turn.get("field")
                                   and rule_turn.get("turn") == number
-                                  and isinstance(variants, list) and bool(variants)
-                                  and all(isinstance(q, str) and bool(q.strip()) for q in variants)
-                                  and branch_turn.get("question") in variants)
+                                  and set(rule_turn) == {"turn", "field", "canonical_question"})
     check("clarification_matching_rules", matching_bound,
-          "Reviewed exact question variants must bind to every actual frozen branch, question, and unresolved field")
+          "Versioned anchored-intent rules must bind only each actual frozen canonical question, field, and turn")
     check("branches_and_subgroups", len(coverage_rows) == 100
           and {r.get("record_id") for r in coverage_rows} == expected_ids
           and coverage.get("independently_verified") is True and coverage_bound
