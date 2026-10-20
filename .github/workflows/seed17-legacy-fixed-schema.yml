@@ -1,0 +1,56 @@
+name: Seed17 legacy fixed typed schema diagnostic
+
+on:
+  push:
+    branches:
+      - research/seed17-schema-isolation-20261020
+    paths:
+      - .github/workflows/seed17-legacy-fixed-schema.yml
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: seed17-legacy-fixed-schema-invented
+  cancel-in-progress: false
+
+jobs:
+  invented-only:
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    env:
+      PYTHONPATH: .
+      GEMINI_API_KEY: ${{ secrets.GEMINI_API_KEY }}
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+      - run: python -m pip install -r requirements.txt
+      - name: Assert legacy wire settings unchanged
+        run: python -m unittest tests.test_seed17_schema_features -v
+      - name: Secret configured
+        run: test -n "$GEMINI_API_KEY"
+      - name: Fixed-name typed string legacy structured output
+        run: python tools/diagnose_seed17_schema_features.py --live-synthetic --case fixed_string --wire-mode legacy --output runs/provider_diagnostics/legacy_fixed_string_${{ github.run_id }}
+      - name: Save invented provider receipts
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: seed17-legacy-fixed-schema-${{ github.run_id }}
+          path: runs/provider_diagnostics/legacy_fixed_string_*/
+          retention-days: 14
+          if-no-files-found: warn
+      - name: Verify test conclusion from immutable result
+        if: always()
+        run: |
+          python - <<'PY'
+          import json,glob
+          files=glob.glob("runs/provider_diagnostics/legacy_fixed_string_*/fixed_string/result.json")
+          for p in files:
+              x=json.load(open(p,encoding="utf-8"))
+              print("LEGACY_TYPED_SCHEMA_RESULT",json.dumps({k:x.get(k) for k in
+                  ("status","wire_mode","code","http_status","stage_finish_reasons","output_tokens")},sort_keys=True))
+          print("PROTECTED_EXECUTION=FALSE; CURRENT_PROTOCOL_UNCHANGED=TRUE")
+          PY
