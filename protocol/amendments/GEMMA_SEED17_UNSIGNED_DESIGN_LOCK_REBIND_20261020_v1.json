@@ -1,0 +1,25 @@
+{
+  "amendment_id": "gemma_seed17_unsigned_design_lock_rebind_20261020_v1",
+  "scope": "Repair a stale unsigned lock hash; unchanged committed protocol; no execution authorization",
+  "reason": "Commit 1d03c9c905489b61f444448793d96a66db87d7c8 changed the registered request timeout from 90 to 300 seconds but did not update FREEZE.json. The stale lock still bound the protocol at 6ad07ba2fb6de539ff6e302a559778a61d71b470. Rebind only config_sha256 to the exact existing committed protocol bytes; do not normalize the protocol or private references.",
+  "protocol_change_commit": "1d03c9c905489b61f444448793d96a66db87d7c8",
+  "protocol_path": "protocol/gemma4_seed17_v1.json",
+  "protocol_sha256": "db2ca7473d38c0b8e45f516bac395afeda3766e16503c6f6d371f1f16c399c67",
+  "prior_protocol_sha256": "34e3f4d0b1a4ff0219bc03387bbff0ccb5bfcdf92f35b376a7ea098118ecc656",
+  "preserved_lock": {
+    "path": "protocol/amendments/pre_design_lock_rebind_20261020_v1/FREEZE.json",
+    "sha256": "0130c3d956173a7caffcb0a00f6631ec0372d98d7e32773e6246371d98ec5326"
+  },
+  "updated_lock": {
+    "path": "protocol/seed17/FREEZE.json",
+    "sha256": "9804e5a35fb1236f69079cbe203ead0df07e89570d820c981937e678ae0dcffc"
+  },
+  "changed_lock_fields": [
+    "config_sha256"
+  ],
+  "protocol_bytes_changed": false,
+  "reference_bytes_changed": false,
+  "protected_execution_authorized": false,
+  "status_changed": false,
+  "signature_changed": false
+}

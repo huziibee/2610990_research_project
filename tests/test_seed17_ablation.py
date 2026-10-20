@@ -96,19 +96,31 @@ class Seed17AblationTests(unittest.TestCase):
         with self.assertRaises(ValueError):audit(output,synthetic=True)
 
     def test_http_failure_is_durable_and_never_retried(self):
+        for status in (500, 502, 503, 504):
+            with self.subTest(http_status=status):
+                self.check_http_failure_is_durable_and_never_retried(status)
+
+    def check_http_failure_is_durable_and_never_retried(self, http_status):
         output,inputs,oracle,manifest=self.make_run(1)
         sends=[]
         def failed(payload,settings):
             sends.append(payload)
-            raise InferenceError("synthetic",code="HTTP_FAILURE",http_status=500)
+            raise InferenceError("synthetic",code="HTTP_FAILURE",http_status=http_status)
         model=self.model(output,manifest,failed)
         self.assertEqual(run(output,manifest,inputs,model,oracle)["status"],"PAUSED")
         self.assertEqual(len(sends),1)
         first=load(output/"initial/000001.json")
         self.assertEqual(first["status"],"error")
+        receipts=list((output/"requests").glob("*.done.json"))
+        self.assertEqual(len(receipts),1)
+        receipt=read_json(receipts[0])
+        self.assertEqual(receipt["status"],"ERROR")
+        self.assertEqual(receipt["http_status"],http_status)
+        failed_receipt_hash=digest(receipts[0])
         # Explicit resume advances the remaining plan; the failed request stays in denominator.
         self.assertEqual(run(output,manifest,inputs,self.model(output,manifest),oracle,resume=True)["status"],"COMPLETE")
         self.assertEqual(len(sends),1)
+        self.assertEqual(digest(receipts[0]),failed_receipt_hash)
         report=audit(output,synthetic=True)[0]
         self.assertEqual(sum(report["initial_failures"].values()),1)
 
