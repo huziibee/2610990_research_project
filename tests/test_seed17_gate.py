@@ -48,6 +48,53 @@ class Seed17GateTests(unittest.TestCase):
                 self.assertIn("live_multi_turn", failed)
                 self.assertIn("author_reviewed_gold_100", failed)
 
+    def test_live_smoke_gate_uses_registered_shared_grounding_prompt(self):
+        # Invented provider-shaped observations exercise the actual gate; this
+        # does not claim that injected responses are qualifying live evidence.
+        from dataclasses import replace
+        from research.gemini_backend import GeminiBackend, GenerationSettings
+        from research.systems import ResearchSystem, TASK_PROMPT
+        from research.integrity import digest
+        from tests.test_systems import CASE, TASK
+
+        for suffix in ("", " Use the proposed goal as a hypothesis and ground each argument in input evidence.", " stale prompt"):
+            with self.subTest(suffix=suffix), tempfile.TemporaryDirectory() as folder:
+                root = Path(folder)
+                (root / "protocol").mkdir()
+                protocol = root / "protocol/gemma4_seed17_v1.json"
+                protocol.write_bytes((ROOT / "protocol/gemma4_seed17_v1.json").read_bytes())
+                bundle = {"schema_version": 4, "artifacts": {
+                    "protocol": {"path": protocol.relative_to(root).as_posix(), "sha256": digest(protocol)}}}
+
+                def save(name, text):
+                    path = root / (name + ".json")
+                    path.write_text(text, encoding="utf-8")
+                    bundle["artifacts"][name] = {"path": path.name, "sha256": digest(path)}
+
+                def send(payload, settings):
+                    value = ({"intended_goal": TASK["intended_goal"]}
+                             if payload["generationConfig"]["responseJsonSchema"]["required"] == ["intended_goal"] else TASK)
+                    return {"responseId": "invented-gate-fixture", "modelVersion": "gemma-4-26b-a4b-it",
+                        "usageMetadata": {"promptTokenCount": 100, "candidatesTokenCount": 50, "thoughtsTokenCount": 0},
+                        "candidates": [{"finishReason": "STOP", "content": {"parts": [{"text": json.dumps(value)}]}}]}
+
+                for system in ("S0", "S1"):
+                    backend = GeminiBackend(replace(GenerationSettings(timeout_seconds=300),
+                        max_output_tokens=4096 if system == "S0" else 2048), transport=send)
+                    task = ResearchSystem(backend).predict(CASE, system, 17)
+                    calls = copy.deepcopy(backend.records)
+                    for call in calls:
+                        call["execution"] = "LIVE_DEVELOPMENT"
+                    if system == "S1":
+                        self.assertEqual(calls[-1]["system_prompt"], TASK_PROMPT)
+                        calls[-1]["system_prompt"] += suffix
+                    save("live_prediction_" + system, json.dumps({"status": "ok", "execution": "LIVE_DEVELOPMENT",
+                        "record_id": CASE["record_id"], "system": system, "inference_calls": len(calls), "task": task}))
+                    save("live_calls_" + system, "".join(json.dumps(c) + "\n" for c in calls))
+                checks = {c["name"]: c["passed"] for c in check_readiness(root, bundle)["checks"]}
+                self.assertTrue(checks["live_synthetic_smoke_S0"])
+                self.assertEqual(checks["live_synthetic_smoke_S1"], not suffix)
+
     def test_blocked_execute_creates_no_model_or_oracle(self):
         with patch("tools.run_single_seed.readiness", return_value={"ready": False}), \
              patch("research.seed17_processes.ModelProcess", side_effect=AssertionError("No model")), \
