@@ -1,8 +1,5 @@
 name: Seed17 invented multi-turn live smoke
 on:
-  push:
-    branches:
-      - research/seed17-provider-ci-20261020
   workflow_dispatch:
 permissions:
   contents: read
