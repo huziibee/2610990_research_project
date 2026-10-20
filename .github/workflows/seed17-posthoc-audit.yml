@@ -62,3 +62,36 @@ jobs:
           print("LIVE_TWO_ANSWER_SMOKE_GATE", "REJECTED_BECAUSE_A_MODEL_CALL_FAILED")
           print("NEW_PROVIDER_REQUESTS",0)
           PY
+      - name: Profile truncated synthetic model content without printing it
+        run: |
+          python - <<'PY'
+          import json, zlib
+          from pathlib import Path
+          from collections import Counter
+          root=Path("synthetic_evidence")
+          profiles=[]
+          for path in root.rglob("*.done.json"):
+              if path.parent.name!="requests":continue
+              data=json.loads(path.read_text(encoding="utf-8"))
+              candidates=(data.get("response") or {}).get("candidates") or []
+              for item in candidates:
+                  text="".join(p.get("text","") for p in (item.get("content") or {}).get("parts",[])
+                               if p.get("thought") is not True)
+                  if not text: continue
+                  encoded=text.encode("utf-8")
+                  spans=Counter(text[i:i+24] for i in range(max(0,len(text)-23)))
+                  profiles.append({
+                      "finish":item.get("finishReason"),
+                      "content_characters":len(text),
+                      "bytes":len(encoded),
+                      "compression_ratio":round(len(zlib.compress(encoded))/max(1,len(encoded)),3),
+                      "distinct_characters":len(set(text)),
+                      "max_repetition_of_24_character_sequence":max(spans.values(),default=0),
+                      "readiness_field_mentions":text.count('"readiness"'),
+                      "actions_field_mentions":text.count('"actions"'),
+                      "unresolved_field_mentions":text.count('"unresolved"')
+                  })
+          print("SYNTHETIC_GENERATION_SHAPE_ONLY",json.dumps(profiles,sort_keys=True))
+          print("RAW_MODEL_TEXT_PRINTED",False)
+          print("NEW_PROVIDER_REQUESTS",0)
+          PY
