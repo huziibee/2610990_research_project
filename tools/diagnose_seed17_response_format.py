@@ -35,7 +35,7 @@ def current_response_format(payload):
     schema = cfg.pop("responseJsonSchema", None)
     if not isinstance(schema, dict) or not schema:
         raise ValueError("Full provider JSON schema required")
-    cfg["responseFormat"] = {"text": {"mimeType": "application/json", "schema": schema}}
+    cfg["responseFormat"] = {"text": {"mimeType": "APPLICATION_JSON", "schema": schema}}
     return wire
 
 
@@ -43,7 +43,7 @@ def compatible_mock_response(payload, settings):
     """Feed the existing synthetic mock the identical schema in its old wire slot."""
     restored = copy.deepcopy(payload)
     fmt = restored["generationConfig"].pop("responseFormat")["text"]
-    restored["generationConfig"]["responseMimeType"] = fmt["mimeType"]
+    restored["generationConfig"]["responseMimeType"] = "application/json" if fmt["mimeType"] == "APPLICATION_JSON" else fmt["mimeType"]
     restored["generationConfig"]["responseJsonSchema"] = fmt["schema"]
     return mock_response(restored, settings)
 
