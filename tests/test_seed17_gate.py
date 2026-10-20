@@ -101,6 +101,38 @@ class Seed17GateTests(unittest.TestCase):
              patch("research.seed17_processes.OracleProcess", side_effect=AssertionError("No oracle")):
             self.assertEqual(main(["--execute", "--bundle", "does-not-exist.json"]), 2)
 
+    def test_short_failed_smoke_returns_blocked_report_without_indexing_missing_turns(self):
+        from research.integrity import digest
+        from research.seed17_smoke_fixture import fixture
+        for length in (0, 1, 2):
+            with self.subTest(turns=length), tempfile.TemporaryDirectory() as folder:
+                root = Path(folder)
+                directory = root / "runs/development/synthetic_failed"
+                directory.mkdir(parents=True)
+                (directory / "seal.json").write_text("{}")
+                bundle = {"schema_version": 5, "artifacts": {}}
+                def save(name, value):
+                    path = root / (name + ".json")
+                    path.write_text(json.dumps(value))
+                    bundle["artifacts"][name] = {"path": path.name, "sha256": digest(path)}
+                    return bundle["artifacts"][name]
+                save("implementation_snapshot", {"files": {}})
+                oracle = save("oracle_audit", {"events": [], "fixture_only": True})
+                save("live_multi_turn", {"directory": directory.relative_to(root).as_posix(),
+                     "seal_sha256": digest(directory / "seal.json"), "code_fingerprints": {},
+                     "oracle_audit": oracle})
+                manifest = {"execution": "LIVE_SEED17_SMOKE", "inputs": fixture()[0],
+                            "schedule": [{"system": s} for s in ("S0", "S1")]}
+                rows = [{"turn": i, "status": "error", "task": None} for i in range(length)]
+                with patch("research.seed17_gate.check_readiness_base", return_value={
+                        "ready": False, "checks": [], "failures": []}), \
+                     patch("research.seed17_audit.audit", return_value=(
+                         {}, manifest, {s: rows for s in ("S0", "S1")})):
+                    report = check_readiness(root, bundle)
+                self.assertFalse(report["ready"])
+                self.assertFalse(report["protected_execution_authorized"])
+                self.assertIn("live_multi_turn", {f["gate"] for f in report["failures"]})
+
     def test_bad_bundle_and_outside_mock_output_fail_without_credentials(self):
         with patch("research.gemini_backend.GeminiBackend._request", side_effect=AssertionError("No provider")):
             with tempfile.TemporaryDirectory() as folder:

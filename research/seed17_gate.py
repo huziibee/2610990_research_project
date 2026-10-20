@@ -348,6 +348,8 @@ def check_readiness(root, bundle=None):
             expected_events = []
             for item in manifest["schedule"]:
                 rows = outputs[item["system"]]
+                if len(rows) != 3:
+                    raise ValueError("Live smoke must complete exactly two clarification replies")
                 multi_valid = (multi_valid and len(rows) == 3 and [r["turn"] for r in rows] == [0,1,2]
                     and rows[0]["task"]["readiness"] == rows[1]["task"]["readiness"] == "CLARIFY"
                     and rows[2]["task"]["readiness"] == "ACTION_READY")
