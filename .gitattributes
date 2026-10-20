@@ -23,3 +23,6 @@ protocol/amendments/pre_final_engineering_410fe44/** -text
 protocol/amendments/GEMMA_SEED17_PRELAUNCH_ENGINEERING_20261020.json -text
 protocol/amendments/pre_design_lock_rebind_20261020_v1/** -text
 protocol/amendments/GEMMA_SEED17_UNSIGNED_DESIGN_LOCK_REBIND_20261020_v1.json -text
+
+# Original ciphertext and approved sidecar bytes must survive every checkout.
+protected_reference_archive/** -text
