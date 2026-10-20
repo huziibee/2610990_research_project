@@ -103,6 +103,7 @@ def run(output):
         "oracle":"IN_PROCESS_INVENTED_ONLY",
         "registered_study_protocol_changed":False,
         "synthetic_http_5xx_max_attempts_per_stage":3,
+        "diagnostic_timeout_seconds":120,
         "all_attempts_recorded":True})
     for system,seq in (("S0",1),("S1",2)):
         folder=output/system
@@ -121,7 +122,7 @@ def run(output):
             identity={"system":system,"stage_request_index":counter[0]}
             return bounded_synthetic_http_retry(request_journal,wire,settings,
                 identity,sender=GeminiBackend._request,events=events)
-        backend=GeminiBackend(GenerationSettings(timeout_seconds=300),transport=send)
+        backend=GeminiBackend(GenerationSettings(timeout_seconds=120),transport=send)
         try:
             loop=ResearchSystem(backend).clarify(item,
                 lambda question,turn: oracle.answer(seq,item["record_id"],"branch-a",question,turn),
