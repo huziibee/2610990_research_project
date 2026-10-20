@@ -1,0 +1,48 @@
+name: Seed17 seed17-only 300s timeout full offline pre-freeze
+on:
+  push:
+    branches:
+      - research/seed17-timeout300-preflight-v2-20261020
+    paths:
+      - .github/workflows/seed17-timeout300-preflight-v2.yml
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  synthetic-ready-without-private-gold:
+    runs-on: ubuntu-latest
+    timeout-minutes: 25
+    env:
+      PYTHONPATH: .
+      OUT: runs/readiness/timeout300_v2_preflight_${{ github.run_id }}
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+      - name: Install pinned dependencies
+        run: python -m pip install -r requirements.txt
+      - name: Validate complete simulated main and ablation pipelines plus analysis
+        run: python tools/validate_seed17_safe.py --output "$OUT"
+      - name: Report readiness truthfully without private references
+        run: |
+          python - <<'PY'
+          import json,os
+          from pathlib import Path
+          root=Path(os.environ["OUT"])
+          summary=json.loads((root/"safe_validation_summary.json").read_text())
+          readiness=json.loads((root/"readiness.json").read_text())
+          print("SYNTHETIC_PREFLIGHT_SUMMARY",json.dumps(summary,sort_keys=True))
+          print("PRE_FREEZE_GATE_FAILURES",json.dumps([x["gate"] for x in readiness["failures"]]))
+          assert summary["safe_checks_passed"] is True
+          assert summary["mock_initial_predictions"] == 200
+          assert summary["protected_predictions_executed"] is False
+          assert readiness["ready"] is False
+          PY
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: seed17-shared-preflight-${{ github.run_id }}
+          path: ${{ env.OUT }}/
+          retention-days: 14
+          if-no-files-found: warn
