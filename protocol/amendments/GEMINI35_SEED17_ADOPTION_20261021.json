@@ -1,0 +1,60 @@
+{
+  "schema_version": 1,
+  "amendment_id": "gemini35_seed17_adoption_20261021",
+  "status": "USER_ADOPTED_IMPLEMENTATION_AND_TECHNICAL_QUALIFICATION_PENDING",
+  "decision_basis": {
+    "source": "Current user instruction in Huzaifahs research",
+    "verbatim_model_choice": "yes use that gemini",
+    "scope": "Model and transport adoption, reference recovery, implementation, testing and unsigned technical freeze only"
+  },
+  "selected_profile": {
+    "model": "gemini-3.5-flash-lite",
+    "api": "Gemini Developer API generateContent v1beta",
+    "wire_codec": "seed17_lossless_named_arguments_v1",
+    "wire_format": "generationConfig.responseFormat.text; APPLICATION_JSON; complete typed-argument schema",
+    "thinking_config": {"thinkingLevel": "minimal", "includeThoughts": false},
+    "thinking_limitation": "Minimal is not a guarantee of zero reasoning. Preserve actual reported usage; missing reasoning-token metadata remains unknown.",
+    "seed": 17,
+    "temperature": 0.7,
+    "topP": 0.95,
+    "S0_per_call_maxOutputTokens": 4096,
+    "S1_per_call_maxOutputTokens": 2048,
+    "S0_calls_per_prediction": 1,
+    "S1_calls_per_prediction": 2,
+    "automatic_transport_retries": 0,
+    "automatic_malformed_output_retries": 0,
+    "maximum_simulated_clarification_answers": 5
+  },
+  "unchanged": {
+    "source_cases": 100,
+    "execute_cases": 74,
+    "clarify_cases": 26,
+    "approved_clarification_branches": 26,
+    "main_initial_predictions": 200,
+    "ablation_initial_predictions": 500,
+    "reference_method": "AUTHOR_APPROVED_AGENT_ASSISTED",
+    "reference_bytes_and_original_approval_hashes": true,
+    "exact_approved_question_matching": true,
+    "strict_canonical_task_validation": true,
+    "generator_oracle_judge_separation": true,
+    "all_failures_in_denominator": true
+  },
+  "historical_supporting_evidence": {
+    "workflow_run_id": 39476606184,
+    "source_commit": "ee255427575e62ab424d9929ed175345f0f71a71",
+    "artifact_id": 12289404336,
+    "archive_seal_sha256": "cffce8f1b6b4a0958418f123311eef463709371059dbd8f0e310ba431f619259",
+    "qualifies_future_modified_code": false
+  },
+  "release_requirements": [
+    "Integrate the selected profile consistently into generation, immutable request auditing, ablations and readiness checks.",
+    "Validate the original private reference release without changing approved bytes or inventing review.",
+    "Qualify the exact final implementation with complete synthetic main/ablation runs, current live S0/S1 trajectories and matching judge evidence.",
+    "Prepare a complete hash-bound unsigned technical freeze before requesting the separate release-bound main authorization.",
+    "Obtain separate release-bound ablation authorization before protected ablations."
+  ],
+  "technical_freeze_prepared": false,
+  "protected_execution_authorized": false,
+  "protected_predictions_executed": false,
+  "manuscript_work_authorized_by_this_amendment": false
+}
