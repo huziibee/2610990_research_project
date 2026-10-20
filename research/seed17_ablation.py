@@ -57,7 +57,7 @@ def intervention_record(root, ablation):
         raise ValueError("Unregistered ablation")
     return {"ablation": ablation, "matched_baseline": "S1", "seed": 17,
             "stages": stages(ablation), "prompts": {s: prompt(ablation, s) for s in stages(ablation)},
-            "settings": asdict(GenerationSettings()), "thinking_config": GenerationSettings().thinking_config(),
+            "settings": asdict(GenerationSettings(timeout_seconds=300)), "thinking_config": GenerationSettings(timeout_seconds=300).thinking_config(),
             "input_removal": ablation if ablation in ("scene", "dialogue") else None,
             "check_dependency_consistency": ablation != "dependency_checking",
             "contract_sha256": digest(Path(root) / "protocol/seed17/ablation_contract_v1.json")}
