@@ -1,0 +1,23 @@
+name: Five-seed tracked-source preparation
+on:
+  push:
+    branches: [research/five-seed-release-20261020]
+    paths: [.github/workflows/five-seed-source.yml]
+  workflow_dispatch:
+permissions: {contents: read}
+jobs:
+  source:
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - uses: actions/checkout@v4
+      - run: |
+          mkdir -p /tmp/source
+          git archive --format=zip --output=/tmp/source/source.zip HEAD
+          git rev-parse HEAD > /tmp/source/commit.txt
+          sha256sum /tmp/source/source.zip > /tmp/source/source.sha256
+      - uses: actions/upload-artifact@v4
+        with:
+          name: five-seed-source-${{ github.run_id }}
+          path: /tmp/source/
+          retention-days: 14
