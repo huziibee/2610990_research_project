@@ -8,6 +8,55 @@ import re
 from research.integrity import digest, read_json, read_jsonl, verify_derived, loads_json
 
 
+def synthetic_smoke_grounding_valid(rows, steps):
+    """Qualify only the registered invented single-move fixture, not study gold.
+
+    Approved fixture replies become evidence only on their corresponding turn.
+    This deliberately uses exact fixture field identifiers, not a general
+    inference about free-text unresolved fields or protected references.
+    """
+    try:
+        if (not isinstance(rows, list) or len(rows) != len(steps) + 1
+                or any(type(r["turn"]) is not int for r in rows)
+                or [r["turn"] for r in rows] != list(range(len(rows)))
+                or [s["field"] for s in steps] != ["destination", "time"]):
+            return False
+        released = {}
+        for index, row in enumerate(rows):
+            if index:
+                released[steps[index - 1]["field"]] = steps[index - 1]["answer"]
+            task = row["task"]
+            actions, unresolved = task["actions"], task["unresolved"]
+            if (not isinstance(actions, list) or len(actions) > 1
+                    or not isinstance(unresolved, list)):
+                return False
+            critical = set()
+            for item in unresolved:
+                if (item["field"] not in {"object", "destination", "time"}
+                        or type(item["critical"]) is not bool):
+                    return False
+                if item["critical"]:
+                    critical.add(item["field"])
+            for action in actions:
+                arguments = action["arguments"]
+                if (action["capability_id"] != "move" or not isinstance(arguments, dict)
+                        or not set(arguments) <= {"object", "destination", "time"}
+                        or critical.intersection(arguments)):
+                    return False
+                for field, argument in arguments.items():
+                    expected = "blue cup" if field == "object" else released.get(field)
+                    if (expected is None or argument["type"] != "string"
+                            or not isinstance(argument["value"], str)
+                            or argument["value"].strip().casefold() != expected.strip().casefold()
+                            or not isinstance(argument["evidence"], list)
+                            or not all(isinstance(v, str) for v in argument["evidence"])
+                            or (field != "object" and "dialogue" not in argument["evidence"])):
+                        return False
+        return True
+    except (KeyError, TypeError, ValueError, AttributeError):
+        return False
+
+
 def _check_readiness(root, bundle=None):
     root = Path(root).resolve()
     failures = []
@@ -353,6 +402,7 @@ def check_readiness(root, bundle=None):
                 multi_valid = (multi_valid and len(rows) == 3 and [r["turn"] for r in rows] == [0,1,2]
                     and rows[0]["task"]["readiness"] == rows[1]["task"]["readiness"] == "CLARIFY"
                     and rows[2]["task"]["readiness"] == "ACTION_READY")
+                multi_valid = multi_valid and synthetic_smoke_grounding_valid(rows, steps)
                 terminal = rows[2]["task"]
                 actions = terminal["actions"]
                 if len(actions) != 1:
