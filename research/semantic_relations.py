@@ -34,7 +34,11 @@ def build_relationship_graph(task, model_input, *, referent_bindings=None, capab
     *reviewed* referent IDs. Unprovided bindings stay literal and unverified.
     This is a projection, not entity resolution or semantic parsing.
     """
-    validate_task(task, model_input, capability_catalog=capability_catalog)
+    # This evaluator must receive contradictory/cyclic edges so it can report
+    # them as measured issues. Keep schema and pointer checks, but leave
+    # dependency-consistency scoring to the graph diagnostics below.
+    validate_task(task, model_input, capability_catalog=capability_catalog,
+                  check_dependency_consistency=False)
     bindings = {} if referent_bindings is None else referent_bindings
     if not isinstance(bindings, dict):
         raise ValueError("Referent bindings must be a dictionary")

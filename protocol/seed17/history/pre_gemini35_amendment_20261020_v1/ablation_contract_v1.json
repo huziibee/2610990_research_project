@@ -1,0 +1,27 @@
+{
+  "schema_version": 1,
+  "contract_id": "gemma4_seed17_five_ablations_v1",
+  "status": "REGISTERED_ENGINEERING_CONTRACT_NOT_EXECUTION_AUTHORIZATION",
+  "scope": "seed17_five_ablations_with_approved_clarification_only",
+  "seed": 17,
+  "cases": 100,
+  "initial_predictions": 500,
+  "matched_baseline": "S1",
+  "calls_per_prediction": 2,
+  "max_output_tokens_per_call": 2048,
+  "model": "gemma-4-26b-a4b-it",
+  "thinking": {"thinkingLevel": "minimal", "includeThoughts": false},
+  "schedule": "historical planned_ablation_schedule(IDS, [17]); unchanged ordering; system=S1 is routing metadata",
+  "interventions": {
+    "goal_first": "Replace explicit goal intermediate with context_summary; second stage derives goal from same visible inputs. This tests explicit goal representation, not absence of implicit goal inference.",
+    "structured_grounding": "Remove explicit grounding instructions from second-stage prompt only. Preserve provider JSON schema, structured representation and local validation.",
+    "scene": "Replace scene with existing SCENE_MASK for every stage and turn; reject scene evidence. Preserve all other visible fields.",
+    "dependency_checking": "Disable deterministic dependency-consistency checks only. Preserve prompts, schemas, typed arguments and evidence validation. Evaluation must still penalize invalid dependencies.",
+    "dialogue": "Withhold the entire dialogue field at every stage and turn, including original dialogue and subsequently approved simulated replies. Preserve instruction, scene, capabilities. The oracle may release approved answers, but those answers remain masked from this condition; inability to resolve remains in the denominator."
+  },
+  "clarification": {"max_turns": 5, "oracle": "same separately isolated author-approved exact-matching oracle", "stop": ["ACTION_READY", "ANSWER_UNAVAILABLE", "ERROR", "TURN_LIMIT"], "fabricated_answers": false},
+  "retry_policy": "no automatic transport, malformed-output, failed-result or ambiguous-send retries; explicit resume replays durable receipts only",
+  "authorization": "separate explicit ablation authorization bound to technical freeze, contract, schedule, fixed output directory and base artifacts; main authorization alone is insufficient",
+  "semantic_evaluation": "AUTHOR_APPROVED_AGENT_ASSISTED; isolated frozen evaluator; no generation feedback; missing judgments unresolved",
+  "denominators": "100 source cases per intervention; retain failures and unresolved judgments; case-level pairing against S1; no between-seed variability estimate"
+}

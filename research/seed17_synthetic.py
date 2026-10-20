@@ -31,8 +31,8 @@ def cohort(count=100, *, multi_turn=False):
             "final_approval": {"actor": "SYNTHETIC_FIXTURE_APPROVER", "notes": "Invented test fixture"},
             "reference": reference}
         rule_cases.append({"record_id": cid, "reference_revision": 1, "branches": [
-            {"branch_id": "branch-a", "turns": [{"turn": i, "field": t["field"], "question": t["question"],
-                                                   "question_variants": [t["question"]]} for i, t in enumerate(turns, 1)]}
+            {"branch_id": "branch-a", "turns": [{"turn": i, "field": t["field"],
+                                                   "canonical_question": t["question"]} for i, t in enumerate(turns, 1)]}
         ] if depth else []})
     export_hash = content_hash(list(references.values()))
     rules = {"reference_sha256": export_hash, "method": METHOD, "independently_verified": True,
@@ -87,6 +87,10 @@ def mock_send(payload, settings):
                   "constraints": []}], "unresolved": [{"field": f, "reason": "missing", "critical": True} for f in missing],
                  "dependencies": [], "readiness": "CLARIFY" if missing else "ACTION_READY",
                  "clarification_question": QUESTIONS[FIELDS.index(missing[0])] if missing else None}
+        from research.gemini_backend import SEED17_GEMINI_PROFILE
+        if settings.profile == SEED17_GEMINI_PROFILE:
+            from research.seed17_wire_codec import encode_task
+            value = encode_task(value)
     return {"modelVersion": "MOCK_SEED17_NOT_PROVIDER_EVIDENCE", "responseId": "SYNTHETIC_RESPONSE",
             "usageMetadata": {"promptTokenCount": 100, "candidatesTokenCount": 50, "totalTokenCount": 150},
             "candidates": [{"finishReason": "STOP", "content": {"parts": [{"text": json.dumps(value)}]}}]}

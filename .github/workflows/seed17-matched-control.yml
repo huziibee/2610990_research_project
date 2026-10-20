@@ -1,0 +1,52 @@
+name: Seed17 budget-matched alternative control
+on:
+  push:
+    branches: [research/seed17-matched-control-20261020]
+    paths: [.github/workflows/seed17-matched-control.yml]
+  workflow_dispatch:
+permissions: {contents: read}
+concurrency:
+  group: seed17-single-live-provider-owner
+  cancel-in-progress: false
+jobs:
+  matched_control:
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    env:
+      PYTHONPATH: .
+      OUT: runs/provider_diagnostics/matched_gemini_${{ github.run_id }}
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with: {python-version: '3.11'}
+      - run: python -m pip install -r requirements.txt
+      - name: Budget, true-model identity and full synthetic mock tests
+        run: python -m unittest tests.test_seed17_matched_gemini_control tests.test_seed17_candidate_evidence_audit -v
+      - name: Complete real alternative-model control, first attempts only
+        env:
+          GEMINI_API_KEY: ${{ secrets.GEMINI_API_KEY }}
+        run: |
+          test -n "$GEMINI_API_KEY"
+          python tools/probe_seed17_matched_gemini_control.py --output "$OUT"
+      - name: Audit immutable raw evidence, exact model and all nine requests
+        run: |
+          mkdir -p runs/readiness/matched_control_${{ github.run_id }}
+          python tools/audit_seed17_candidate_evidence.py "$OUT" --expected-model gemini-3.5-flash-lite --output runs/readiness/matched_control_${{ github.run_id }}/audit.json
+      - name: Record actual outcome without changing the registered study
+        if: always()
+        run: |
+          python - <<'PY'
+          import os
+          from pathlib import Path
+          p=Path(os.environ['OUT'])/'summary.json'
+          if p.is_file():print('MATCHED_CONTROL_OUTCOME',p.read_text())
+          print('REGISTERED_MODEL_ADOPTED=False; PROTECTED_PREDICTIONS_EXECUTED=False')
+          PY
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: seed17-matched-control-${{ github.run_id }}
+          path: |
+            runs/provider_diagnostics/matched_gemini_${{ github.run_id }}/
+            runs/readiness/matched_control_${{ github.run_id }}/
+          retention-days: 14

@@ -4,10 +4,14 @@ from research.gemini_backend import GenerationSettings
 
 def validate_config(config):
     if (config["schema_version"] != 1 or config["study_id"] != "gemma4-seed17-v1"
-            or config["model"]["requested_id"] != "gemma-4-26b-a4b-it"
-            or config["model"]["structured_output"] != "provider_json_schema_and_strict_local_validation"
+            or config["model"]["requested_id"] != "gemini-3.5-flash-lite"
+            or config["model"].get("profile") != "seed17_gemini35_wire_v1"
+            or config["model"]["structured_output"] != "lossless_named_arguments_codec_and_strict_local_validation"
+            or config.get("reasoning_usage_policy") != "Provider-reported reasoning tokens are permitted and recorded; minimal thinking is not a zero-reasoning guarantee."
+            or config.get("design_amendment") != "protocol/seed17/GEMINI35_MODEL_CODEC_AMENDMENT_20261020_v1.json"
+            or config.get("output_validation_contract") != "protocol/seed17/output_validation_contract_v1.json"
             or config["candidate_generation_config"] != {"temperature": .7, "topP": .95, "candidateCount": 1,
-                "maxOutputTokens": 4096, "responseMimeType": "application/json",
+                "maxOutputTokens": 4096, "responseFormat": {"text": {"mimeType": "APPLICATION_JSON"}},
                 "thinkingConfig": {"thinkingLevel": "minimal", "includeThoughts": False}}
             or config["runs"] != {"seeds": [17], "concurrency": 1, "main_initial_predictions": 200,
                 "ablation_initial_predictions": 500, "max_clarification_turns": 5,
@@ -28,6 +32,6 @@ def validate_config(config):
         raise ValueError("Unsupported single-seed contract")
     for system, calls, cap in (("S0", 1, 4096), ("S1", 2, 2048)):
         if config["systems"][system] != {"initial_interpretation_calls": calls, "per_call_maxOutputTokens": cap,
-                                         "per_call_thinkingBudget": 0, "thinking": False}:
-            raise ValueError("Unmatched budgets or enabled thinking")
-    return GenerationSettings(timeout_seconds=300)
+                                         "thinkingConfig": {"thinkingLevel": "minimal", "includeThoughts": False}}:
+            raise ValueError("Unmatched budgets or unsupported thinking configuration")
+    return GenerationSettings(model="gemini-3.5-flash-lite", profile="seed17_gemini35_wire_v1", timeout_seconds=300)

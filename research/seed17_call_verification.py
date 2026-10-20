@@ -34,3 +34,16 @@ def verify_call_record(call, receipt, item, execution):
     if call!=expected:
         raise ValueError('Call output, status, identity or usage differs from durable provider receipt')
     return True
+
+
+def decoded_call_output(call):
+    """Decode raw wire bytes while checking the persisted canonical observation."""
+    from research.integrity import loads_json
+    output = loads_json(call["output_text"])
+    if call["settings"].get("profile") == "seed17_gemini35_wire_v1":
+        if not call["stage"].endswith(".goal") and call["stage"] != "S1.context":
+            from research.seed17_wire_codec import decode_task
+            output = decode_task(output)
+        if call.get("canonical_decoded_output") != output:
+            raise ValueError("Canonical output differs from losslessly decoded provider bytes")
+    return output

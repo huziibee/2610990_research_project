@@ -13,7 +13,7 @@ from tools.run_experiment import _execute_rows, _validated_inputs, main, planned
 
 
 CASE = {"record_id": "SYNTHETIC-851", "instruction": "Wait.", "scene": "Robot in room.",
-        "dialogue": [], "capabilities": "wait() is permitted."}
+        "dialogue": [], "capabilities": "wait(). No arguments are required."}
 TASK = {"intended_goal": "Wait", "actions": [{"action_id": "a1", "capability_id": "wait",
         "arguments": {}, "constraints": []}], "unresolved": [], "dependencies": [],
         "readiness": "ACTION_READY", "clarification_question": None}

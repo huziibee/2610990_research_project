@@ -89,7 +89,7 @@ class AuthorMethodTests(unittest.TestCase):
             with patch('research.seed17_author_review.policy',return_value=self.selected):
                 self.assertEqual(len(load_author_release(self.root,bundle())['rows']),100)
                 mutations=[('clarification_matching_rules',matching,lambda x:x['cases'].pop()),
-                    ('clarification_matching_rules',matching,lambda x:x['cases'][0]['branches'][0]['turns'][0]['question_variants'].append('Unapproved paraphrase?')),
+                    ('clarification_matching_rules',matching,lambda x:x['cases'][0]['branches'][0]['turns'][0].update(canonical_question='Unapproved paraphrase?')),
                     ('clarification_matching_rules',matching,lambda x:x['cases'][0]['branches'][0]['turns'][0].update(answer_sha256='f'*64)),
                     ('reviewed_coverage',coverage,lambda x:x['cases'][0].update(source_record_sha256='f'*64)),
                     ('reviewed_coverage',coverage,lambda x:x['cases'][0].update(capability_eligibility='INVENTED_VERIFIED_SUPPORT')),
@@ -104,6 +104,8 @@ class AuthorMethodTests(unittest.TestCase):
         release=self.context();release['rules']=derived_rules_and_coverage(release)[0]
         oracle=AuthorReviewedClarificationOracle(release,record_id='CA-0001',branch_id='answer-a')
         self.assertEqual(oracle('  WHERE should the cup go?  ',1),'shelf A')
+        paraphrase=AuthorReviewedClarificationOracle(release,record_id='CA-0001',branch_id='answer-a')
+        self.assertEqual(paraphrase('Where should the cup go',1),'shelf A')
         self.assertIsNone(oracle('Where should the cup go?',2))
         oracle=AuthorReviewedClarificationOracle(release,record_id='CA-0001',branch_id='answer-a')
         self.assertIsNone(oracle('Unapproved?',1))

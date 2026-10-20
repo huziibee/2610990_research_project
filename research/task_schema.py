@@ -71,11 +71,22 @@ def validate_task(task: dict, model_input: dict, *, capability_catalog: list | N
         if not isinstance(capability_catalog, list):
             raise ValidationError("Capability catalog must be a list")
         for capability in capability_catalog:
-            _keys(capability, ("capability_id", "required_arguments"), "capability")
+            if not isinstance(capability, dict) or set(capability) not in (
+                    {"capability_id", "required_arguments"},
+                    {"capability_id", "required_arguments", "argument_types"}):
+                raise ValidationError("capability: expected identifier, required arguments, and optional argument types")
             _string(capability["capability_id"], "capability_id")
             if (not isinstance(capability["required_arguments"], list)
                     or any(not isinstance(name, str) or not name for name in capability["required_arguments"])):
                 raise ValidationError("Invalid capability required arguments")
+            if "argument_types" in capability:
+                types = capability["argument_types"]
+                if (not isinstance(types, dict)
+                        or any(not isinstance(name, str) or not name
+                               or kind not in ("object", "location", "time", "string", "number", "boolean")
+                               for name, kind in types.items())
+                        or not set(capability["required_arguments"]).issubset(types)):
+                    raise ValidationError("Invalid capability argument types")
             if capability["capability_id"] in known:
                 raise ValidationError("Duplicate capability catalog identifier")
             known[capability["capability_id"]] = capability
@@ -115,16 +126,23 @@ def validate_task(task: dict, model_input: dict, *, capability_catalog: list | N
                 if rest:
                     _pointer(model_input[source], "/" + rest)
         capability = known.get(action["capability_id"], {})
+        allowed_arguments = set(capability.get("argument_types", capability.get("required_arguments", [])))
+        if capability_catalog is not None and set(action["arguments"]) - allowed_arguments:
+            raise ValidationError("Action uses undeclared capability arguments")
         if task["readiness"] == "ACTION_READY":
             required = capability.get("required_arguments", [])
             if not isinstance(required, list) or any(name not in action["arguments"] for name in required):
                 raise ValidationError("Missing required capability arguments")
+        for name, expected_type in capability.get("argument_types", {}).items():
+            if name in action["arguments"] and action["arguments"][name]["type"] != expected_type:
+                raise ValidationError("Argument type contradicts declared capability contract")
     for unresolved in task["unresolved"]:
         _keys(unresolved, ("field", "reason", "critical"), "unresolved")
         _string(unresolved["field"], "unresolved field")
         _string(unresolved["reason"], "unresolved reason")
         if type(unresolved["critical"]) is not bool:
             raise ValidationError("critical must be boolean")
+    directed_edges = []
     for dependency in task["dependencies"]:
         _keys(dependency, ("source", "target", "relation"), "dependency")
         if any(not isinstance(dependency[key], str) or not dependency[key].startswith("/actions/")
@@ -150,6 +168,37 @@ def validate_task(task: dict, model_input: dict, *, capability_catalog: list | N
                 raise ValidationError("before requires action references") from None
             if check_dependency_consistency and left >= right:
                 raise ValidationError("Contradictory action order")
+            directed_edges.append((left, right))
+        elif dependency["relation"] == "depends_on":
+            # depends_on may address an action or one of its arguments. Its
+            # dependency graph is over the owning action indices.
+            left = int(dependency["source"].split("/")[2])
+            right = int(dependency["target"].split("/")[2])
+            if check_dependency_consistency and left == right:
+                raise ValidationError("An action cannot depend on itself")
+            directed_edges.append((left, right))
+        elif dependency["relation"] == "same_value" and check_dependency_consistency:
+            if dependency["source"] == dependency["target"]:
+                raise ValidationError("same_value cannot refer to itself")
+    if check_dependency_consistency:
+        graph = {}
+        for source_index, target_index in directed_edges:
+            if source_index == target_index:
+                raise ValidationError("Dependency graph contains a self edge")
+            graph.setdefault(source_index, set()).add(target_index)
+        visiting, visited = set(), set()
+        def visit(node):
+            if node in visiting:
+                raise ValidationError("Dependency graph contains a cycle")
+            if node in visited:
+                return
+            visiting.add(node)
+            for successor in graph.get(node, ()):
+                visit(successor)
+            visiting.remove(node)
+            visited.add(node)
+        for node in graph:
+            visit(node)
     critical = any(item["critical"] for item in task["unresolved"])
     if task["readiness"] == "ACTION_READY":
         if critical or not task["actions"] or task["clarification_question"] is not None:

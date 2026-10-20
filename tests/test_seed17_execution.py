@@ -165,7 +165,9 @@ class EngineTests(unittest.TestCase):
             self.assertIsNone(metrics["S0"]["estimated_api_cost_usd"])
             for path in (args[0] / "calls").glob("*.json"):
                 call = read_json(path)
-                self.assertTrue(call["response_json_schema"])
+                self.assertTrue(call["actual_wire_schema"])
+                self.assertTrue(call["validation_json_schema"])
+                self.assertIsNone(call["response_json_schema"])
                 self.assertEqual(call["thinking_config"], {"thinkingLevel": "minimal", "includeThoughts": False})
                 self.assertEqual(call["settings"]["max_output_tokens"], 4096 if call["stage"] == "S0.direct" else 2048)
 

@@ -18,10 +18,14 @@ class ReadinessIntegrityTests(unittest.TestCase):
     def fixture(self, root):
         files = {}
         for name in ('research/synthetic_worker.py', 'protocol/DATA_FREEZE_20261019.json',
-                     'protocol/gemini_protocol_v1.json', 'protocol/amendments/synthetic.json'):
+                     'protocol/gemini_protocol_v1.json', 'protocol/seed17/output_validation_contract_v1.json',
+                     'protocol/amendments/synthetic.json'):
             path = root / name
             path.parent.mkdir(parents=True, exist_ok=True)
-            path.write_text('SYNTHETIC ENGINEERING FIXTURE ONLY', encoding='utf-8')
+            if name.endswith('output_validation_contract_v1.json'):
+                path.write_bytes((ROOT / name).read_bytes())
+            else:
+                path.write_text('SYNTHETIC ENGINEERING FIXTURE ONLY', encoding='utf-8')
             files[name] = digest(path)
         snapshot = root / 'snapshot.json'
         write_json(snapshot, {'files': files, 'runtime': current_runtime()})

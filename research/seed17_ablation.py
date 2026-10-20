@@ -28,7 +28,10 @@ def prepared_input(item, ablation):
 
 def validate_prediction(task, item, ablation):
     prepared = prepared_input(item, ablation)
-    result = validate_task(task, prepared, check_dependency_consistency=ablation != "dependency_checking")
+    from research.systems import ResearchSystem
+    catalog = ResearchSystem(None)._catalog(prepared)
+    result = validate_task(task, prepared, capability_catalog=catalog,
+                           check_dependency_consistency=ablation != "dependency_checking")
     return assert_no_withheld_evidence(result, ablation) if ablation in ("scene", "dialogue") else result
 
 
@@ -55,12 +58,16 @@ def intervention_record(root, ablation):
     """Record actual settings, prompts, masks and validation difference per condition."""
     if ablation not in INTERVENTIONS:
         raise ValueError("Unregistered ablation")
+    from research.seed17_config import validate_config
+    settings = validate_config(read_json(Path(root) / "protocol/gemma4_seed17_v1.json"))
     return {"ablation": ablation, "matched_baseline": "S1", "seed": 17,
             "stages": stages(ablation), "prompts": {s: prompt(ablation, s) for s in stages(ablation)},
-            "settings": asdict(GenerationSettings(timeout_seconds=300)), "thinking_config": GenerationSettings(timeout_seconds=300).thinking_config(),
+            "settings": asdict(settings), "thinking_config": settings.thinking_config(),
             "input_removal": ablation if ablation in ("scene", "dialogue") else None,
             "check_dependency_consistency": ablation != "dependency_checking",
-            "contract_sha256": digest(Path(root) / "protocol/seed17/ablation_contract_v1.json")}
+            "contract_sha256": digest(Path(root) / "protocol/seed17/ablation_contract_v1.json"),
+            "output_validation_contract_sha256": digest(
+                Path(root) / "protocol/seed17/output_validation_contract_v1.json")}
 
 
 def validate_authorization(root, bundle, authorization):

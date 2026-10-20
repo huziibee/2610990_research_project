@@ -1,0 +1,78 @@
+name: Seed17 original Gemma lossless JSON document qualification
+on:
+  push:
+    branches: [research/seed17-fasttrack-codec-20261020]
+    paths: [.github/workflows/seed17-gemma-json-document.yml]
+  workflow_dispatch:
+permissions: {contents: read}
+concurrency:
+  group: seed17-original-gemma-json-document
+  cancel-in-progress: false
+jobs:
+  qualification:
+    runs-on: ubuntu-latest
+    timeout-minutes: 25
+    env:
+      PYTHONPATH: .
+      GEMINI_API_KEY: ${{ secrets.GEMINI_API_KEY }}
+      OUT: runs/provider_diagnostics/gemma_json_document_${{ github.run_id }}
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with: {python-version: '3.11'}
+      - run: python -m pip install -r requirements.txt
+      - name: Parser negative tests and complete separate-oracle rehearsal
+        run: |
+          python -m unittest tests.test_seed17_json_document tests.test_seed17_plain_text_transport tests.test_seed17_canonical_json -v
+          python tools/probe_seed17_canonical_json.py --mock --plain-text --allow-json-fence --attempts 1 --output runs/provider_diagnostics/gemma_document_mock_${{ github.run_id }}
+      - name: Original Gemma26 complete S0/S1, no retries, no changed task values
+        id: live
+        continue-on-error: true
+        run: python tools/probe_seed17_canonical_json.py --plain-text --allow-json-fence --attempts 1 --output "$OUT"
+      - name: Independently check raw document normalization and each completed trajectory
+        id: audit
+        if: always()
+        run: |
+          python - <<'PY'
+          import json,os
+          from pathlib import Path
+          from tools.probe_seed17_wire_codec import qualify
+          from research.seed17_json_document import parse_document
+          from research.seed17_smoke_fixture import fixture
+          from research.task_schema import validate_task
+          root=Path(os.environ['OUT']);summary=json.loads((root/'summary.json').read_text())
+          inputs,release=fixture();steps=release['rows'][0]['reference']['hypothetical_answer_branches'][0]['turns']
+          print('GEMMA_DOCUMENT_SUMMARY',json.dumps(summary,sort_keys=True))
+          assert summary['mock'] is False and summary['protected_predictions_executed'] is False
+          assert summary['complete'] and summary['all_first_attempts_succeeded']
+          calls_total=0;normalized=0
+          for system,expected in [('S0',3),('S1',6)]:
+              calls=json.loads((root/system/'calls.json').read_text());calls_total+=len(calls)
+              assert len(calls)==expected
+              rows=json.loads((root/system/'trajectory.json').read_text())['trajectory']
+              assert qualify(rows,steps)
+              for call in calls:
+                  assert call['status']=='OK' and call['finish_reason']=='STOP'
+                  assert call['model_version']=='gemma-4-26b-a4b-it'
+                  parsed,meta=parse_document(call['output_text'])
+                  if not call['stage'].endswith('.goal'):
+                      validate_task(parsed,{'record_id':'SYNTHETIC-001',**call['input']})
+                  if call.get('document_normalization'):
+                      assert call['document_normalization']==meta
+                      assert call['canonical_decoded_output']==parsed
+                      normalized+=1
+          print('INDEPENDENT_GEMMA_DOCUMENT_AUDIT',json.dumps({'passed':True,'actual_calls':calls_total,'losslessly_normalized_documents':normalized,'model':'gemma-4-26b-a4b-it','protected_predictions':0}))
+          PY
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: seed17-original-gemma-documents-${{ github.run_id }}
+          path: |
+            runs/provider_diagnostics/gemma_json_document_${{ github.run_id }}/
+            runs/provider_diagnostics/gemma_document_mock_${{ github.run_id }}/
+          retention-days: 14
+      - name: Require actual live and independent audit success
+        if: always()
+        run: |
+          test '${{ steps.live.outcome }}' = 'success'
+          test '${{ steps.audit.outcome }}' = 'success'

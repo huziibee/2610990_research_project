@@ -1,0 +1,99 @@
+name: Seed17 fast-track codec and complete offline validation
+on:
+  push:
+    branches: [research/seed17-fasttrack-codec-20261020]
+    paths: [.github/workflows/seed17-fasttrack-codec.yml]
+  workflow_dispatch:
+permissions:
+  contents: read
+concurrency:
+  group: seed17-fasttrack-codec
+  cancel-in-progress: false
+jobs:
+  offline:
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    env:
+      PYTHONPATH: .
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with: {python-version: '3.11'}
+      - run: python -m pip install -r requirements.txt
+      - name: Full tests, all main and ablation mocks, analysis and source integrity
+        run: python tools/validate_seed17_safe.py --output runs/readiness/fasttrack_${{ github.run_id }}
+      - name: Assert complete mocks without confusing readiness with tests
+        run: |
+          python - <<'PY'
+          import json,os
+          from pathlib import Path
+          from research.seed17_ablation_audit import audit
+          root=Path('runs/readiness/fasttrack_'+os.environ['GITHUB_RUN_ID'])
+          summary=json.loads((root/'safe_validation_summary.json').read_text())
+          assert summary['safe_checks_passed'] is True
+          assert summary['protected_predictions_executed'] is False
+          assert summary['mock_initial_predictions']==200
+          evidence=json.loads((root/'mock_execution_evidence.json').read_text())
+          report,_,_=audit(evidence['ablations']['directory'],synthetic=True)
+          assert report['initial_predictions']==500 and report['cases']==100
+          print('OFFLINE_FULL_GRID',json.dumps({'tests':summary['tests_passed'],'main':200,'ablations':500,'protected':0}))
+          PY
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: seed17-fasttrack-offline-${{ github.run_id }}
+          path: runs/readiness/fasttrack_${{ github.run_id }}/
+          retention-days: 14
+  live:
+    runs-on: ubuntu-latest
+    timeout-minutes: 40
+    env:
+      PYTHONPATH: .
+      GEMINI_API_KEY: ${{ secrets.GEMINI_API_KEY }}
+      AUTHOR_REVIEW_AES_KEY_BASE64: ${{ secrets.AUTHOR_REVIEW_AES_KEY_BASE64 }}
+      OUT: runs/provider_diagnostics/fasttrack_live_${{ github.run_id }}
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with: {python-version: '3.11'}
+      - run: python -m pip install -r requirements.txt
+      - name: Codec tests and complete mocked two-answer RPC loop before live calls
+        run: |
+          python -m unittest tests.test_seed17_wire_codec -v
+          python tools/probe_seed17_wire_codec.py --mock --attempts 1 --output runs/provider_diagnostics/fasttrack_mock_${{ github.run_id }}
+      - name: Check available prerequisites without revealing secrets
+        run: |
+          python - <<'PY'
+          import os,json
+          assert os.getenv('GEMINI_API_KEY'), 'Configured model API key missing'
+          print('CLOUD_PREREQUISITES',json.dumps({'model_api_key_configured':True,'private_reference_decryption_secret_configured':bool(os.getenv('AUTHOR_REVIEW_AES_KEY_BASE64')),'private_references_opened':False}))
+          PY
+      - name: Complete current-model S0 and S1 live candidate with separate oracle
+        id: live
+        continue-on-error: true
+        run: python tools/probe_seed17_wire_codec.py --mode modern --attempts 3 --output "$OUT"
+      - name: Publish actual per-system outcomes and preserve failures
+        if: always()
+        run: |
+          python - <<'PY'
+          import os,json
+          from pathlib import Path
+          f=Path(os.environ['OUT'])/'summary.json'
+          if f.is_file():
+              print('LIVE_CODEC_SUMMARY',f.read_text())
+          else:
+              print('LIVE_CODEC_SUMMARY_MISSING')
+          print('PROTECTED_PREDICTIONS_EXECUTED=FALSE; TECHNICAL_FREEZE_ISSUED=FALSE')
+          PY
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: seed17-fasttrack-live-${{ github.run_id }}
+          path: |
+            runs/provider_diagnostics/fasttrack_live_${{ github.run_id }}/
+            runs/provider_diagnostics/fasttrack_mock_${{ github.run_id }}/
+          retention-days: 14
+          if-no-files-found: warn
+      - name: Do not mark failed candidate as passed
+        if: always()
+        run: test '${{ steps.live.outcome }}' = 'success'

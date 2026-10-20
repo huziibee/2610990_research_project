@@ -174,6 +174,39 @@ class PipelineTests(unittest.TestCase):
         with self.assertRaises(ValidationError):
             validate_task(TASK, CASE, capability_catalog=[])
 
+    def test_visible_capability_contract_checks_identifier_required_names_and_types(self):
+        self.assertEqual(ResearchSystem(None)._catalog(CASE), [{
+            "capability_id": "move", "required_arguments": ["object", "destination"],
+            "argument_types": {"object": "object", "destination": "location"}}])
+        wrong_id = copy.deepcopy(TASK)
+        wrong_id["actions"][0]["capability_id"] = "teleport"
+        with self.assertRaises(ValidationError):
+            ResearchSystem(GeminiBackend(transport=lambda p, s: response(wrong_id))).predict(CASE, "S0")
+        missing = copy.deepcopy(TASK)
+        del missing["actions"][0]["arguments"]["destination"]
+        with self.assertRaises(ValidationError):
+            ResearchSystem(GeminiBackend(transport=lambda p, s: response(missing))).predict(CASE, "S0")
+        wrong_type = copy.deepcopy(TASK)
+        wrong_type["actions"][0]["arguments"]["destination"]["type"] = "string"
+        with self.assertRaises(ValidationError):
+            ResearchSystem(GeminiBackend(transport=lambda p, s: response(wrong_type))).predict(CASE, "S0")
+        extra = copy.deepcopy(TASK)
+        extra["actions"][0]["arguments"]["speed"] = {
+            "type": "string", "value": "fast", "evidence": ["instruction"]}
+        with self.assertRaises(ValidationError):
+            ResearchSystem(GeminiBackend(transport=lambda p, s: response(extra))).predict(CASE, "S0")
+        prose = {**CASE, "capabilities": "You may move things where appropriate."}
+        with self.assertRaises(ValidationError):
+            ResearchSystem(None)._catalog(prose)
+
+    def test_visible_no_argument_capability_requires_explicit_empty_contract(self):
+        no_arguments = {**CASE, "capabilities": "wait(). No arguments are required."}
+        self.assertEqual(ResearchSystem(None)._catalog(no_arguments), [{
+            "capability_id": "wait", "required_arguments": [], "argument_types": {}}])
+        ambiguous = {**CASE, "capabilities": "wait() is permitted."}
+        with self.assertRaises(ValidationError):
+            ResearchSystem(None)._catalog(ambiguous)
+
     def test_simulated_answer_only_after_question(self):
         clarify = copy.deepcopy(TASK)
         clarify.update(readiness="CLARIFY", clarification_question="Which shelf?",
