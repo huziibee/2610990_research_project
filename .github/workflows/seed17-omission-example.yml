@@ -1,0 +1,60 @@
+name: Seed17 original-model missing-argument candidate
+on:
+  push:
+    branches: [research/seed17-omission-example-candidate-20261020]
+    paths: [.github/workflows/seed17-omission-example.yml]
+  workflow_dispatch:
+permissions: {contents: read}
+concurrency:
+  group: seed17-single-live-provider-owner
+  cancel-in-progress: false
+jobs:
+  qualification:
+    runs-on: ubuntu-latest
+    timeout-minutes: 25
+    env:
+      PYTHONPATH: .
+      OUT: runs/provider_diagnostics/omission_example_${{ github.run_id }}
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with: {python-version: '3.11'}
+      - run: python -m pip install -r requirements.txt
+      - name: Shared prompt, unchanged validation and raw evidence regressions
+        run: python -m unittest tests.test_seed17_omission_example tests.test_seed17_candidate_evidence_audit tests.test_seed17_json_document -v
+      - name: Complete separate-oracle synthetic rehearsal of the candidate
+        run: python tools/probe_seed17_omission_example.py --mock --attempts 1 --output runs/provider_diagnostics/omission_mock_${{ github.run_id }}
+      - name: Real original-model candidate with three explicitly recorded HTTP attempts at most
+        id: live
+        continue-on-error: true
+        env:
+          GEMINI_API_KEY: ${{ secrets.GEMINI_API_KEY }}
+        run: |
+          test -n "$GEMINI_API_KEY"
+          python tools/probe_seed17_omission_example.py --attempts 3 --output "$OUT"
+      - name: Audit complete raw first-attempt qualification, not just parsed calls
+        id: audit
+        if: always()
+        continue-on-error: true
+        run: python tools/audit_seed17_candidate_evidence.py "$OUT" --expected-model gemma-4-26b-a4b-it
+      - name: Preserve candidate outcomes including failures
+        if: always()
+        run: |
+          python - <<'PY'
+          import os,json
+          from pathlib import Path
+          p=Path(os.environ['OUT'])/'summary.json'
+          if p.is_file():print('CANDIDATE_ACTUAL_OUTCOME',p.read_text())
+          print('PROTECTED_PREDICTIONS_EXECUTED=False; REGISTERED_STUDY_UNCHANGED=True')
+          PY
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: seed17-omission-example-${{ github.run_id }}
+          path: runs/provider_diagnostics/omission_example_${{ github.run_id }}/
+          retention-days: 14
+      - name: Report genuine qualification failure
+        if: always()
+        run: |
+          test '${{ steps.live.outcome }}' = 'success'
+          test '${{ steps.audit.outcome }}' = 'success'
