@@ -67,12 +67,12 @@ def probe(model_id,case,directory,*,live=False,send=None):
               "thinking_config":payload["generationConfig"]["thinkingConfig"],
               "schema_sha256":content_hash(payload["generationConfig"]["responseFormat"]["text"]["schema"]),
               "source":"INVENTED_SYNTHETIC-001_ONLY","protected_predictions_executed":False,
-              "automatic_transport_retries":0,
+              "automatic_transport_retries":0,"diagnostic_reasoning_tokens_allowed":True,
               "mode":"REGISTERED_SCHEMA_MODEL_COMPARISON_NOT_FREEZE_EVIDENCE"}
     write_json(directory/"registration.json",register)
     write_json(directory/"wire_request.json",payload)
     quota=QuotaLedger(ROOT/"runs/resource_ledgers/gemma_developer_api") if live else None
-    journal=RequestJournal(directory/"requests",content_hash(register),quota)
+    journal=RequestJournal(directory/"requests",content_hash(register),quota,allow_reasoning_tokens=True)
     transport=journal.transport({"model":model_id,"case":case},send or (
         GeminiBackend._request if live else lambda p,s: {
           "modelVersion":"MOCK", "responseId":"MOCK",
