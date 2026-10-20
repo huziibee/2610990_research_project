@@ -1,0 +1,64 @@
+name: Seed17 posthoc synthetic smoke failure audit
+on:
+  push:
+    branches:
+      - research/seed17-evidence-audit-20261020
+    paths:
+      - .github/workflows/seed17-posthoc-audit.yml
+  workflow_dispatch:
+permissions:
+  contents: read
+  actions: read
+jobs:
+  posthoc-no-provider:
+    runs-on: ubuntu-latest
+    timeout-minutes: 8
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/download-artifact@v4
+        with:
+          name: seed17-synthetic-gates-39410924268
+          run-id: 39410924268
+          github-token: ${{ github.token }}
+          path: synthetic_evidence
+      - name: Audit existing synthetic receipts and fail-closed live gate without new API calls
+        run: |
+          python - <<'PY'
+          from pathlib import Path
+          import json
+          root=Path("synthetic_evidence")
+          calls=[]
+          for p in root.rglob("*.json"):
+              if p.parent.name!="calls":continue
+              obj=json.loads(p.read_text(encoding="utf-8"))
+              calls.append({k:obj.get(k) for k in (
+                  "stage","status","error_code","finish_reason","http_status","model_version")})
+          calls.sort(key=lambda x:(str(x.get("stage")),str(x.get("status"))))
+          receipts=[]
+          for p in root.rglob("*.done.json"):
+              if p.parent.name!="requests":continue
+              obj=json.loads(p.read_text(encoding="utf-8"))
+              response=obj.get("response") or {}
+              candidates=response.get("candidates") or []
+              receipts.append({
+                  "status":obj.get("status"),"code":obj.get("code"),
+                  "http_status":obj.get("http_status"),
+                  "finish_reasons":[c.get("finishReason") for c in candidates],
+                  "candidate_count":len(candidates),
+                  "response_has_model_version":bool(response.get("modelVersion")),
+                  "thinking_markers":(obj.get("thought_marker_diagnostic") or {}).get("marked_parts"),
+                  "google_status":(obj.get("provider_diagnostics") or {}).get("google_status")
+              })
+          judge=list(root.rglob("calibration.json"))
+          judge_data=json.loads(judge[0].read_text(encoding="utf-8")) if len(judge)==1 else {}
+          print("REDACTED_S0_S1_CALLS",json.dumps(calls,sort_keys=True))
+          print("REDACTED_PROVIDER_RECEIPTS",json.dumps(receipts,sort_keys=True))
+          print("INDEPENDENT_JUDGE",json.dumps({
+              "all_passed":judge_data.get("all_passed"),
+              "fixtures_completed":len(judge_data.get("cases",[]))},sort_keys=True))
+          if len(calls)<4:raise RuntimeError("Incomplete synthetic call archive")
+          if not any(x["stage"]=="S1.ground" and x["status"]!="OK" for x in calls):
+              raise RuntimeError("Expected S1.ground failure missing: inspect manually")
+          print("LIVE_TWO_ANSWER_SMOKE_GATE", "REJECTED_BECAUSE_A_MODEL_CALL_FAILED")
+          print("NEW_PROVIDER_REQUESTS",0)
+          PY
