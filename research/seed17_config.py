@@ -30,4 +30,4 @@ def validate_config(config):
         if config["systems"][system] != {"initial_interpretation_calls": calls, "per_call_maxOutputTokens": cap,
                                          "per_call_thinkingBudget": 0, "thinking": False}:
             raise ValueError("Unmatched budgets or enabled thinking")
-    return GenerationSettings()
+    return GenerationSettings(timeout_seconds=300)
