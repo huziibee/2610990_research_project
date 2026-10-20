@@ -1,0 +1,37 @@
+{
+  "schema_version": 1,
+  "judge_id": "seed17_isolated_judge_v3",
+  "evaluation_method": "AUTHOR_APPROVED_AGENT_ASSISTED",
+  "status": "CANDIDATE_NOT_RELEASED",
+  "requested_model": "gemini-3.8-live",
+  "expected_model_version": null,
+  "separate_from_generator": true,
+  "rubric": {
+    "path": "protocol/seed17/judge_rubric_v1.json",
+    "sha256": "4f1418c3515476d5f1adb865af122c54f0b84069db42be764639c8a2cc35be3f"
+  },
+  "settings": {
+    "temperature": 0,
+    "topP": 1,
+    "candidateCount": 1,
+    "maxOutputTokens": 2048,
+    "responseModalities": [
+      "AUDIO"
+    ]
+  },
+  "timeout_seconds": 90,
+  "automatic_retries": 0,
+  "malformed_output_retries": 0,
+  "calibration_fixture_version": "seed17_judge_synthetic_v1",
+  "live_synthetic_calibration_required": true,
+  "abstention_reporting": "Keep every case in denominator; report lower/upper bounds and no point estimate or paired CI while any outcome is unresolved.",
+  "protected_execution_authorized": false,
+  "provider_docs_checked": "2026-10-19",
+  "provider_docs": "https://ai.google.dev/gemini-api/docs/models/gemini-3.8-live",
+  "transport": "Gemini_Live_WebSocket_BidiGenerateContent",
+  "structured_judgment": "schema_declared_function_call_plus_strict_local_validation",
+  "provider_structured_outputs_supported": false,
+  "thinking_control": "Omitted: gemini-3.8-live does not support thinking_config or thinking_level; no thought text retained. Generation Gemma remains minimal/includeThoughts=false.",
+  "model_version_policy": "Pin requested stable model ID and record provider revision when returned; never fabricate unavailable revisions.",
+  "accept_reported_reasoning_usage": true
+}

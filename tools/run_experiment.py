@@ -73,23 +73,29 @@ def _validated_inputs(rows, expected_ids):
 def _settings(config):
     from research.gemini_backend import GenerationSettings
     runs, systems = config["runs"], config["systems"]
+    gemma = config["model"]["requested_id"].startswith("gemma-")
+    direct_thinking, staged_thinking = (0, 0) if gemma else (2048, 1024)
+    direct_cap, staged_cap = (4096, 2048) if gemma else (8192, 4096)
     if (runs["seeds"] != SEEDS or runs["concurrency"] != 1
             or runs["max_transport_retries"] != 0 or runs["retry_malformed_output"] is not False
             or runs["main_system_count"] != 2 or runs["main_full_runs"] != 10
             or runs["warmup_non_test_cases_per_configuration"] != 3
             or systems["S2"]["retained"] is not False or systems["S2"]["required"] is not False
-            or systems["S0"]["per_call_maxOutputTokens"] != 8192
-            or systems["S0"]["per_call_thinkingBudget"] != 2048
-            or systems["S1"]["per_call_maxOutputTokens"] != 4096
-            or systems["S1"]["per_call_thinkingBudget"] != 1024):
+            or systems["S0"]["per_call_maxOutputTokens"] != direct_cap
+            or systems["S0"]["per_call_thinkingBudget"] != direct_thinking
+            or systems["S1"]["per_call_maxOutputTokens"] != staged_cap
+            or systems["S1"]["per_call_thinkingBudget"] != staged_thinking
+            or (gemma and any(systems[s].get("thinking") is not False for s in SYSTEMS))):
         raise ValueError("Unsupported protocol amendment: runner requires matched S0/S1 budgets and zero retries")
     generation = config["candidate_generation_config"]
     if (generation["candidateCount"] != 1 or generation["thinkingConfig"]["includeThoughts"] is not False
-            or generation["maxOutputTokens"] != 8192
-            or generation["thinkingConfig"]["thinkingBudget"] != 2048):
+            or generation["maxOutputTokens"] != direct_cap
+            or generation["thinkingConfig"] != (
+                {"thinkingLevel": "minimal", "includeThoughts": False} if gemma else
+                {"thinkingBudget": 2048, "includeThoughts": False})):
         raise ValueError("Unsupported generation configuration")
     return GenerationSettings(model=config["model"]["requested_id"], temperature=generation["temperature"],
-                              top_p=generation["topP"], max_output_tokens=4096, thinking_budget=1024,
+                              top_p=generation["topP"], max_output_tokens=staged_cap, thinking_budget=staged_thinking,
                               timeout_seconds=runs["request_timeout_seconds"])
 
 

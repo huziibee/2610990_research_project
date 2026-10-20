@@ -31,10 +31,10 @@ class GroundingPromptControlTests(unittest.TestCase):
         self.assertEqual([c["stage"] for c in backend.records], ["S1.goal", "S1.ground"])
         self.assertEqual(backend.records[1]["stage_context"],
                          {"intended_goal": TASK["intended_goal"]})
-        self.assertEqual(sum(c["settings"]["max_output_tokens"] for c in backend.records), 8192)
-        self.assertEqual(sum(c["settings"]["thinking_budget"] for c in backend.records), 2048)
+        self.assertEqual(sum(c["settings"]["max_output_tokens"] for c in backend.records), 4096)
+        self.assertEqual(sum(c["settings"]["thinking_budget"] for c in backend.records), 0)
         self.assertNotIn("ground each argument in input evidence", NO_EXPLICIT_GROUNDING_PROMPT)
-        self.assertIn("evidence", json.dumps(sent[1]["generationConfig"]["responseJsonSchema"]))
+        self.assertIn("evidence", json.dumps(backend.records[1]["validation_json_schema"]))
 
     def test_output_still_structured_and_invalid_evidence_is_rejected(self):
         invalid = copy.deepcopy(TASK)

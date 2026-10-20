@@ -1,0 +1,57 @@
+name: Seed17 synthetic HTTP 500 diagnostics
+
+on:
+  push:
+    branches:
+      - research/seed17-http500-synthetic-diagnostic-20261020
+    paths:
+      - tools/diagnose_seed17_http500.py
+      - tests/test_seed17_http500_diagnostic.py
+      - .github/workflows/seed17-http500-diagnostic.yml
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  invented-fixture-only:
+    runs-on: ubuntu-latest
+    timeout-minutes: 35
+    env:
+      PYTHONPATH: .
+      GEMINI_API_KEY: ${{ secrets.GEMINI_API_KEY }}
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+      - run: python -m pip install -r requirements.txt
+      - name: Offline tests
+        run: python -m unittest tests.test_seed17_http500_diagnostic -v
+      - name: Confirm configured secret
+        run: test -n "$GEMINI_API_KEY"
+      - name: Synthetic S0 provider retry diagnostic
+        id: s0
+        continue-on-error: true
+        run: python tools/diagnose_seed17_http500.py --system S0 --max-attempts 3 --backoff-seconds 2 --output runs/development/ci_http500_s0_${{ github.run_id }}
+      - name: Synthetic S1 provider retry diagnostic
+        id: s1
+        continue-on-error: true
+        run: python tools/diagnose_seed17_http500.py --system S1 --max-attempts 3 --backoff-seconds 2 --s1-output-tokens 6144 --output runs/development/ci_http500_s1_${{ github.run_id }}
+      - name: Preserve full diagnostic attempts
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: seed17-http500-synthetic-${{ github.run_id }}
+          path: runs/development/ci_http500_*/
+          if-no-files-found: warn
+          retention-days: 7
+      - name: Report outcome without claiming readiness
+        if: always()
+        run: |
+          echo "S0 diagnostic: ${{ steps.s0.outcome }}"
+          echo "S1 diagnostic: ${{ steps.s1.outcome }}"
+          echo "NOT FREEZE EVIDENCE; PROTECTED PREDICTIONS: ZERO"
+          if [ "${{ steps.s0.outcome }}" != "success" ] || [ "${{ steps.s1.outcome }}" != "success" ]; then
+            exit 1
+          fi

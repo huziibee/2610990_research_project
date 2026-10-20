@@ -76,8 +76,8 @@ class ContextAblationTests(unittest.TestCase):
                 data = json.loads(call["contents"][0]["parts"][0]["text"])
                 self.assertEqual(data["input"]["scene"], SCENE_MASK)
                 self.assertNotIn(CASE["scene"], json.dumps(data))
-            self.assertEqual(sum(r["settings"]["max_output_tokens"] for r in backend.records), 8192)
-            self.assertEqual(sum(r["settings"]["thinking_budget"] for r in backend.records), 2048)
+            self.assertEqual(sum(r["settings"]["max_output_tokens"] for r in backend.records), 4096)
+            self.assertEqual(sum(r["settings"]["thinking_budget"] for r in backend.records), 0)
 
     def test_masked_scene_citation_fails_even_if_provider_schema_allows_it(self):
         task = copy.deepcopy(TASK)

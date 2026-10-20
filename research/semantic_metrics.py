@@ -143,3 +143,9 @@ def paired_semantic_bootstrap(left, right, *, iterations=10000, seed=20261019):
     return {"difference": mean(differences), "ci95": [quantile(.025), quantile(.975)],
             "independent_case_count": len(cases), "run_count": len(runs), "bootstrap_iterations": iterations,
             "bootstrap_seed": seed, "method": "percentile paired case bootstrap of within-case branch and run means"}
+
+
+def score_automated_semantics(predictions, judgments, reference_contexts, seeds):
+    """Selected automated pathway; legacy score_semantics remains unchanged."""
+    from research.automated_semantics import score_automated
+    return score_automated(predictions, judgments, reference_contexts, seeds)

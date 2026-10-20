@@ -1,0 +1,145 @@
+name: Seed17 integrated synthetic readiness checks
+
+on:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  integrated-synthetic-only:
+    runs-on: ubuntu-latest
+    timeout-minutes: 35
+    env:
+      PYTHONPATH: .
+      GEMINI_API_KEY: ${{ secrets.GEMINI_API_KEY }}
+      SMOKE_DIR: runs/development/integrated_ci_${{ github.run_id }}
+      JUDGE_DIR: runs/judgments/integrated_ci_${{ github.run_id }}
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+      - name: Install dependencies
+        run: python -m pip install -r requirements.txt
+      - name: Confirm source release and full offline regression suite
+        run: |
+          python Data/verify_package.py
+          python -m unittest discover -s tests -q
+      - name: Confirm repository secret is configured
+        run: |
+          if [ -z "$GEMINI_API_KEY" ]; then
+            echo "BLOCKED: Actions repository secret is not configured"
+            exit 1
+          fi
+      - name: Execute exactly one fresh invented S0/S1 clarification smoke
+        id: smoke
+        shell: bash
+        run: |
+          set +e
+          python tools/run_single_seed.py --live-smoke --output "$SMOKE_DIR"
+          code=$?
+          set -e
+          echo "exit_code=$code" >> "$GITHUB_OUTPUT"
+          python - <<'PY'
+          import json, os
+          from pathlib import Path
+          root = Path(os.environ["SMOKE_DIR"])
+          entries = []
+          for path in sorted((root/"calls").glob("*.json")):
+              item=json.loads(path.read_text(encoding="utf-8"))
+              entries.append({k:item.get(k) for k in
+                  ("stage", "status", "error_code", "http_status", "model_version")})
+          print("SYNTHETIC_SMOKE_STAGE_RESULTS",json.dumps(entries,sort_keys=True))
+          print("PROTECTED_PREDICTIONS_EXECUTED",False)
+          PY
+      - name: Verify every call and both two-answer trajectories (do not trust COMPLETE alone)
+        id: smoke_integrity
+        shell: bash
+        run: |
+          python - <<'PY'
+          import json,os
+          from pathlib import Path
+          from research.seed17_audit import audit
+          from research.seed17_smoke_fixture import fixture
+          from research.clarification_matching import normalize_question
+          root=Path(os.environ["SMOKE_DIR"])
+          good=True
+          faults=[]
+          calls=[]
+          for path in sorted((root/"calls").glob("*.json")):
+              call=json.loads(path.read_text(encoding="utf-8"))
+              calls.append(call)
+              if call.get("status")!="OK":
+                  good=False
+                  faults.append({"stage":call.get("stage"),"code":call.get("error_code")})
+          if not calls:
+              good=False
+              faults.append({"stage":"ALL","code":"NO_CALL_RECEIPTS"})
+          try:
+              _,manifest,outputs=audit(root,synthetic=True)
+              assert manifest["execution"]=="LIVE_SEED17_SMOKE"
+              _,release=fixture()
+              steps=release["rows"][0]["reference"]["hypothetical_answer_branches"][0]["turns"]
+              assert {p["system"] for p in manifest["schedule"]}=={"S0","S1"}
+              for p in manifest["schedule"]:
+                  rows=outputs[p["system"]]
+                  assert len(rows)==3 and [x["turn"] for x in rows]==[0,1,2]
+                  assert [x["status"] for x in rows]==["ok","ok","ok"]
+                  assert [x["task"]["readiness"] for x in rows]==["CLARIFY","CLARIFY","ACTION_READY"]
+                  assert len(rows[2]["task"]["actions"])==1
+                  for turn,step in enumerate(steps,1):
+                      assert normalize_question(rows[turn]["question"])==normalize_question(step["question"])
+                      assert rows[turn]["answer"]==step["answer"]
+          except (ValueError,TypeError,KeyError,AssertionError,RuntimeError,IndexError,OSError) as exc:
+              good=False
+              faults.append({"stage":"TRAJECTORY","code":type(exc).__name__})
+          print("STRICT_SMOKE_GATE",json.dumps({"passed":good,"failures":faults,"protected_predictions":0},sort_keys=True))
+          with open(os.environ["GITHUB_OUTPUT"],"a",encoding="utf-8") as out:
+              out.write("exit_code="+("0" if good else "2")+"\n")
+          PY
+      - name: Run five invented independent live judge calibration fixtures
+        id: judge
+        shell: bash
+        run: |
+          set +e
+          python tools/calibrate_seed17_judge.py --live-synthetic --output "$JUDGE_DIR"
+          code=$?
+          set -e
+          echo "exit_code=$code" >> "$GITHUB_OUTPUT"
+          python - <<'PY'
+          import json,os
+          from pathlib import Path
+          path=Path(os.environ["JUDGE_DIR"])/"calibration.json"
+          if path.is_file():
+              data=json.loads(path.read_text(encoding="utf-8"))
+              print("JUDGE_CALIBRATION_RESULT",json.dumps({
+                  "all_passed":data.get("all_passed"),
+                  "live":data.get("live"),
+                  "fixtures_completed":len(data.get("cases",[])),
+                  "passes":[x.get("passed") for x in data.get("cases",[])],
+                  "protected_predictions_executed":data.get("protected_predictions_executed")
+              },sort_keys=True))
+          PY
+      - name: Save synthetic-only receipts for independent inspection
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: seed17-synthetic-gates-${{ github.run_id }}
+          path: |
+            ${{ env.SMOKE_DIR }}/
+            ${{ env.SMOKE_DIR }}_evidence/
+            ${{ env.JUDGE_DIR }}/
+          retention-days: 14
+          if-no-files-found: warn
+      - name: Enforce both live gates
+        if: always()
+        shell: bash
+        run: |
+          if [ "${{ steps.smoke.outputs.exit_code }}" != "0" ] ||
+             [ "${{ steps.smoke_integrity.outputs.exit_code }}" != "0" ] ||
+             [ "${{ steps.judge.outputs.exit_code }}" != "0" ]; then
+            echo "BLOCKED: live synthetic readiness gate did not pass; no protected experiment was run"
+            exit 1
+          fi
+          echo "Both live synthetic gates passed; this is not the protected-release authorization."

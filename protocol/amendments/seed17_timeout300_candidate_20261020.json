@@ -1,0 +1,32 @@
+{
+  "schema_version": 1,
+  "amendment_id": "seed17_matched_provider_timeout_300_candidate_20261020",
+  "study_id": "gemma4-seed17-v1",
+  "status": "CANDIDATE_PREPROTECTED_NOT_FROZEN",
+  "rationale": "A single registered current-code full synthetic S0/S1 two-answer smoke stopped on S0.direct TIMEOUT at 90 seconds, before an output was returned. Distinct S1.ground requests returned after up to about 90 seconds, and the isolated model has documented long-tail provider latency. This candidate tests whether a longer nonsemantic deadline allows both systems to complete; it is not evidence of eventual protected success.",
+  "change": {
+    "from_timeout_seconds": 90,
+    "to_timeout_seconds": 300,
+    "applies_to": "All initial and clarification S0/S1 model calls; identical deadline per request",
+    "auto_retries": 0,
+    "malformed_output_retries": 0
+  },
+  "unchanged": {
+    "model": "gemma-4-26b-a4b-it",
+    "seed": 17,
+    "temperature": 0.7,
+    "topP": 0.95,
+    "S0_maxOutputTokens": 4096,
+    "S1_per_call_maxOutputTokens": 2048,
+    "provider_schema": true,
+    "strict_local_validation": true,
+    "clarification_depth": 5,
+    "dataset_and_author_references": true,
+    "judge_rubric": true,
+    "ablation_scoring_contracts": true
+  },
+  "fairness": "Provider latency is measured for all attempts including slow successes and timeouts. This amendment changes the stopping threshold, not the measured latency; retain all old attempts as development evidence.",
+  "evaluation_gate": "Do not promote this candidate without passing all offline tests and a fresh complete S0/S1 two-answer synthetic live smoke, with no failed inference call and exact output matching.",
+  "protected_predictions_executed": false,
+  "authorization_granted": false
+}

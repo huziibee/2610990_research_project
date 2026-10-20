@@ -1,0 +1,31 @@
+{
+  "schema_version": 1,
+  "amendment_id": "seed17_preprotected_shared_concise_grounding_prompt_20261020",
+  "study_id": "gemma4-seed17-v1",
+  "status": "CANDIDATE_PREPROTECTED_NOT_AUTHORIZED",
+  "rationale": "On invented synthetic data the original S1.ground prompt generated a MAX_TOKENS loop at 2048 and at a diagnostic 3584 tokens; the archived 2048 output repeated the same 24-character sequence 273 times and compressed to 5.9% of original size. A distinct concise grounding prompt with the full provider JSON schema produced a locally valid CLARIFY task using 191 output tokens. Prompt effects require complete multi-turn and broader validation before acceptance.",
+  "scope": [
+    "S0.direct",
+    "S1.ground"
+  ],
+  "modification": "Apply the exact same concise, nonrepeating task grounding prompt to both systems. Omit the redundant inline copy of the task JSON format because the provider enforces the stage-specific responseJsonSchema; retain the strict local task validator. The S1.goal separate inference and stage_context intended_goal remain unchanged.",
+  "invariants": {
+    "model": "gemma-4-26b-a4b-it",
+    "seed": 17,
+    "temperature": 0.7,
+    "topP": 0.95,
+    "S0_total_max_output_tokens": 4096,
+    "S1_total_max_output_tokens": 4096,
+    "S1_goal_max_output_tokens": 2048,
+    "S1_ground_max_output_tokens": 2048,
+    "provider_json_schema": "unchanged",
+    "strict_local_validator": "unchanged",
+    "clarification_depth": 5,
+    "retries": 0,
+    "dataset_and_approved_references": "unchanged"
+  },
+  "fairness_note": "This candidate deliberately uses an identical grounding prompt for S0 and S1 so goal conditioning—not a different grounding instruction—is the principal architectural contrast. Different system call counts and context visibility remain part of the defined intervention.",
+  "protected_predictions_executed": false,
+  "selection_policy": "Evaluate the full registered invented S0/S1 two-answer smoke and offline regression suite. Do not select an amended protected result by retrying held-out cases. Keep all failed development attempts in the audit.",
+  "approval": "Not an approved technical freeze, human review receipt, or protected execution authorization."
+}

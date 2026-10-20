@@ -20,17 +20,32 @@ def main():
     parser.add_argument("--system", choices=["S0", "S1", "S2"], default="S0")
     parser.add_argument("--seed", type=int, default=17)
     parser.add_argument("--live", action="store_true", help="Make paid Google API calls for the synthetic development case")
+    parser.add_argument("--clarification", action="store_true", help="Smoke-test one synthetic question/answer and revalidation")
     args = parser.parse_args()
     model_input = json.loads((ROOT / "development/synthetic_case.json").read_text(encoding="utf-8"))
     if not model_input["record_id"].startswith("SYNTHETIC-"):
         raise ValueError("Development runner accepts synthetic development IDs only")
+    if args.clarification:
+        model_input.update(record_id="SYNTHETIC-002",
+                           instruction="Move the blue cup to a shelf.",
+                           scene="A blue cup is on the desk. Shelf A and shelf B are empty.")
     execution = "LIVE_DEVELOPMENT" if args.live else "MOCK_DEVELOPMENT"
     transport = None
     if not args.live:
         task = json.loads((ROOT / "development/synthetic_task.json").read_text(encoding="utf-8"))
         def mock_transport(payload, settings):
             prompt = payload["systemInstruction"]["parts"][0]["text"]
-            value = {"intended_goal": task["intended_goal"]} if "Recover the intended goal." in prompt else task
+            visible = json.loads(payload["contents"][0]["parts"][0]["text"])["input"]
+            value = json.loads(json.dumps(task))
+            if args.clarification and not visible["dialogue"]:
+                value["intended_goal"] = "Move the blue cup to a shelf"
+                del value["actions"][0]["arguments"]["destination"]
+                value.update(readiness="CLARIFY", clarification_question="Which shelf?",
+                             unresolved=[{"field": "destination", "reason": "missing", "critical": True}])
+            elif args.clarification:
+                value["actions"][0]["arguments"]["destination"]["evidence"] = ["dialogue"]
+            if "Recover the intended goal." in prompt:
+                value = {"intended_goal": value["intended_goal"]}
             return {"modelVersion": "MOCK-NOT-PROVIDER-EVIDENCE", "candidates": [{
                 "finishReason": "STOP", "content": {"parts": [{"text": json.dumps(value)}]}}]}
         transport = mock_transport
@@ -43,9 +58,26 @@ def main():
               "created_utc": datetime.now(timezone.utc).isoformat(),
               "runtime": {"python": platform.python_version(), "platform": platform.platform()},
               "semantic_correctness": "NOT_COMPUTED"}
+    record["phase"] = "SYNTHETIC_CLARIFICATION_SMOKE" if args.clarification else "INITIAL_PREDICTION"
     start = time.perf_counter()
     try:
-        record["task"] = ResearchSystem(backend).predict(model_input, system=args.system, seed=args.seed)
+        system = ResearchSystem(backend)
+        if args.clarification:
+            # Development-only replies. This does not release any protected reference.
+            variants = {"which shelf?", "which shelf should i move the blue cup to?",
+                        "where should i move the blue cup?", "which shelf should the blue cup be moved to?",
+                        "which shelf would you like me to move the blue cup to?",
+                        "should i move the blue cup to shelf a or shelf b?"}
+            def answer(question, turn):
+                return "Shelf A" if turn == 1 and " ".join(question.split()).casefold() in variants else None
+            result = system.clarify(model_input, answer, system=args.system, seed=args.seed)
+            record["clarification"] = result
+            record["task"] = result["task"]
+            if (result["termination"] != "ACTION_READY" or len(result["turns"]) != 1
+                    or result["trajectory"][0]["task"]["readiness"] != "CLARIFY"):
+                raise ValueError("Synthetic clarification did not complete the required question/answer cycle")
+        else:
+            record["task"] = system.predict(model_input, system=args.system, seed=args.seed)
         record["status"] = "ok"
     except (InferenceError, ValidationError, ValueError) as exc:
         # Include only safe class names, never provider errors/headers or credentials.

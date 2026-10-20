@@ -1,5 +1,5 @@
 {
-  "protocol_version": "1.0.0-candidate",
+  "protocol_version": "1.1.0-candidate",
   "created": "2026-10-19",
   "status": "NOT_FROZEN",
   "allow_held_out_predictions": false,
@@ -30,22 +30,23 @@
     "origin_correction_amendment": "protocol/amendments/CA-0100_source_status_20261019.json"
   },
   "model": {
-    "requested_id": "gemini-2.5-flash-lite",
+    "requested_id": "gemma-4-26b-a4b-it",
     "api": "Gemini Developer API generateContent v1beta",
     "immutable_revision": null,
     "record_response_modelVersion": true,
     "access_verified": false,
     "second_model": null,
-    "provider_precision_quantization_gpu": "NOT_EXPOSED"
+    "provider_precision_quantization_gpu": "NOT_EXPOSED",
+    "structured_output_mode": "provider_json_schema_and_local_validation"
   },
   "candidate_generation_config": {
     "temperature": 0.7,
     "topP": 0.95,
     "candidateCount": 1,
-    "maxOutputTokens": 8192,
+    "maxOutputTokens": 4096,
     "responseMimeType": "application/json",
     "thinkingConfig": {
-      "thinkingBudget": 2048,
+      "thinkingLevel": "minimal",
       "includeThoughts": false
     }
   },
@@ -74,17 +75,17 @@
     "S0": {
       "required": true,
       "initial_interpretation_calls": 1,
-      "thinking": true,
-      "per_call_maxOutputTokens": 8192,
-      "per_call_thinkingBudget": 2048
+      "thinking": false,
+      "per_call_maxOutputTokens": 4096,
+      "per_call_thinkingBudget": 0
     },
     "S1": {
       "required": true,
       "initial_interpretation_calls": 2,
-      "thinking": true,
+      "thinking": false,
       "explicit_goal_grounding_dependencies": true,
-      "per_call_maxOutputTokens": 4096,
-      "per_call_thinkingBudget": 1024
+      "per_call_maxOutputTokens": 2048,
+      "per_call_thinkingBudget": 0
     },
     "S2": {
       "required": false,
@@ -95,8 +96,8 @@
       "independent_interpretation_pipelines": 2,
       "calls_per_interpretation_pipeline": 2,
       "max_total_calls_per_turn": 5,
-      "adjudication_maxOutputTokens": 8192,
-      "adjudication_thinkingBudget": 2048,
+      "adjudication_maxOutputTokens": 4096,
+      "adjudication_thinkingBudget": 0,
       "adjudication_trigger": "exact_structured_dictionary_inequality_not_semantic_comparator"
     }
   },
@@ -143,6 +144,17 @@
     "prompt_schema_code_runtime_and_data_hashes_archived",
     "documented_exposure_and_deviation_log"
   ],
-  "budget_comparison": "summed_max_output_and_thinking_caps_matched_S0_S1; input_token_cost_and_actual_usage_measured_separately",
-  "design_decisions_status": "LOCKED_CANDIDATE_PENDING_VERIFICATION_GATES"
+  "budget_comparison": "summed_max_output_caps_matched_S0_S1; thinking_off_all_stages; actual_input_output_tokens_and_latency_measured_separately",
+  "design_decisions_status": "LOCKED_CANDIDATE_PENDING_VERIFICATION_GATES",
+  "model_switch_amendment": "protocol/amendments/GEMMA_THINKING_OFF_20261019.json",
+  "execution_stage": "SYNTHETIC_SMOKE_ONLY_BEFORE_ONE_FULL_SEED",
+  "next_stage_plan": {
+    "scope": "one_full_seed_after_smoke_and_readiness_release",
+    "seed": 17,
+    "main_initial_predictions": 200,
+    "ablation_initial_predictions": 500,
+    "clarification": "all_approved_branches_up_to_five_turns",
+    "historical_five_seed_schedule_authorized_now": false,
+    "single_seed_runner_and_scoring_amendment_required": true
+  }
 }

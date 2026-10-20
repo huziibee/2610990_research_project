@@ -1,5 +1,7 @@
 # Freeze status
 
+> Current model amendment (2026-10-19): use `gemma-4-26b-a4b-it`, thinking OFF (`thinkingLevel: minimal`), provider JSON schema and strict local validation. S0 output cap 4096; S1 2048 per stage. Synthetic smoke tests first, then one full seed (17) after readiness release and runner/scoring amendments. Earlier Gemini/thinking-enabled and five-seed descriptions below are historical and superseded for the next run. See [model amendment](amendments/GEMMA_THINKING_OFF_20261019.json). Held-out predictions remain disabled.
+
 **Design decisions locked. Full scientific protocol: NOT_FROZEN. Held-out predictions: disabled.**
 
 The design below is settled and is not expected to change during ordinary implementation. A full freeze also requires verified task references, a scoring procedure and the evidence needed to run the design. Those missing artifacts cannot be replaced by labelling a document frozen. This distinction preserves the completed work and avoids reopening decisions already made.

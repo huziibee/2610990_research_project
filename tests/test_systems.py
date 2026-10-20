@@ -4,7 +4,7 @@ import json
 import unittest
 from pathlib import Path
 
-from research.gemini_backend import GeminiBackend, InferenceError
+from research.gemini_backend import GeminiBackend, GenerationSettings, InferenceError
 from research.systems import ResearchSystem
 from research.task_schema import ValidationError, validate_task
 
@@ -26,6 +26,41 @@ def response(value):
 
 
 class PipelineTests(unittest.TestCase):
+    def test_current_protocol_matches_backend_and_rejects_thinking_amendment(self):
+        from tools.run_experiment import _settings
+        config = json.loads((Path(__file__).resolve().parents[1] / "protocol/gemini_protocol_v1.json").read_text())
+        settings = _settings(config)
+        self.assertEqual(settings, GenerationSettings())
+        config["candidate_generation_config"]["thinkingConfig"] = {"thinkingBudget": 2048, "includeThoughts": False}
+        with self.assertRaises(ValueError):
+            _settings(config)
+
+    def test_thinking_off_survives_direct_staged_and_adjudication_overrides(self):
+        calls = []
+        def transport(payload, settings):
+            calls.append(payload)
+            return response(TASK)
+        backend = GeminiBackend(transport=transport)
+        for stage, context, direct in (("S0.direct", None, True),
+                ("S1.ground", {"intended_goal": "goal"}, False),
+                ("S2.adjudicate", {"proposals": [TASK, TASK]}, False)):
+            backend.generate("prompt", CASE, seed=17, stage=stage, context=context, direct=direct)
+        for payload, record in zip(calls, backend.records):
+            self.assertEqual(record["settings"]["model"], "gemma-4-26b-a4b-it")
+            self.assertEqual(record["settings"]["thinking_budget"], 0)
+            self.assertEqual(payload["generationConfig"]["thinkingConfig"],
+                             {"thinkingLevel": "minimal", "includeThoughts": False})
+            self.assertEqual(record["thinking_config"], payload["generationConfig"]["thinkingConfig"])
+            self.assertEqual(record["response_json_schema"], payload["generationConfig"]["responseJsonSchema"])
+
+    def test_gemma_rejects_enabled_budget_and_legacy_gemini_remains_explicit(self):
+        with self.assertRaises(ValueError):
+            GenerationSettings(thinking_budget=1024)
+        settings = GenerationSettings(model="gemini-2.5-flash-lite", thinking_budget=1024)
+        backend = GeminiBackend(settings=settings, transport=lambda p, s: response(TASK))
+        ResearchSystem(backend).predict(CASE, "S0")
+        self.assertEqual(backend.records[0]["thinking_config"]["thinkingBudget"], 2048)
+
     def test_direct_uses_visible_input_and_records_usage(self):
         calls = []
         def transport(payload, settings):
@@ -37,15 +72,15 @@ class PipelineTests(unittest.TestCase):
         self.assertEqual(set(visible), {"instruction", "scene", "dialogue", "capabilities"})
         self.assertEqual(backend.records[0]["tokens"]["reasoning"], 20)
         self.assertEqual(backend.records[0]["model_version"], "synthetic-version")
-        self.assertEqual(calls[0]["generationConfig"]["thinkingConfig"]["thinkingBudget"], 2048)
+        self.assertEqual(calls[0]["generationConfig"]["thinkingConfig"], {"thinkingLevel": "minimal", "includeThoughts": False})
 
     def test_structured_has_two_stages_and_equal_total_budget(self):
         replies = iter([{"intended_goal": TASK["intended_goal"]}, TASK])
         backend = GeminiBackend(transport=lambda p, s: response(next(replies)))
         self.assertEqual(ResearchSystem(backend).predict(CASE, "S1"), TASK)
         self.assertEqual(len(backend.records), 2)
-        self.assertEqual(sum(r["settings"]["max_output_tokens"] for r in backend.records), 8192)
-        self.assertEqual(sum(r["settings"]["thinking_budget"] for r in backend.records), 2048)
+        self.assertEqual(sum(r["settings"]["max_output_tokens"] for r in backend.records), 4096)
+        self.assertEqual(sum(r["settings"]["thinking_budget"] for r in backend.records), 0)
 
     def test_independent_second_branch_does_not_receive_first(self):
         replies = iter([{"intended_goal": "first goal"}, TASK,

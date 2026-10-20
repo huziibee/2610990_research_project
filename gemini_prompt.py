@@ -1,4 +1,4 @@
-"""Send one prompt to Gemini 2.5 Flash-Lite and print a rationale summary and answer."""
+"""Send one prompt to Gemma 4 with thinking disabled."""
 
 from __future__ import annotations
 
@@ -11,7 +11,7 @@ from urllib.error import HTTPError, URLError
 from urllib.request import Request, urlopen
 
 
-MODEL = "gemini-2.5-flash-lite"
+MODEL = "gemma-4-26b-a4b-it"
 API_URL = f"https://generativelanguage.googleapis.com/v1beta/models/{MODEL}:generateContent"
 
 
@@ -39,7 +39,7 @@ def get_prompt(argument: str | None) -> str:
 
 
 def main() -> int:
-    parser = argparse.ArgumentParser(description="Ask Gemini 2.5 Flash-Lite a prompt.")
+    parser = argparse.ArgumentParser(description="Ask Gemma 4 a prompt with thinking off.")
     parser.add_argument("prompt", nargs="?", help="Prompt text; omit to enter it interactively or pipe it in")
     args = parser.parse_args()
 
@@ -65,7 +65,7 @@ def main() -> int:
             }]
         },
         "contents": [{"role": "user", "parts": [{"text": prompt}]}],
-        "generationConfig": {"thinkingConfig": {"thinkingBudget": -1}},
+        "generationConfig": {"thinkingConfig": {"thinkingLevel": "minimal", "includeThoughts": False}},
     }
     request = Request(
         API_URL,

@@ -1,0 +1,116 @@
+\documentclass[10pt,conference]{IEEEtran}
+\usepackage[T1]{fontenc}
+\usepackage{newtxtext,newtxmath,microtype,graphicx,booktabs,tabularx,array,amsmath,url,balance,float,placeins}
+\usepackage[hidelinks]{hyperref}
+\usepackage{tikz,xcolor}
+\definecolor{deepblue}{HTML}{24578B}
+\definecolor{paleBlue}{HTML}{E7F0FA}
+\definecolor{paleTeal}{HTML}{E4F5F0}
+\definecolor{paleAmber}{HTML}{FFF2D8}
+\definecolor{paleGray}{HTML}{F2F4F7}
+\definecolor{todoRed}{HTML}{B42318}
+\usetikzlibrary{arrows.meta,positioning,fit}
+\setlength{\tabcolsep}{3pt}
+\renewcommand{\arraystretch}{1.10}
+\title{From Co-occurring Ambiguities to Action-Ready Robot Tasks: A Study of Structured, Context-Grounded Interpretation}
+\author{\IEEEauthorblockN{Mohammed Bangie \hspace{0.5em} (Student No. 2610990)}\IEEEauthorblockA{School of Computer Science and Applied Mathematics\\University of the Witwatersrand, Johannesburg, South Africa\\Supervisors: Steven James and Benjamin Rosman}}
+\newcommand{\pending}[1]{\noindent{\color{todoRed}\footnotesize\textbf{TO DO ---} #1}\par}
+\newcommand{\todo}[1]{\par\smallskip\noindent{\color{todoRed}\footnotesize\textbf{TO DO ---} #1}\par\smallskip}
+\newcommand{\todocell}{\textcolor{todoRed}{\scriptsize\bfseries TBD}}
+\begin{document}
+\maketitle\thispagestyle{plain}\pagestyle{plain}
+\begin{abstract}
+We describe a protected text-to-text study of action-ready task interpretation using \texttt{gemma-4-26b-a4b-it}. Direct generation (S0) and goal-first structured generation (S1) receive the same visible information and equal maximum output-token budgets. The evaluation cohort contains exactly 100 source records: 74 execute and 26 clarify cases. A completed reference release contains 100 complete-task references and 26 simulated clarification branches. Ground truth was produced with model assistance and approved by the research author. Structural validity is checked programmatically; semantic output equivalence is evaluated with a frozen automated judging rubric, not second-human verification. Integrity checks bind the exact author receipt, source records, event history and exported references. These checks do not establish semantic truth. Seed 17 is the sole planned seed; paired case-level uncertainty can be estimated, but between-seed variability cannot. Protected evaluation remains disabled, and no task-correctness results are reported.
+\end{abstract}
+\begin{IEEEkeywords}
+ambiguity, grounding, clarification, structured interpretation, model-assisted annotation
+\end{IEEEkeywords}
+\noindent\textbf{Current Gemma seed-17 working manuscript.} Earlier Qwen and Gemini manuscripts, five-seed schedules and review provenance remain historical artifacts. This source supersedes their proposed experimental settings for the next study. This working manuscript contains protocol and implementation information only; protected evaluation remains disabled.
+
+\section{Introduction}
+An instruction can leave its intended action, object, destination or time uncertain. Scene descriptions and previous dialogue may supply the missing information; otherwise the interpreter should request a focused clarification. Our scope is text-to-text task interpretation, not physical robot execution or safety certification. We ask whether separating goal recovery from task grounding improves complete-task correctness over direct generation with the same model and maximum output budget. Five matched ablations are prepared separately. Additional repeated-model review is outside the current S0/S1 study.
+
+\section{Background and Related Work}
+\subsection{Indirect meaning and task interpretation}
+A request can communicate an intended action without naming that action directly. Searle distinguishes the literal form of an utterance from an indirect act performed through it \cite{searle1975}, while Grice explains how conversational context supports inferences beyond the words explicitly spoken \cite{grice1975}. These accounts motivate interpreting communicative intent, but do not supply an algorithm for generating action-ready robot tasks. Mannekote \emph{et al.} study the synthetic generation of indirect requests to make task-oriented dialogue data more natural \cite{mannekote}. Zhang \emph{et al.} examine indirect speech in physical human--robot collaboration, where the literal wording and intended collaborative response may differ \cite{tool}. These works establish why interpreting only the surface wording is inadequate. They do not, however, provide a general test of multiple interacting ambiguities within one task specification.
+
+\subsection{Ambiguity and contextual grounding}
+AmbiK provides ambiguous task instructions situated in kitchen environments, illustrating how the same instruction can require additional knowledge or clarification \cite{ambik}. VAGUE investigates how visual context can clarify ambiguous expressions \cite{vague}. Context can make one interpretation more plausible than another, but a plausible interpretation still needs evidence.
+
+A useful distinction is between \emph{co-occurrence} and \emph{dependence}. Two ambiguous fields co-occur when both appear in an instruction; they depend on one another when choosing a value for one constrains the possible value of the other. For example, selecting a labelled medicine tray may determine its recipient. In contrast, the tray and an unrelated delivery deadline may each be resolved independently. This distinction affects how ambiguity is evaluated, even when both instructions contain the same number of ambiguity labels.
+
+\subsection{Clarification in human--robot interaction}
+CLARA distinguishes ambiguity that can be resolved through interaction from commands outside the robot's feasible action repertoire, using scene-aware uncertainty and feasibility reasoning \cite{clara}. We adapt only this \emph{diagnostic distinction}, not CLARA's sampling-based uncertainty estimator, feasibility classifier, or additional terminal state. Madureira and Schlangen analyse clarification requests in collaborative CoDraw dialogues, showing that clarification can concern specific missing or uncertain task information \cite{codraw}. An important distinction is that uncertainty about a model prediction does not necessarily mean a required task detail is missing. For the present text-to-text problem, clarification must ultimately be judged by whether it resolves an execution-critical field.
+
+\subsection{Structured task generation and robot capabilities}
+ClarifyVC studies the translation of ambiguous vehicle-control commands into structured, schema-aligned calls and uses ambiguity-oriented data augmentation \cite{clarifyvc}. This makes it a close methodological reference, although vehicle functions are more constrained than many general robot tasks. The selected hosted model and call budgets are specified in the separate Gemma seed-17 protocol below. Additional prompts alone do not establish improved reasoning.
+
+\subsection{Literature-derived evaluation perspectives}
+ClarifyVC motivates a three-tier diagnostic separation: single-turn parsing, conservative clarification, and grounding across multiple turns \cite{clarifyvc}. We adapt this \emph{evaluation organization}, not the vehicle-control algorithms, training data, or safety assurances. Sarathy \emph{et al.} motivate distinguishing the interpretation of the speaker's intent, action selection, referential binding, and relationships between arguments \cite{sarathy}. These evaluator categories are not claims that our generator implements Sarathy's cognitive architecture. AmbiK's human-preferences, common-sense-knowledge and safety distinctions motivate per-type help analysis rather than a single blanket preference for asking questions \cite{ambik}. The spontaneous instruction clarification requests in CoDraw-iCR motivate coding \emph{what information} a question seeks \cite{codraw}. IndirectRequests supplies distinct linguistic review dimensions---appropriateness, unambiguity, and world understanding---that should not be collapsed into a single intent score \cite{mannekote}. VAGUE demonstrates the importance of visual scene cues for disambiguation \cite{vague}; our controlled removal of a \emph{textual scene description} is only a text-only methodological adaptation, never a reproduced visual benchmark or image-understanding experiment.
+
+Grice's cooperative principles of quantity, quality, relation, and manner and Searle's distinction between literal utterances and indirect acts provide theoretical motivation for why concise, relevant questions and evidence-supported interpretation matter \cite{grice1975,searle1975}. Zhang \emph{et al.} add empirical motivation from indirect speech in physical collaboration \cite{tool}. These are interpretive motivations, not implemented pragmatic inference rules or empirical evaluations of human trust in our text-only system.
+
+\subsection{Research gap}
+The literature provides complementary accounts of indirect meaning, grounding, clarification, and structured outputs. The open question addressed here is narrower and testable: for commands containing several ambiguities, does explicitly representing a task's goal, grounded arguments, and unresolved details improve the correctness of the final task compared with direct generation? A related question is whether repeated reasoning with the same model adds value beyond the structured approach. These questions require reference task specifications, not only labels such as ``execute'' and ``clarify.''
+
+
+\section{Methodology}
+\subsection{Protected dataset and reference release}
+The frozen version-1.0.1 cohort contains exactly 100 source records, with author-approved routes of 74 execute and 26 clarify. All cases remain evaluation-only; they are not used for prompt tuning, debugging, training or model selection. Inputs consist of an instruction, scene, previous dialogue and visible capabilities. Reference tasks, hypothetical replies, question-matching rules and evaluation labels stay outside the model input. Original source files, archive hashes, historical schedules and review events are preserved.
+
+The selected methodology is \emph{one-human author review of model-assisted complete-task references}, with the separately versioned evaluation protocol \texttt{AUTHOR\_APPROVED\_AGENT\_ASSISTED}. It adopts the candidate amendment of 19 October 2026 without modifying the historical two-human protocol. The existing author approval receipt records Mohammed Bangie's attestation that all 100 references and clarification branches were checked against their sources. The exact release status remains \texttt{AUTHOR\_REVIEWED\_NOT\_INDEPENDENTLY\_VERIFIED}. The receipt reports Grok and GLM as author-attested model assistance; exact model versions and independently authenticated inference logs are unavailable. No additional model identities, second reviewer or independent adjudication are asserted.
+
+Read-only validation checks the receipt's canonical self-hash, raw receipt/export hashes, original source and route bindings, worksheet hash, all 100 ledger histories and revisions, human adoption, task schemas, evidence references and the 26 clarification branches. Archive integrity and restoration provide recovery evidence, not correctness guarantees. The source-pinned author ledger retains its original candidate/adopted states; we do not rewrite it as legacy independently approved gold.
+
+\subsection{Clarification and subgroup eligibility}
+Matching uses only the canonical questions already contained in the exact author-approved release. Normalization collapses whitespace and applies Unicode case folding. There is no semantic-similarity fallback, automatic paraphrase acceptance, fabricated answer or model-generated user reply. The evaluator releases one annotated simulated answer only after the corresponding question matches, then revalidates the predicted task. Each path stops immediately on action readiness, an unavailable approved answer, an error or five answers. Initial predictions, all subsequent turns, stop reasons, calls and usage are preserved. Simulated conversations are reported separately from real human interactions.
+
+The 100 explicit dialogue-relevance and linked-dependency labels are projected directly from the approved references. All branch IDs, fields, turn order and answers remain unchanged. These labels define prespecified subgroup analyses; they are never inferred from evaluated predictions. Restrictive exact matching may reject a reasonable paraphrase and therefore limits the measured clarification coverage.
+
+\subsection{Single-seed model protocol}
+The requested model is \texttt{gemma-4-26b-a4b-it}; thinking is configured as \texttt{minimal} with \texttt{includeThoughts: false}. Provider JSON schema enforcement and strict local validation remain required. S0 makes one call capped at 4096 output tokens. S1 makes two calls capped at 2048 tokens each, first recovering the goal and then grounding the task. Temperature is 0.7 and top-$p$ is 0.95. Observed model versions, response IDs, input/output tokens, available reasoning-token counts and latency are recorded. A missing reasoning-token count is unavailable, not zero.
+
+The prespecified shuffled schedule contains 200 paired initial predictions: S0 and S1 for each source case, seed 17 only. A separate 500-prediction schedule prepares five ablations without launching them. No transport or malformed-output retries are permitted. Crash-safe immutable request claims and receipts prevent rerunning an attempt that may have reached the provider. Quota reservations pace requests conservatively, while acknowledging that other clients sharing the provider project are not observable.
+
+\subsection{Scoring and uncertainty}
+Complete-task correctness requires an action-ready prediction, all required semantic dimensions correct and no unsupported detail. Layer A validates readiness, stopping, schema, typed arguments, evidence pointers, capability membership where an approved catalog exists, ordering, constraints, dependencies and exact approved task structures. An exact structural match may establish agreement with an approved reference; it does not establish that the reference itself is true. A textual difference alone is not treated as a semantic error.
+
+Layer B evaluates comparisons that structural checks cannot resolve. The isolated judge is \texttt{gemini-3.8-live}, separate from the Gemma generator \cite{gemini38live}. A fixed rubric assesses intended-goal equivalence, action equivalence and ordering, arguments, constraints, dependencies, evidence support and unsupported details. The judge receives a system-blinded prediction, the approved reference and visible source context in a separate evaluator process. Generation workers never receive these judging packets or any judging feedback. The judge returns field-level decisions, evidence-based explanations, confidence labels and an abstention indicator. Confidence is self-reported rather than a calibrated correctness probability. No human must inspect every generated output.
+
+The Live API does not support JSON response-schema enforcement or an explicit thinking-level setting for this model. A schema-declared \texttt{submit\_semantic\_judgment} function call supplies structured decisions; strict local validation checks every field and evidence pointer. Malformed, missing or abstaining judgments remain unresolved. Reasoning-token usage is retained when reported, while private thought text is discarded. These judge settings are separate from Gemma's minimal-thinking generation condition. Requested model identity, any returned provider revision, tool-call identity, configuration, rubric, request, response, hashes and available usage are preserved. An unavailable provider revision is not invented. The judge configuration and rubric must be frozen and calibrated on invented correct, incorrect, paraphrase and uncertain examples before protected predictions.
+
+Failures and unresolved judgments remain in the denominator. No task-correctness point estimate or paired confidence interval is reported while any case outcome is unresolved; branch-averaged lower and upper completion bounds show the remaining uncertainty.  Turns and branches are aligned by case and system; branches are averaged within a case. S1--S0 differences use 10,000 paired case-level bootstrap replicates with bootstrap seed 20261019. The independent resampling unit is the case, not a turn or generated output. One seed cannot estimate between-seed variability. These intervals also do not quantify systematic reference or scorer bias. Latency P50/P95, token consumption and dated cost estimates will be reported with coverage and scope; absent account-tier or token evidence remains unavailable.
+
+\section{Implementation status and pending evaluation}
+The author-approved release is complete under the selected methodology, and its exact source, ledger, task, branch, matching and eligibility bindings are mechanically checked. Synthetic regression tests and complete mock schedule execution validate implementation behavior; they do not constitute the protected experiment. Failed live development attempts are preserved. The latest synthetic generator session received HTTP 500 on S0's first post-answer call and S1's initial goal call, so live calls stopped without automatic retries. Successful current-code two-answer trajectories remain unverified.
+
+A live judge calibration detected incorrect arguments and unsupported details, but its final inconsistent-reference fixture received a decisive error verdict rather than the required abstention. A separately versioned rubric now gives reference/source conflicts explicit priority; this final rubric still needs successful live calibration. No earlier calibration pass is substituted for current-configuration evidence.
+
+Protected evaluation remains disabled. Live synthetic judge and generator checks must pass before the exact implementation, protocol, runtime, reference projections and readiness bundle can form a final unsigned technical freeze. Explicit author launch authorization remains a separate requirement. No main results, ablation effects, protected latency/cost measurements or task-correctness confidence intervals have been computed.
+
+\section{Limitations}
+A single author can introduce individual annotation bias. An automated evaluator can introduce scoring bias and share systematic model errors with the generator, despite using a separate model. Model assistance can reproduce correlated errors, and author adoption does not remove them. The reviewer's identity and the reported model-review history are self-attested rather than externally authenticated. Hashes, schemas and source-substring checks establish integrity and mechanical consistency, not entailment or semantic truth. System blinding is not independent review. Automated semantic evaluation is not independently human-verified correctness; agent agreement and confidence are not guarantees. Exact canonical-question matching limits paraphrase coverage; simulated replies cover annotated scenarios rather than observed human behavior. The cohort is small, text only and evaluation specific. A single seed provides no estimate of between-seed variability, and action-ready text does not establish safe physical execution.
+
+\section{Conclusion}
+This working protocol specifies an author-reviewed, model-assisted reference methodology and protected single-seed comparison of S0 and S1. The implementation preserves provenance, uses automated structural and semantic evaluation, and separates hidden references from generation inputs. Scientific conclusions await the remaining readiness requirements and separately authorized evaluation.
+
+\balance
+\begin{thebibliography}{99}
+\bibitem{ambik} A. Ivanova \emph{et al.}, ``AmbiK: Dataset of Ambiguous Tasks in Kitchen Environment,'' \emph{Proc. ACL}, 2025.
+\bibitem{tool} Y. Zhang \emph{et al.}, ``Can You Pass That Tool?: Implications of Indirect Speech in Physical Human-Robot Collaboration,'' \emph{Proc. CHI}, 2025, doi:10.1145/3706598.3713780.
+\bibitem{clara} J. Park \emph{et al.}, ``CLARA: Classifying and Disambiguating User Commands for Reliable Interactive Robotic Agents,'' \emph{IEEE Robotics and Automation Letters}, 2023.
+\bibitem{clarifyvc} H. Zhou \emph{et al.}, ``ClarifyVC: Clarifying Ambiguous Commands in Vehicle Control with a Hybrid Data Augmentation Pipeline,'' \emph{ICLR}, 2026.
+\bibitem{codraw} B. Madureira and D. Schlangen, ``Instruction Clarification Requests in Multimodal Collaborative Dialogue Games: Tasks, and an Analysis of the CoDraw Dataset,'' \emph{Proc. EACL}, 2023.
+\bibitem{sarathy} V. Sarathy, M. Fawn, M. McWilliams, M. Scheutz, and B. Oosterveld, ``On Evaluating LLM Integration into Robotic Architectures,'' \emph{ACM Trans. Intell. Syst. Technol.}, 2025, doi:10.1145/3754340.
+\bibitem{mannekote} A. Mannekote \emph{et al.}, ``Making Task-Oriented Dialogue Datasets More Natural by Synthetically Generating Indirect User Requests,'' \emph{Proc. COLING}, 2025.
+\bibitem{searle1975} J. R. Searle, ``Indirect Speech Acts,'' in \emph{Syntax and Semantics}, vol. 3, \emph{Speech Acts}, P. Cole and J. L. Morgan, Eds. New York: Academic Press, 1975, pp. 59--82.
+\bibitem{grice1975} H. P. Grice, ``Logic and Conversation,'' in \emph{Syntax and Semantics}, vol. 3, \emph{Speech Acts}, P. Cole and J. L. Morgan, Eds. New York: Academic Press, 1975, pp. 41--58.
+
+
+
+\bibitem{geminimodel} Google, ``Gemini 2.5 Flash-Lite,'' model documentation. \url{https://ai.google.dev/gemini-api/docs/models/gemini-2.5-flash-lite}.
+\bibitem{geminithinking} Google, ``Gemini thinking,'' API documentation. \url{https://ai.google.dev/gemini-api/docs/thinking}.
+\bibitem{vague} H. Nam \emph{et al.}, ``VAGUE: Visual Contexts Clarify Ambiguous Expressions,'' \emph{Proc. ICCV}, 2025.
+\bibitem{gemini38live} Google, ``Gemini 3.8 Live,'' model and Live API documentation, checked 19 October 2026. \url{https://ai.google.dev/gemini-api/docs/models/gemini-3.8-live}.
+\end{thebibliography}
+\end{document}

@@ -1,0 +1,33 @@
+{
+  "amendment_id": "author_reviewed_model_assisted_reference_release_20261019",
+  "status": "METHODOLOGY_ADOPTED_EVALUATION_DISABLED",
+  "allow_held_out_predictions": false,
+  "benchmark_executed": false,
+  "review_design": "ONE_HUMAN_AUTHOR_REVIEW_OF_MODEL_ASSISTED_COMPLETE_TASK_REFERENCES",
+  "second_human_reviewer_required_by_selected_candidate_method": false,
+  "reference_release_status_expected": "AUTHOR_REVIEWED_NOT_INDEPENDENTLY_VERIFIED",
+  "reference_cohort_count": 100,
+  "reference_routes": {
+    "execute": 74,
+    "clarify": 26
+  },
+  "clarification_cases_with_branches": 26,
+  "model_assisted_provenance": "Report actual known model identities only as author-attested; independently authenticated inference logs absent unless separately supplied",
+  "limitations": [
+    "Author-generated or adopted annotations can contain model-assisted and individual-review biases",
+    "Author signoff is not evidence of independent human verification",
+    "Semantic truth is not guaranteed by syntactic or source-substring validation",
+    "Review and scoring procedures need preregistration and clear provenance"
+  ],
+  "next_gates": [
+    "Verify exact local author receipt, each task and every clarification path against source-pinned ledger",
+    "Archive encrypted complete private release without placing plaintext gold in the public repository",
+    "Register vetted question-answer matching rules and evaluator-only oracle",
+    "Update all frozen evaluation, scoring, runner and paper references consistently before any held-out call",
+    "Complete live synthetic smoke and protected runner authorization separately"
+  ],
+  "selected_evaluation_protocol": "AUTHOR_APPROVED_AGENT_ASSISTED",
+  "selected_protocol_path": "protocol/seed17/AUTHOR_APPROVED_AGENT_ASSISTED_v1.json",
+  "additional_human_review_required": false,
+  "preserved_original_amendment": "protocol/amendments/AUTHOR_REVIEWED_GOLD_CANDIDATE_ORIGINAL_20261019.json"
+}
