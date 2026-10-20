@@ -54,20 +54,26 @@ def selected_schema(case):
     return schema
 
 
-def outgoing_wire(payload,case):
+def outgoing_wire(payload,case,wire_mode='modern'):
     output=copy.deepcopy(payload)
     cfg=output["generationConfig"]
-    old=cfg.pop("responseJsonSchema")
+    old=cfg["responseJsonSchema"]
     if old!=selected_schema("full_dynamic"):
         raise ValueError("Original production JSON schema changed; abort investigation")
-    fmt=cfg.pop("responseMimeType")
-    if fmt!="application/json":
+    if cfg["responseMimeType"]!="application/json":
         raise ValueError("Original JSON mode changed")
-    cfg["responseFormat"]={"text":{"mimeType":"APPLICATION_JSON","schema":selected_schema(case)}}
+    if wire_mode == "legacy":
+        cfg["responseJsonSchema"]=selected_schema(case)
+    elif wire_mode == "modern":
+        cfg.pop("responseMimeType")
+        cfg.pop("responseJsonSchema")
+        cfg["responseFormat"]={"text":{"mimeType":"APPLICATION_JSON","schema":selected_schema(case)}}
+    else:
+        raise ValueError("Unsupported wire mode")
     return output
 
 
-def run(output,*,live=False,only=None):
+def run(output,*,live=False,only=None,wire_mode='modern'):
     output=Path(output).resolve()
     parent=(ROOT/"runs/provider_diagnostics").resolve()
     if not output.is_relative_to(parent) or output==parent:
@@ -84,7 +90,7 @@ def run(output,*,live=False,only=None):
     for name in ([only] if only else CASES):
         folder=output/name
         folder.mkdir()
-        payload=outgoing_wire(captured_payload("S0.direct"),name)
+        payload=outgoing_wire(captured_payload("S0.direct"),name,wire_mode)
         write_json(folder/"wire_request.json",payload)
         request_hash=content_hash(payload)
         journal=RequestJournal(folder/"requests",
@@ -96,10 +102,10 @@ def run(output,*,live=False,only=None):
                                         {"text":json.dumps({"intended_goal":"Synthetic invented smoke"})}]}}],
                                     "responseId":"mock_only","modelVersion":"mock_only",
                                     "usageMetadata":{"promptTokenCount":1,"candidatesTokenCount":1}})
-        backend=GeminiBackend(settings=settings,transport=lambda p,s: sender(outgoing_wire(p,name),s))
+        backend=GeminiBackend(settings=settings,transport=lambda p,s: sender(outgoing_wire(p,name,wire_mode),s))
         result={"case":name,"status":"FAILED","synthetic_only":True,
                 "protected_predictions_executed":False,
-                "wire_schema_sha256":content_hash(selected_schema(name))}
+                "wire_schema_sha256":content_hash(selected_schema(name)), "wire_mode":wire_mode}
         try:
             task=backend.generate(fixture["prompt"],fixture["input"],seed=17,
                                   stage="S0.direct",direct=True)
@@ -114,7 +120,7 @@ def run(output,*,live=False,only=None):
         result["output_tokens"]=[r.get("tokens",{}).get("output") for r in backend.records]
         for record in backend.records:
             record["actual_wire_schema_sha256"]=result["wire_schema_sha256"]
-            record["actual_wire_mode"]="responseFormat/APPLICATION_JSON/DIAGNOSTIC"
+            record["actual_wire_mode"]=wire_mode+"/APPLICATION_JSON/DIAGNOSTIC"
         write_json(folder/"calls.json",backend.records)
         write_json(folder/"result.json",result)
         print(json.dumps(result,sort_keys=True),flush=True)
@@ -128,8 +134,9 @@ def main():
     p.add_argument("--output",type=Path,required=True)
     p.add_argument("--live-synthetic",action="store_true")
     p.add_argument("--case",choices=CASES)
+    p.add_argument("--wire-mode",choices=("legacy","modern"),default="modern")
     args=p.parse_args()
-    run(args.output,live=args.live_synthetic,only=args.case)
+    run(args.output,live=args.live_synthetic,only=args.case,wire_mode=args.wire_mode)
 
 
 if __name__=="__main__":
