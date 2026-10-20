@@ -32,3 +32,6 @@ protocol/seed17/ablation_contract_v1.json -text
 protocol/seed17/GEMINI35_MODEL_CODEC_AMENDMENT_20261020_v1.json -text
 protocol/seed17/STRUCTURED_GROUNDING_AMENDMENT_20261020_v1.json -text
 protocol/seed17/history/** -text
+
+# Preserve the author-approved validation-contract bytes.
+protocol/seed17/output_validation_contract_v1.json -text
