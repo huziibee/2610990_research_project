@@ -5,3 +5,6 @@ __pycache__/
 runs/
 
 output/pdf/*.log
+
+# Local author-reviewed reference recovery notes (never publish)
+/README_PRIVATE_REFERENCE_RECOVERY.md
