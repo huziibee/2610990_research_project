@@ -1,8 +1,5 @@
 name: Seed17 synthetic provider diagnostics
 on:
-  push:
-    branches:
-      - research/seed17-provider-ci-20261020
   workflow_dispatch:
 permissions:
   contents: read
