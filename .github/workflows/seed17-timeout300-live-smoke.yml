@@ -1,4 +1,4 @@
-name: Seed17 300-second matched timeout full synthetic smoke
+name: Seed17 scoped 300-second matched timeout live smoke
 
 on:
   push:
