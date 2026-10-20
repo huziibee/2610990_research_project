@@ -1,0 +1,64 @@
+name: Seed17 invented schema feature isolation
+
+on:
+  push:
+    branches:
+      - research/seed17-schema-isolation-20261020
+    paths:
+      - .github/workflows/seed17-schema-isolation.yml
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: seed17-invented-schema-feature-bisect
+  cancel-in-progress: false
+
+jobs:
+  invented-only:
+    runs-on: ubuntu-latest
+    timeout-minutes: 55
+    env:
+      PYTHONPATH: .
+      GEMINI_API_KEY: ${{ secrets.GEMINI_API_KEY }}
+      OUT_DIR: runs/provider_diagnostics/schema_features_${{ github.run_id }}
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+      - run: python -m pip install -r requirements.txt
+      - name: Offline exact-schema mutation tests
+        run: python -m unittest tests.test_seed17_schema_features -v
+      - name: Ensure secret configured
+        run: test -n "$GEMINI_API_KEY"
+      - name: Live invented-only schema feature isolation
+        id: isolation
+        continue-on-error: true
+        run: python tools/diagnose_seed17_schema_features.py --live-synthetic --output "$OUT_DIR"
+      - name: Print bounded status and local validation
+        if: always()
+        run: |
+          python - <<'PY'
+          import json,os
+          from pathlib import Path
+          p=Path(os.environ["OUT_DIR"])
+          for f in sorted(p.glob("*/result.json")):
+              v=json.loads(f.read_text(encoding="utf-8"))
+              print("SCHEMA_FEATURE",json.dumps({k:v.get(k) for k in
+                ("case","status","code","http_status","stage_finish_reasons",
+                 "output_tokens","provider_diagnostics")},sort_keys=True))
+          print("INVENTED_ONLY=TRUE; PROTECTED_RUNS=0; STUDY_FREEZE_UNCHANGED=TRUE")
+          PY
+      - name: Keep actual invented wire receipts
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: seed17-invented-schema-features-${{ github.run_id }}
+          path: ${{ env.OUT_DIR }}/
+          retention-days: 14
+          if-no-files-found: warn
+      - name: Confirm diagnostics completed without inferring scientific success
+        if: always()
+        run: test "${{ steps.isolation.outcome }}" = "success"
