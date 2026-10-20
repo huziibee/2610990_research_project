@@ -1,0 +1,83 @@
+name: Authorized five-seed research through real results
+on:
+  workflow_dispatch:
+  push:
+    branches: [main]
+    paths: [.github/workflows/five-seed-authorized-execution.yml]
+permissions:
+  contents: write
+  actions: write
+concurrency:
+  group: five-seed-protected-execution-v1
+  cancel-in-progress: false
+jobs:
+  durable-private-checkpoint:
+    runs-on: ubuntu-latest
+    timeout-minutes: 330
+    steps:
+      - uses: actions/checkout@v4
+        with: {persist-credentials: false}
+      - uses: actions/setup-python@v5
+        with: {python-version: '3.11.17'}
+      - run: python -m pip install -r requirements.txt
+      - name: Verify checkpoint encryption and no-overwrite guards without credentials
+        run: python -m unittest discover -s .github/scripts -p test_cloud_checkpoint.py -v
+      - name: Authenticate native private key and acquire durable repository execution lease
+        id: lease
+        env:
+          GH_TOKEN: ${{ github.token }}
+          GEMINI_API_KEY: ${{ secrets.GEMINI_API_KEY }}
+          AUTHOR_REVIEW_AES_KEY_BASE64: ${{ secrets.AUTHOR_REVIEW_AES_KEY_BASE64 }}
+        run: python .github/scripts/cloud_checkpoint.py start
+      - name: Use the originally claimed code version for every continuation
+        if: steps.lease.outcome == 'success'
+        uses: actions/checkout@v4
+        with:
+          ref: ${{ steps.lease.outputs.source_commit }}
+          persist-credentials: false
+      - name: Freeze, authorize both delegated scopes, run, judge and analyze until safe checkpoint
+        if: steps.lease.outcome == 'success'
+        id: execute
+        env:
+          GH_TOKEN: ${{ github.token }}
+          GEMINI_API_KEY: ${{ secrets.GEMINI_API_KEY }}
+          AUTHOR_REVIEW_AES_KEY_BASE64: ${{ secrets.AUTHOR_REVIEW_AES_KEY_BASE64 }}
+        run: python .github/scripts/cloud_checkpoint.py execute
+      - name: Encrypt all completed and failed private execution records
+        id: seal
+        if: ${{ always() && steps.lease.outcome == 'success' && steps.execute.outcome != 'skipped' }}
+        env:
+          AUTHOR_REVIEW_AES_KEY_BASE64: ${{ secrets.AUTHOR_REVIEW_AES_KEY_BASE64 }}
+        run: python .github/scripts/cloud_checkpoint.py seal
+      - name: Preserve encrypted checkpoint only; never publish plaintext runs
+        id: upload
+        if: ${{ always() && steps.seal.outcome == 'success' }}
+        uses: actions/upload-artifact@v4
+        with:
+          name: five-seed-private-checkpoint-${{ github.run_id }}
+          path: /tmp/five-seed-cloud-encrypted/
+          retention-days: 14
+          if-no-files-found: error
+      - name: Commit the latest verified checkpoint pointer atomically
+        id: commit
+        if: ${{ always() && steps.upload.outcome == 'success' }}
+        env:
+          GH_TOKEN: ${{ github.token }}
+          CHECKPOINT_ARTIFACT_ID: ${{ steps.upload.outputs.artifact-id }}
+        run: python .github/scripts/cloud_checkpoint.py commit
+      - name: Continue only after durable progress and a complete encrypted checkpoint
+        if: ${{ steps.commit.outputs.continue == 'true' }}
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: python .github/scripts/cloud_checkpoint.py advance
+      - name: Report state without pretending a checkpoint is a final result
+        if: always()
+        run: |
+          echo 'No plaintext reference files or protected responses are uploaded.'
+          echo 'All model failures and unknowns remain in the encrypted evidence.'
+          echo 'Complete: ${{ steps.commit.outputs.complete }}'
+          echo 'Next checkpoint dispatched only when continuation was eligible: ${{ steps.commit.outputs.continue }}'
+          test '${{ steps.lease.outcome }}' = success
+          test '${{ steps.execute.outcome }}' = success
+          test '${{ steps.seal.outcome }}' = success
+          test '${{ steps.commit.outcome }}' = success
