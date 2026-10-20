@@ -1,0 +1,40 @@
+name: Five-seed secure original-reference staging
+on:
+  push:
+    branches: [research/five-seed-key-staging-20261020]
+  workflow_dispatch:
+permissions: {contents: read}
+concurrency:
+  group: five-seed-reference-key-bootstrap
+  cancel-in-progress: false
+jobs:
+  bootstrap:
+    runs-on: ubuntu-latest
+    timeout-minutes: 40
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with: {python-version: '3.11'}
+      - run: python -m pip install -r requirements.txt
+      - name: Synthetic authenticated encryption tests
+        run: python -m unittest tests.test_reference_key_envelope -v
+      - name: Generate ephemeral receiver; private key stays on runner
+        run: python tools/bootstrap_reference_key.py init --directory "$RUNNER_TEMP/key-receiver"
+      - uses: actions/upload-artifact@v4
+        with:
+          name: reference-key-public-${{ github.run_id }}
+          path: ${{ runner.temp }}/key-receiver/public/
+          retention-days: 1
+      - name: Receive encrypted key, verify original release, save only encrypted reusable envelope
+        env:
+          GITHUB_TOKEN: ${{ github.token }}
+          GEMINI_API_KEY: ${{ secrets.GEMINI_API_KEY }}
+        run: python tools/bootstrap_reference_key.py receive --directory "$RUNNER_TEMP/key-receiver" --output "$RUNNER_TEMP/key-envelope"
+      - uses: actions/upload-artifact@v4
+        with:
+          name: approved-reference-envelope-${{ github.run_id }}
+          path: ${{ runner.temp }}/key-envelope/
+          retention-days: 30
+      - name: Remove ephemeral private key on every exit
+        if: always()
+        run: rm -f "$RUNNER_TEMP/key-receiver/private.pem"
