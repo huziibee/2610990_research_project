@@ -27,7 +27,7 @@ class ResponseFormatSchemaTests(unittest.TestCase):
         self.assertEqual(original, self.original)
         fmt = transformed["generationConfig"]["responseFormat"]["text"]
         self.assertEqual(fmt["schema"], self.schema)
-        self.assertEqual(fmt["mimeType"], "application/json")
+        self.assertEqual(fmt["mimeType"], "APPLICATION_JSON")
         self.assertEqual(
             {k: v for k, v in transformed["generationConfig"].items() if k != "responseFormat"},
             {k: v for k, v in original["generationConfig"].items()
