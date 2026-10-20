@@ -85,7 +85,7 @@ def audit(directory, *, synthetic=False):
         previous = None
         for cid, call in zip(row["calls"], calls):
             call_ids.add(cid)
-            config = GenerationSettings()
+            config = GenerationSettings(timeout_seconds=300)
             expected_settings = asdict(config)
             expected_settings["max_output_tokens"] = 4096 if system == "S0" else 2048
             visible = model_visible_context(current)
