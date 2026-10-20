@@ -85,7 +85,9 @@ def audit(directory, *, synthetic=False):
         previous = None
         for cid, call in zip(row["calls"], calls):
             call_ids.add(cid)
-            config = GenerationSettings(timeout_seconds=300)
+            from research.seed17_config import validate_config
+            from research.gemini_backend import build_request
+            config = validate_config(read_json(Path(__file__).resolve().parents[1] / "protocol/gemma4_seed17_v1.json"))
             expected_settings = asdict(config)
             expected_settings["max_output_tokens"] = 4096 if system == "S0" else 2048
             visible = model_visible_context(current)
@@ -94,13 +96,15 @@ def audit(directory, *, synthetic=False):
                     or call["system_prompt"] != expected_prompt
                     or call["seed"] != 17 or call["record_id"] != current["record_id"]
                     or call["stage_context"] != previous or call["thinking_config"] != config.thinking_config()
-                    or call["response_json_schema"] != response_schema(current, call["stage"])):
+                    or call["validation_json_schema"] != response_schema(current, call["stage"])):
                 raise ValueError("Settings, schema or released context changed")
-            payload = {"systemInstruction": {"parts": [{"text": call["system_prompt"]}]},
-                "contents": [{"role": "user", "parts": [{"text": json.dumps({"input": visible, "stage_context": previous}, ensure_ascii=False)}]}],
-                "generationConfig": {"temperature": .7, "topP": .95, "candidateCount": 1, "seed": 17,
-                    "maxOutputTokens": expected_settings["max_output_tokens"], "responseMimeType": "application/json",
-                    "responseJsonSchema": call["response_json_schema"], "thinkingConfig": config.thinking_config()}}
+            payload, effective_settings, canonical_schema = build_request(
+                config, expected_prompt, current, seed=17, stage=call["stage"],
+                context=previous, direct=system == "S0")
+            if (asdict(effective_settings) != expected_settings
+                    or call["response_json_schema"] != payload["generationConfig"].get("responseJsonSchema")
+                    or call["validation_json_schema"] != canonical_schema):
+                raise ValueError("Wire or canonical schema changed")
             claim = read_json(_member(directory, "requests/" + cid + ".claim.json"))
             identity = {"binding": content_hash(manifest), "key": {"sequence": sequence,
                 "branch_id": "initial" if row["turn"] == 0 else row["branch_id"], "turn": row["turn"], "stage": call["stage"]}}

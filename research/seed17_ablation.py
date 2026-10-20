@@ -55,9 +55,11 @@ def intervention_record(root, ablation):
     """Record actual settings, prompts, masks and validation difference per condition."""
     if ablation not in INTERVENTIONS:
         raise ValueError("Unregistered ablation")
+    from research.seed17_config import validate_config
+    settings = validate_config(read_json(Path(root) / "protocol/gemma4_seed17_v1.json"))
     return {"ablation": ablation, "matched_baseline": "S1", "seed": 17,
             "stages": stages(ablation), "prompts": {s: prompt(ablation, s) for s in stages(ablation)},
-            "settings": asdict(GenerationSettings(timeout_seconds=300)), "thinking_config": GenerationSettings(timeout_seconds=300).thinking_config(),
+            "settings": asdict(settings), "thinking_config": settings.thinking_config(),
             "input_removal": ablation if ablation in ("scene", "dialogue") else None,
             "check_dependency_consistency": ablation != "dependency_checking",
             "contract_sha256": digest(Path(root) / "protocol/seed17/ablation_contract_v1.json")}
