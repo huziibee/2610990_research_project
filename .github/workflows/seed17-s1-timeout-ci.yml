@@ -1,0 +1,19 @@
+name: Seed17 invented S1 grounding timeout diagnostic
+on:
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  s1-timeout-one-call:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    env:
+      PYTHONPATH: .
+      GEMINI_API_KEY: ${{ secrets.GEMINI_API_KEY }}
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+      - name: One synthetic S1 grounding request at diagnostic timeout
+        run: python tools/ci_probe_s1_ground_timeout.py

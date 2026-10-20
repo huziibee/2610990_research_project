@@ -1,0 +1,19 @@
+name: Seed17 synthetic provider diagnostics
+on:
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  synthetic-provider-contracts:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    env:
+      PYTHONPATH: .
+      GEMINI_API_KEY: ${{ secrets.GEMINI_API_KEY }}
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+      - name: Two synthetic single-send Gemma requests (no benchmark)
+        run: python tools/ci_probe_gemma_schema.py
