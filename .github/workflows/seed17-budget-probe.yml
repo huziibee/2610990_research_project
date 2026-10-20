@@ -1,0 +1,26 @@
+name: Seed17 single synthetic S1 rebalanced budget probe
+on:
+  push:
+    branches:
+      - research/seed17-rebalanced-budget-probe-20261020
+    paths:
+      - .github/workflows/seed17-budget-probe.yml
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  one-s1-goal-ground-pair:
+    runs-on: ubuntu-latest
+    timeout-minutes: 7
+    env:
+      PYTHONPATH: .
+      GEMINI_API_KEY: ${{ secrets.GEMINI_API_KEY }}
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+      - name: Check exact secret exists
+        run: test -n "$GEMINI_API_KEY"
+      - name: One synthetic S1 pair with 512+3584 tokens, no retries or protected cases
+        run: python tools/ci_probe_s1_budget_reallocation.py
