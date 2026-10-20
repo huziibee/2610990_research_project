@@ -7,6 +7,7 @@ from statistics import mean
 from research.gemini_backend import GenerationSettings
 from research.generation_schema import response_schema
 from research.input_contract import validate_model_input, model_visible_context
+from research.seed17_call_verification import decoded_call_output
 from research.integrity import read_json, digest, loads_json
 from research.seed17_engine import load, validate_requests, validate_durable_layout, validate_durable_trajectory
 from research.seed17_journal import content_hash
@@ -100,7 +101,7 @@ def audit(directory, *, synthetic=False):
             from research.seed17_call_verification import verify_call_record
             verify_call_record(call,read_json(_member(directory,'requests/'+cid+'.done.json')),current,manifest['execution'])
             if call["status"] == "OK":
-                previous = loads_json(call["output_text"])
+                previous = decoded_call_output(call)
         if row["status"] == "ok" and previous != row["task"]:
             raise ValueError("Task differs from provider output")
 

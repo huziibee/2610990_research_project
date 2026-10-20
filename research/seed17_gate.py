@@ -5,6 +5,7 @@ missing evidence is reported, never inferred from filenames or green mocks.
 """
 from pathlib import Path
 import re
+from research.seed17_call_verification import decoded_call_output
 from research.integrity import digest, read_json, read_jsonl, verify_derived, loads_json
 
 
@@ -208,7 +209,7 @@ def _check_readiness(root, bundle=None):
                 live = (live and asdict(effective) == settings
                         and call.get("validation_json_schema") == canonical == response_schema(model_input, stages[index])
                         and call.get("response_json_schema") == payload["generationConfig"].get("responseJsonSchema"))
-                output = loads_json(call["output_text"])
+                output = decoded_call_output(call)
                 if stages[index].endswith(".goal"):
                     live = live and isinstance(output, dict) and set(output) == {"intended_goal"} and bool(output["intended_goal"])
                 else:
