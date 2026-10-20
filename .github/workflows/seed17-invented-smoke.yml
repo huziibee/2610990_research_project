@@ -1,0 +1,27 @@
+name: Seed17 invented multi-turn live smoke
+on:
+  push:
+    branches:
+      - research/seed17-provider-ci-20261020
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  invented-smoke:
+    runs-on: ubuntu-latest
+    timeout-minutes: 35
+    env:
+      GEMINI_API_KEY: ${{ secrets.GEMINI_API_KEY }}
+      PYTHONPATH: .
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+      - name: Install exact project runtime dependencies
+        run: python -m pip install -r requirements.txt
+      - name: Run synthetic-only S0/S1 two-answer smoke with no automatic retries
+        shell: bash
+        run: |
+          if [ -z "$GEMINI_API_KEY" ]; then echo "Missing GEMINI_API_KEY repository Actions secret"; exit 1; fi
+          python tools/run_single_seed.py --live-smoke --output "runs/development/cloud_seed17_${{ github.run_id }}"
