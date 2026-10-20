@@ -1,0 +1,20 @@
+name: Seed17 preprotected protocol digest
+on:
+  push:
+    branches:
+      - research/seed17-timeout300-candidate-20261020
+    paths:
+      - .github/workflows/seed17-protocol-digest.yml
+permissions:
+  contents: read
+jobs:
+  digest-only-no-model:
+    runs-on: ubuntu-latest
+    timeout-minutes: 3
+    steps:
+      - uses: actions/checkout@v4
+      - name: Report exact raw-byte protocol fingerprint for explicit design-lock amendment
+        run: |
+          sha256sum protocol/gemma4_seed17_v1.json
+          sha256sum protocol/seed17/FREEZE.json
+          echo "NO_MODEL_OR_PROTECTED_PREDICTIONS"
