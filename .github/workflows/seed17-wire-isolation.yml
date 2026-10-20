@@ -1,0 +1,66 @@
+name: Seed17 invented Gemma wire isolation
+
+on:
+  push:
+    branches:
+      - research/seed17-wire-isolation-20261020
+    paths:
+      - .github/workflows/seed17-wire-isolation.yml
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: seed17-invented-wire-isolation
+  cancel-in-progress: false
+
+jobs:
+  compare:
+    runs-on: ubuntu-latest
+    timeout-minutes: 55
+    env:
+      PYTHONPATH: .
+      GEMINI_API_KEY: ${{ secrets.GEMINI_API_KEY }}
+      OUT_DIR: runs/provider_diagnostics/wire_isolation_${{ github.run_id }}
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+      - run: python -m pip install -r requirements.txt
+      - name: Invented variant construction tests
+        run: python -m unittest tests.test_seed17_wire_isolation -v
+      - name: Check nonempty key without disclosing
+        run: test -n "$GEMINI_API_KEY"
+      - name: Seven single-shot provider comparisons
+        id: compare
+        continue-on-error: true
+        run: python tools/diagnose_seed17_wire_fields.py --live-synthetic --output "$OUT_DIR"
+      - name: Review only bounded error metadata and normal finish reasons
+        if: always()
+        run: |
+          python - <<'PY'
+          import json,os
+          from pathlib import Path
+          root=Path(os.environ["OUT_DIR"])
+          for path in sorted(root.glob("*/result.json")):
+              r=json.loads(path.read_text(encoding="utf-8"))
+              allowed=("variant","status","code","http_status","finish_reasons","output_token_count",
+                       "nonempty_text","valid_json","json_shape","provider_diagnostics")
+              print("WIRE_RESULT",json.dumps({x:r.get(x) for x in allowed},sort_keys=True))
+          print("PROTECTED_PREDICTIONS_EXECUTED=FALSE; RELEASE_GATE_EVIDENCE=FALSE")
+          PY
+      - name: Preserve single-shot invented request journals
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: seed17-invented-wire-isolation-${{ github.run_id }}
+          path: ${{ env.OUT_DIR }}/
+          retention-days: 14
+          if-no-files-found: warn
+      - name: Report diagnostics only, no claim of readiness
+        if: always()
+        run: |
+          test "${{ steps.compare.outcome }}" = "success"
+          echo "Provider comparison completed; check per-case statuses. No study launch."
