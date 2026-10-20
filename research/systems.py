@@ -29,13 +29,15 @@ COMMON = (
 # The provider already enforces the complete response JSON schema. Keep one
 # concise shared grounding prompt for both S0.direct and S1.ground; the
 # experimental distinction is the extra S1 goal context, not prompt verbosity.
-TASK_PROMPT = (
-    COMMON
-    + "Ground the instruction and any proposed intended_goal in the supplied scene, dialogue and capabilities. "
-    + "Return exactly one complete JSON task object matching the response schema. "
-    + "List each unresolved critical field at most once, and do not duplicate items or repeat text. "
-    + "If clarification is required, ask one question about exactly one missing field."
+EXPLICIT_GROUNDING_INSTRUCTION = (
+    "Ground the instruction and any proposed intended_goal in the supplied scene, dialogue and capabilities. "
 )
+TASK_FORMAT_INSTRUCTIONS = (
+    "Return exactly one complete JSON task object matching the response schema. "
+    "List each unresolved critical field at most once, and do not duplicate items or repeat text. "
+    "If clarification is required, ask one question about exactly one missing field."
+)
+TASK_PROMPT = COMMON + EXPLICIT_GROUNDING_INSTRUCTION + TASK_FORMAT_INSTRUCTIONS
 
 
 class ResearchSystem:

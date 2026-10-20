@@ -65,3 +65,23 @@ class Gemini35AmendmentTests(unittest.TestCase):
         self.assertEqual(main['candidate_generation_config']['responseFormat'], ablation['responseFormat'])
         self.assertEqual(main['systems']['S1']['per_call_maxOutputTokens'], ablation['max_output_tokens_per_call'])
         self.assertIn('recorded', main['reasoning_usage_policy'])
+
+    def test_structured_grounding_amendment_binds_single_sentence_removal(self):
+        amendment_path = ROOT / 'protocol/seed17/STRUCTURED_GROUNDING_AMENDMENT_20261020_v1.json'
+        amendment = read_json(amendment_path)
+        contract_path = ROOT / 'protocol/seed17/ablation_contract_v1.json'
+        from research.grounding_prompt_design import STRUCTURED_GROUNDING_ABLATION_PROMPT
+        from research.systems import COMMON, EXPLICIT_GROUNDING_INSTRUCTION, TASK_FORMAT_INSTRUCTIONS, TASK_PROMPT
+        self.assertEqual(amendment['bindings']['contract_sha256'], digest(contract_path))
+        from hashlib import sha256
+        normalized_source = (ROOT / amendment['bindings']['implementation_path']).read_text(encoding='utf-8').encode('utf-8')
+        self.assertEqual(amendment['bindings']['implementation_sha256_lf_normalized_utf8'],
+                         sha256(normalized_source).hexdigest())
+        self.assertEqual(amendment['intervention']['removed_text'], EXPLICIT_GROUNDING_INSTRUCTION.strip())
+        self.assertEqual(TASK_PROMPT, COMMON + EXPLICIT_GROUNDING_INSTRUCTION + TASK_FORMAT_INSTRUCTIONS)
+        self.assertEqual(STRUCTURED_GROUNDING_ABLATION_PROMPT,
+                         TASK_PROMPT.replace(EXPLICIT_GROUNDING_INSTRUCTION, '', 1))
+        self.assertIn('does not remove evidence structure, semantic grounding, or structured output',
+                      amendment['intervention']['interpretation_limit'].casefold())
+        self.assertIs(amendment['authorization']['main'], False)
+        self.assertIs(amendment['authorization']['ablations'], False)
