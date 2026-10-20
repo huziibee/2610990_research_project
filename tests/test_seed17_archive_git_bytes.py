@@ -19,6 +19,12 @@ class ArchiveGitBytesTests(unittest.TestCase):
         self.assertEqual(hashlib.sha256(self.archive.read_bytes()).hexdigest(),
                          self.policy['release']['archive_sha256'])
 
+    def test_public_source_binding_bytes_match_approved_release(self):
+        for role, entry in self.policy['source_bindings'].items():
+            with self.subTest(role=role):
+                self.assertEqual(hashlib.sha256((ROOT/entry['path']).read_bytes()).hexdigest(),
+                                 entry['sha256'])
+
     def test_sidecar_bytes_match_original_approved_hash(self):
         self.assertEqual(hashlib.sha256(self.data).hexdigest(),
                          self.policy['release']['archive_manifest_sha256'])
