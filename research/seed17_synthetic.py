@@ -87,6 +87,10 @@ def mock_send(payload, settings):
                   "constraints": []}], "unresolved": [{"field": f, "reason": "missing", "critical": True} for f in missing],
                  "dependencies": [], "readiness": "CLARIFY" if missing else "ACTION_READY",
                  "clarification_question": QUESTIONS[FIELDS.index(missing[0])] if missing else None}
+        from research.gemini_backend import SEED17_GEMINI_PROFILE
+        if settings.profile == SEED17_GEMINI_PROFILE:
+            from research.seed17_wire_codec import encode_task
+            value = encode_task(value)
     return {"modelVersion": "MOCK_SEED17_NOT_PROVIDER_EVIDENCE", "responseId": "SYNTHETIC_RESPONSE",
             "usageMetadata": {"promptTokenCount": 100, "candidatesTokenCount": 50, "totalTokenCount": 150},
             "candidates": [{"finishReason": "STOP", "content": {"parts": [{"text": json.dumps(value)}]}}]}
