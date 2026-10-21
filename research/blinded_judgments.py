@@ -4,9 +4,12 @@ Never imported by inference. Reviewer identities are self-attested, not authenti
 No review record alone authorizes publication of a semantic score.
 """
 from __future__ import annotations
+import copy
 import hashlib
 import hmac
 import json
+
+from research.input_contract import VISIBLE_FIELDS, model_visible_context
 
 FIELDS = ("goal", "actions", "order", "arguments", "constraints", "dependencies", "evidence_supported")
 
@@ -24,6 +27,19 @@ def _identity(actor):
 
 def _record_id(row):
     return (row["record_id"], row["seed"], row["branch_id"], row["turn"])
+
+
+def _visible_context(case, context):
+    """Admit exactly the model-visible source fields, never labels or linkage."""
+    if type(context) is not dict or set(context) != VISIBLE_FIELDS:
+        raise ValueError("Reviewer source context must have exactly four visible fields")
+    return model_visible_context({"record_id": case, **context})
+
+
+def _blind_order(secret, item):
+    """Keyed stable permutation independent of prediction storage/order."""
+    return hmac.new(secret, b"semantic-review-order-v1|" + item["assignment_id"].encode("ascii"),
+                    hashlib.sha256).digest()
 
 
 def build_blinded_packet(predictions, references, source_contexts, *, secret):
@@ -60,6 +76,9 @@ def build_blinded_packet(predictions, references, source_contexts, *, secret):
             continue  # An operational failure remains a denominator failure, not a human judgment.
         if not isinstance(row.get("task"), dict):
             raise ValueError("Successful prediction lacks task")
+        visible_context = _visible_context(case, source_contexts[case])
+        if not isinstance(ref["branches"][branch], dict):
+            raise ValueError("Expected completed task must be an object")
         digest = canonical_hash(row)
         assignment_id = hmac.new(secret, (digest + "|" + "/".join(map(str, key))).encode("utf-8"),
                                  hashlib.sha256).hexdigest()[:24]
@@ -67,15 +86,20 @@ def build_blinded_packet(predictions, references, source_contexts, *, secret):
                         "branch_id": branch, "turn": turn, "prediction_sha256": digest,
                         "reference_sha256": ref["sha256"], "reference_revision": ref["revision"]})
         review.append({"assignment_id": assignment_id,
-                       "source_context": source_contexts[case],
-                       "reference_task": ref["branches"][branch],
-                       "predicted_task": row["task"],
+                       "source_context": visible_context,
+                       "reference_task": copy.deepcopy(ref["branches"][branch]),
+                       "predicted_task": copy.deepcopy(row["task"]),
                        "reviewer_id": None, "notes": None,
                        "fields": {field: None for field in FIELDS},
                        "unsupported_detail": None,
                        "initial_clarification_appropriate": None})
     if len({item["assignment_id"] for item in review}) != len(review):
         raise ValueError("Blinded assignment collision")
+    # A reviewer must not infer system/run blocks from the input record order.
+    # Stable keyed ordering permits reproducible packet regeneration without
+    # exposing the sorting key or unblinded metadata in a review packet.
+    review.sort(key=lambda item: _blind_order(secret, item))
+    mapping.sort(key=lambda item: _blind_order(secret, item))
     return {"packet_status": "UNREVIEWED", "system_blinded": True,
             "benchmark_executed": False, "semantic_correctness": "NOT_COMPUTED",
             "human_review_items": review}, {"private_linkage": mapping}
